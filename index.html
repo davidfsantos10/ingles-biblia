@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inglês com a Bíblia</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1 class="app-title">Inglês com a Bíblia</h1>
+
+    <div class="chapter-selector">
+      <select id="book-select" aria-label="Livro"></select>
+      <select id="chapter-select" aria-label="Capítulo"></select>
+    </div>
+  </header>
+
+  <main class="reading-view">
+    <section class="column column-en" aria-label="Texto em inglês (King James Version)">
+      <div class="column-header">
+        <span class="version-badge">KJV</span>
+        <h2 id="title-en">&nbsp;</h2>
+      </div>
+      <div class="verses" id="verses-en"></div>
+    </section>
+
+    <section class="column column-pt" aria-label="Texto em português (Almeida Revista e Corrigida)">
+      <div class="column-header">
+        <span class="version-badge">ARC</span>
+        <h2 id="title-pt">&nbsp;</h2>
+      </div>
+      <div class="verses" id="verses-pt"></div>
+    </section>
+  </main>
+
+  <p id="empty-state" class="empty-state" hidden>
+    Este capítulo ainda não está disponível nesta versão de demonstração.
+    Por enquanto, experimente <button type="button" id="go-to-sample" class="link-button">Gênesis 1</button>.
+  </p>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

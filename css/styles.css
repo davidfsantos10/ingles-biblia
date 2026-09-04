@@ -1,0 +1,197 @@
+:root {
+  --color-bg: #faf8f4;
+  --color-surface: #ffffff;
+  --color-border: #e2ddd3;
+  --color-text: #2b2822;
+  --color-text-muted: #6b675e;
+  --color-accent: #7a5c3e;
+  --color-accent-soft: #efe6d8;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-reading: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1.25rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-accent);
+}
+
+.chapter-selector {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chapter-selector select {
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.4rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Reading view */
+
+.reading-view {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--color-border);
+}
+
+.reading-view[hidden] {
+  display: none;
+}
+
+.column {
+  background: var(--color-surface);
+  padding: 1.5rem 1.75rem 3rem;
+  overflow-y: auto;
+}
+
+.column-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.column-header h2 {
+  font-family: var(--font-reading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.version-badge {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  white-space: nowrap;
+}
+
+.verses {
+  font-family: var(--font-reading);
+  font-size: 1.15rem;
+  line-height: 1.85;
+  color: var(--color-text);
+}
+
+.verse {
+  margin: 0 0 0.9rem;
+}
+
+.verse-number {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  vertical-align: super;
+  margin-right: 0.35rem;
+}
+
+/* Empty state */
+
+.empty-state {
+  margin: 3rem auto;
+  max-width: 32rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-family: var(--font-ui);
+  padding: 0 1.25rem;
+}
+
+.link-button {
+  font: inherit;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Responsive: stack columns on small screens */
+
+@media (max-width: 720px) {
+  .reading-view {
+    grid-template-columns: 1fr;
+  }
+
+  .column {
+    padding: 1.25rem 1.1rem 2rem;
+  }
+
+  .verses {
+    font-size: 1.05rem;
+  }
+
+  .app-title {
+    font-size: 1rem;
+  }
+
+  .app-header {
+    padding: 0.75rem 0.9rem;
+  }
+
+  .chapter-selector {
+    flex: 1 1 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .chapter-selector select {
+    flex: 1;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  #book-select {
+    text-overflow: ellipsis;
+  }
+}
