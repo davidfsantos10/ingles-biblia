@@ -278,6 +278,9 @@ for (const column of document.querySelectorAll(".column")) {
   column.addEventListener("scroll", hideWordPopup, { passive: true });
 }
 
+// Em telas pequenas as colunas empilham e é a página inteira que rola,
+// não os elementos .column individualmente.
+window.addEventListener("scroll", hideWordPopup, { passive: true });
 window.addEventListener("resize", hideWordPopup);
 
 // --- Vocabulário salvo (localStorage) ---
