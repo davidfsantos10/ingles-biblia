@@ -51,9 +51,21 @@
     </div>
 
     <section id="vocabulary-view" class="vocabulary-view" hidden aria-label="Palavras salvas">
+      <div class="vocabulary-search">
+        <input
+          type="search"
+          id="vocabulary-filter"
+          class="vocabulary-filter-input"
+          placeholder="Buscar palavra ou tradução…"
+          aria-label="Buscar no vocabulário"
+        >
+      </div>
       <p id="vocabulary-empty" class="empty-state" hidden>
         Nenhuma palavra salva ainda. Clique em palavras em inglês durante a leitura para
         adicioná-las aqui.
+      </p>
+      <p id="vocabulary-no-match" class="empty-state" hidden>
+        Nenhuma palavra encontrada para essa busca.
       </p>
       <ul id="vocabulary-list" class="vocabulary-list"></ul>
     </section>

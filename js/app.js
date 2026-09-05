@@ -90,6 +90,9 @@ const readingContainerEl = document.getElementById("reading-container");
 const vocabularyViewEl = document.getElementById("vocabulary-view");
 const vocabularyListEl = document.getElementById("vocabulary-list");
 const vocabularyEmptyEl = document.getElementById("vocabulary-empty");
+const vocabularyNoMatchEl = document.getElementById("vocabulary-no-match");
+const vocabularySearchEl = document.querySelector(".vocabulary-search");
+const vocabularyFilterEl = document.getElementById("vocabulary-filter");
 const vocabCountEl = document.getElementById("vocab-count");
 
 // Palavra en/pt -> tradução, carregado a partir do "glossary" do capítulo atual.
@@ -325,10 +328,21 @@ function renderVocabularyBadge() {
 
 function renderVocabularyList() {
   const list = loadVocabulary();
-  vocabularyListEl.innerHTML = "";
-  vocabularyEmptyEl.hidden = list.length > 0;
+  const filterText = vocabularyFilterEl.value.trim().toLowerCase();
+  const filteredList = filterText
+    ? list.filter(
+        (entry) =>
+          entry.word.toLowerCase().includes(filterText) ||
+          (entry.translation || "").toLowerCase().includes(filterText)
+      )
+    : list;
 
-  for (const entry of list) {
+  vocabularyListEl.innerHTML = "";
+  vocabularySearchEl.hidden = list.length === 0;
+  vocabularyEmptyEl.hidden = list.length > 0;
+  vocabularyNoMatchEl.hidden = list.length === 0 || filteredList.length > 0;
+
+  for (const entry of filteredList) {
     const li = document.createElement("li");
     li.className = "vocabulary-item";
 
@@ -370,6 +384,8 @@ function setActiveView(view) {
 for (const btn of viewTabButtons) {
   btn.addEventListener("click", () => setActiveView(btn.dataset.view));
 }
+
+vocabularyFilterEl.addEventListener("input", renderVocabularyList);
 
 bookSelect.addEventListener("change", () => {
   const book = getSelectedBook();
