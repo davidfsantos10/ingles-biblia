@@ -1,6 +1,6 @@
 // Lista dos 66 livros da Bíblia, com nome em inglês/português, um "slug"
-// usado para montar o caminho do arquivo de dados e o número de capítulos.
-// Por enquanto só existe conteúdo carregado para Gênesis 1 (data/genesis-1.json).
+// usado para montar o caminho do arquivo de dados (data/{slug}-{capítulo}.json)
+// e o número de capítulos de cada livro.
 const BOOKS = [
   { slug: "genesis", en: "Genesis", pt: "Gênesis", chapters: 50 },
   { slug: "exodus", en: "Exodus", pt: "Êxodo", chapters: 40 },
@@ -97,8 +97,6 @@ const vocabularySearchEl = document.querySelector(".vocabulary-search");
 const vocabularyFilterEl = document.getElementById("vocabulary-filter");
 const vocabCountEl = document.getElementById("vocab-count");
 
-// Palavra en/pt -> tradução, carregado a partir do "glossary" do capítulo atual.
-let currentGlossary = { en: {}, pt: {} };
 let currentSource = { book: "", chapter: 0 };
 
 // Uma "palavra" pode incluir hífen/apóstrofo interno (ex.: "ajuntem-se", "don't").
@@ -129,9 +127,8 @@ function getSelectedBook() {
 }
 
 function renderChapter(book, chapter, data) {
-  titleEnEl.textContent = data.titleEn || book.en;
-  titlePtEl.textContent = data.titlePt || book.pt;
-  currentGlossary = data.glossary || { en: {}, pt: {} };
+  titleEnEl.textContent = `${book.en} ${chapter}`;
+  titlePtEl.textContent = `${book.pt} ${chapter}`;
   currentSource = { book: book.pt, chapter };
 
   versesEnEl.innerHTML = "";
@@ -201,10 +198,12 @@ function speakWord(word) {
   window.speechSynthesis.speak(utterance);
 }
 
-function showWordPopup(anchorEl, word, translation) {
+function showWordPopup(anchorEl, word, translation, isLoading) {
   wordPopupOriginalEl.textContent = word;
-  wordPopupTranslationEl.textContent = translation || "tradução não encontrada";
-  wordPopupEl.classList.toggle("word-popup--missing", !translation);
+  wordPopupTranslationEl.textContent = isLoading
+    ? "traduzindo…"
+    : translation || "tradução não encontrada";
+  wordPopupEl.classList.toggle("word-popup--missing", !isLoading && !translation);
   wordPopupEl.hidden = false;
   positionWordPopup(anchorEl.getBoundingClientRect());
 }
@@ -230,20 +229,81 @@ function hideWordPopup() {
   document.querySelectorAll(".word--active").forEach((el) => el.classList.remove("word--active"));
 }
 
-function handleWordActivate(span) {
+// --- Tradução de palavras sob demanda (API pública gratuita) ---
+//
+// Com a Bíblia inteira carregada, não é viável manter um dicionário
+// palavra-a-palavra pronto para todos os 66 livros. Em vez disso, a
+// tradução de cada palavra é buscada na hora em uma API de tradução
+// gratuita e guardada em cache local para não repetir a consulta.
+
+const TRANSLATION_CACHE_KEY = "ingles-biblia.translations";
+
+function loadTranslationCache() {
+  try {
+    const raw = localStorage.getItem(TRANSLATION_CACHE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function saveTranslationCache(cache) {
+  try {
+    localStorage.setItem(TRANSLATION_CACHE_KEY, JSON.stringify(cache));
+  } catch (err) {
+    // Cache indisponível (ex.: armazenamento cheio): segue sem persistir.
+  }
+}
+
+const translationCache = loadTranslationCache();
+
+async function translateWord(word, from, to) {
+  const cacheKey = `${from}|${to}:${word}`;
+  if (translationCache[cacheKey]) return translationCache[cacheKey];
+
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=${from}|${to}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Falha na consulta de tradução");
+
+  const data = await response.json();
+  const translated = data && data.responseData && data.responseData.translatedText;
+  if (!translated) throw new Error("Resposta sem tradução");
+
+  const result = translated.toLowerCase();
+  translationCache[cacheKey] = result;
+  saveTranslationCache(translationCache);
+  return result;
+}
+
+// Evita que a resposta de um clique antigo (ainda em andamento) sobrescreva
+// o popup depois que o usuário já clicou em outra palavra.
+let activeWordRequestId = 0;
+
+async function handleWordActivate(span) {
   document.querySelectorAll(".word--active").forEach((el) => el.classList.remove("word--active"));
   span.classList.add("word--active");
 
   const word = span.dataset.word;
   const lang = span.dataset.lang;
+  const requestId = ++activeWordRequestId;
 
   if (lang === "en") {
-    const translation = currentGlossary.en[word];
     speakWord(word);
-    showWordPopup(span, word, translation);
-    addToVocabulary(word, translation);
-  } else {
-    showWordPopup(span, word, currentGlossary.pt[word]);
+  }
+
+  showWordPopup(span, word, null, true);
+
+  try {
+    const translation =
+      lang === "en" ? await translateWord(word, "en", "pt") : await translateWord(word, "pt", "en");
+    if (requestId !== activeWordRequestId) return;
+
+    if (lang === "en") addToVocabulary(word, translation);
+    if (!wordPopupEl.hidden) showWordPopup(span, word, translation, false);
+  } catch (err) {
+    if (requestId !== activeWordRequestId) return;
+    if (lang === "en") addToVocabulary(word, null);
+    if (!wordPopupEl.hidden) showWordPopup(span, word, null, false);
   }
 }
 
