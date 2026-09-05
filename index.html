@@ -10,34 +10,54 @@
   <header class="app-header">
     <h1 class="app-title">Inglês com a Bíblia</h1>
 
+    <nav class="view-tabs" aria-label="Navegação">
+      <button type="button" class="view-tab" data-view="reading" aria-pressed="true">Leitura</button>
+      <button type="button" class="view-tab" data-view="vocabulary" aria-pressed="false">
+        Vocabulário
+        <span id="vocab-count" class="vocab-count" hidden>0</span>
+      </button>
+    </nav>
+
     <div class="chapter-selector">
       <select id="book-select" aria-label="Livro"></select>
       <select id="chapter-select" aria-label="Capítulo"></select>
     </div>
   </header>
 
-  <main class="reading-view">
-    <section class="column column-en" aria-label="Texto em inglês (King James Version)">
-      <div class="column-header">
-        <span class="version-badge">KJV</span>
-        <h2 id="title-en">&nbsp;</h2>
-      </div>
-      <div class="verses" id="verses-en"></div>
-    </section>
+  <main>
+    <div id="reading-container">
+      <div class="reading-view">
+        <section class="column column-en" aria-label="Texto em inglês (King James Version)">
+          <div class="column-header">
+            <span class="version-badge">KJV</span>
+            <h2 id="title-en">&nbsp;</h2>
+          </div>
+          <div class="verses" id="verses-en"></div>
+        </section>
 
-    <section class="column column-pt" aria-label="Texto em português (Almeida Revista e Corrigida)">
-      <div class="column-header">
-        <span class="version-badge">ARC</span>
-        <h2 id="title-pt">&nbsp;</h2>
+        <section class="column column-pt" aria-label="Texto em português (Almeida Revista e Corrigida)">
+          <div class="column-header">
+            <span class="version-badge">ARC</span>
+            <h2 id="title-pt">&nbsp;</h2>
+          </div>
+          <div class="verses" id="verses-pt"></div>
+        </section>
       </div>
-      <div class="verses" id="verses-pt"></div>
+
+      <p id="empty-state" class="empty-state" hidden>
+        Este capítulo ainda não está disponível nesta versão de demonstração.
+        Por enquanto, experimente <button type="button" id="go-to-sample" class="link-button">Gênesis 1</button>.
+      </p>
+    </div>
+
+    <section id="vocabulary-view" class="vocabulary-view" hidden aria-label="Palavras salvas">
+      <p id="vocabulary-empty" class="empty-state" hidden>
+        Nenhuma palavra salva ainda. Clique em palavras em inglês durante a leitura para
+        adicioná-las aqui.
+      </p>
+      <ul id="vocabulary-list" class="vocabulary-list"></ul>
     </section>
   </main>
-
-  <p id="empty-state" class="empty-state" hidden>
-    Este capítulo ainda não está disponível nesta versão de demonstração.
-    Por enquanto, experimente <button type="button" id="go-to-sample" class="link-button">Gênesis 1</button>.
-  </p>
 
   <div id="word-popup" class="word-popup" role="status" hidden>
     <span id="word-popup-original" class="word-popup-original"></span>

@@ -51,6 +51,46 @@ body {
   color: var(--color-accent);
 }
 
+.view-tabs {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.view-tab {
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.view-tab:hover {
+  color: var(--color-text);
+}
+
+.view-tab[aria-pressed="true"] {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.vocab-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--color-accent);
+  color: var(--color-surface);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  min-width: 1.3em;
+  text-align: center;
+}
+
 .chapter-selector {
   display: flex;
   gap: 0.5rem;
@@ -64,6 +104,24 @@ body {
   border-radius: 0.4rem;
   background: var(--color-bg);
   color: var(--color-text);
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#reading-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#reading-container[hidden] {
+  display: none;
 }
 
 /* Reading view */
@@ -190,6 +248,72 @@ body {
 .word-popup--missing .word-popup-translation {
   font-style: italic;
   opacity: 0.75;
+}
+
+/* Vocabulary */
+
+.vocabulary-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.vocabulary-view[hidden] {
+  display: none;
+}
+
+.vocabulary-list {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 40rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.vocabulary-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 0.7rem 0.9rem;
+}
+
+.vocabulary-word {
+  font-family: var(--font-reading);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.vocabulary-translation {
+  color: var(--color-text-muted);
+  flex: 1;
+}
+
+.vocabulary-source {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.vocabulary-remove {
+  font-family: var(--font-ui);
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.4rem;
+  border-radius: 0.3rem;
+}
+
+.vocabulary-remove:hover {
+  color: #b23b3b;
+  background: var(--color-accent-soft);
 }
 
 /* Empty state */

@@ -85,9 +85,16 @@ const goToSampleBtn = document.getElementById("go-to-sample");
 const wordPopupEl = document.getElementById("word-popup");
 const wordPopupOriginalEl = document.getElementById("word-popup-original");
 const wordPopupTranslationEl = document.getElementById("word-popup-translation");
+const viewTabButtons = document.querySelectorAll(".view-tab");
+const readingContainerEl = document.getElementById("reading-container");
+const vocabularyViewEl = document.getElementById("vocabulary-view");
+const vocabularyListEl = document.getElementById("vocabulary-list");
+const vocabularyEmptyEl = document.getElementById("vocabulary-empty");
+const vocabCountEl = document.getElementById("vocab-count");
 
 // Palavra en/pt -> tradução, carregado a partir do "glossary" do capítulo atual.
 let currentGlossary = { en: {}, pt: {} };
+let currentSource = { book: "", chapter: 0 };
 
 // Uma "palavra" pode incluir hífen/apóstrofo interno (ex.: "ajuntem-se", "don't").
 const WORD_PATTERN = /[A-Za-zÀ-ÖØ-öø-ÿ]+(?:['-][A-Za-zÀ-ÖØ-öø-ÿ]+)*/g;
@@ -120,6 +127,7 @@ function renderChapter(book, chapter, data) {
   titleEnEl.textContent = data.titleEn || book.en;
   titlePtEl.textContent = data.titlePt || book.pt;
   currentGlossary = data.glossary || { en: {}, pt: {} };
+  currentSource = { book: book.pt, chapter };
 
   versesEnEl.innerHTML = "";
   versesPtEl.innerHTML = "";
@@ -225,8 +233,10 @@ function handleWordActivate(span) {
   const lang = span.dataset.lang;
 
   if (lang === "en") {
+    const translation = currentGlossary.en[word];
     speakWord(word);
-    showWordPopup(span, word, currentGlossary.en[word]);
+    showWordPopup(span, word, translation);
+    addToVocabulary(word, translation);
   } else {
     showWordPopup(span, word, currentGlossary.pt[word]);
   }
@@ -267,6 +277,100 @@ for (const column of document.querySelectorAll(".column")) {
 
 window.addEventListener("resize", hideWordPopup);
 
+// --- Vocabulário salvo (localStorage) ---
+
+const VOCABULARY_STORAGE_KEY = "ingles-biblia.vocabulary";
+
+function loadVocabulary() {
+  try {
+    const raw = localStorage.getItem(VOCABULARY_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveVocabulary(list) {
+  localStorage.setItem(VOCABULARY_STORAGE_KEY, JSON.stringify(list));
+}
+
+function addToVocabulary(word, translation) {
+  const list = loadVocabulary();
+  if (list.some((entry) => entry.word === word)) return;
+
+  list.unshift({
+    word,
+    translation: translation || null,
+    book: currentSource.book,
+    chapter: currentSource.chapter,
+    savedAt: Date.now(),
+  });
+  saveVocabulary(list);
+  renderVocabularyBadge();
+  if (!vocabularyViewEl.hidden) renderVocabularyList();
+}
+
+function removeFromVocabulary(word) {
+  const list = loadVocabulary().filter((entry) => entry.word !== word);
+  saveVocabulary(list);
+  renderVocabularyBadge();
+  renderVocabularyList();
+}
+
+function renderVocabularyBadge() {
+  const count = loadVocabulary().length;
+  vocabCountEl.textContent = String(count);
+  vocabCountEl.hidden = count === 0;
+}
+
+function renderVocabularyList() {
+  const list = loadVocabulary();
+  vocabularyListEl.innerHTML = "";
+  vocabularyEmptyEl.hidden = list.length > 0;
+
+  for (const entry of list) {
+    const li = document.createElement("li");
+    li.className = "vocabulary-item";
+
+    const wordEl = document.createElement("span");
+    wordEl.className = "vocabulary-word";
+    wordEl.textContent = entry.word;
+
+    const translationEl = document.createElement("span");
+    translationEl.className = "vocabulary-translation";
+    translationEl.textContent = entry.translation || "tradução não encontrada";
+
+    const sourceEl = document.createElement("span");
+    sourceEl.className = "vocabulary-source";
+    sourceEl.textContent = entry.book ? `${entry.book} ${entry.chapter}` : "";
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "vocabulary-remove";
+    removeBtn.setAttribute("aria-label", `Remover "${entry.word}" do vocabulário`);
+    removeBtn.textContent = "×";
+    removeBtn.addEventListener("click", () => removeFromVocabulary(entry.word));
+
+    li.append(wordEl, translationEl, sourceEl, removeBtn);
+    vocabularyListEl.appendChild(li);
+  }
+}
+
+function setActiveView(view) {
+  const isReading = view === "reading";
+  readingContainerEl.hidden = !isReading;
+  vocabularyViewEl.hidden = isReading;
+  for (const btn of viewTabButtons) {
+    btn.setAttribute("aria-pressed", String(btn.dataset.view === view));
+  }
+  if (!isReading) renderVocabularyList();
+  hideWordPopup();
+}
+
+for (const btn of viewTabButtons) {
+  btn.addEventListener("click", () => setActiveView(btn.dataset.view));
+}
+
 bookSelect.addEventListener("change", () => {
   const book = getSelectedBook();
   populateChapterSelect(book);
@@ -291,3 +395,4 @@ populateBookSelect();
 populateChapterSelect(getSelectedBook());
 chapterSelect.value = String(DEFAULT_CHAPTER);
 loadChapter(getSelectedBook(), DEFAULT_CHAPTER);
+renderVocabularyBadge();
