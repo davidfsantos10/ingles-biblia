@@ -439,3 +439,61 @@ main {
     margin-right: 0.2rem;
   }
 }
+
+/* Portrait phones/tablets: stack English on top of Portuguese instead of
+   side by side, each half independently scrollable within the viewport. */
+
+@media (max-width: 900px) and (orientation: portrait) {
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .reading-view {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+    min-height: 0;
+  }
+
+  .column {
+    min-height: 0;
+    padding: 1rem 1.1rem 1.5rem;
+  }
+
+  .column-header {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .column-header h2 {
+    font-size: 1.15rem;
+  }
+
+  .version-badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.55rem;
+  }
+
+  .verses {
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  .verse {
+    margin: 0 0 0.8rem;
+  }
+
+  .verse-number {
+    font-size: 0.68rem;
+    margin-right: 0.3rem;
+  }
+}
