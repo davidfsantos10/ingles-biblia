@@ -135,6 +135,63 @@ body {
   margin-right: 0.35rem;
 }
 
+/* Clickable words */
+
+.word {
+  cursor: pointer;
+  border-radius: 0.2rem;
+  border-bottom: 1px dotted transparent;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.word:hover {
+  border-bottom-color: var(--color-accent);
+}
+
+.word--active {
+  background: var(--color-accent-soft);
+  border-bottom-color: var(--color-accent);
+}
+
+.word-popup {
+  position: fixed;
+  z-index: 100;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  max-width: min(90vw, 22rem);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+
+.word-popup[hidden] {
+  display: none;
+}
+
+.word-popup-original {
+  font-weight: 700;
+}
+
+.word-popup-arrow {
+  opacity: 0.6;
+}
+
+.word-popup-translation {
+  overflow-wrap: anywhere;
+}
+
+.word-popup--missing .word-popup-translation {
+  font-style: italic;
+  opacity: 0.75;
+}
+
 /* Empty state */
 
 .empty-state {

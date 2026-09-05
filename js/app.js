@@ -82,6 +82,15 @@ const versesPtEl = document.getElementById("verses-pt");
 const readingView = document.querySelector(".reading-view");
 const emptyStateEl = document.getElementById("empty-state");
 const goToSampleBtn = document.getElementById("go-to-sample");
+const wordPopupEl = document.getElementById("word-popup");
+const wordPopupOriginalEl = document.getElementById("word-popup-original");
+const wordPopupTranslationEl = document.getElementById("word-popup-translation");
+
+// Palavra en/pt -> tradução, carregado a partir do "glossary" do capítulo atual.
+let currentGlossary = { en: {}, pt: {} };
+
+// Uma "palavra" pode incluir hífen/apóstrofo interno (ex.: "ajuntem-se", "don't").
+const WORD_PATTERN = /[A-Za-zÀ-ÖØ-öø-ÿ]+(?:['-][A-Za-zÀ-ÖØ-öø-ÿ]+)*/g;
 
 function populateBookSelect() {
   for (const book of BOOKS) {
@@ -110,24 +119,45 @@ function getSelectedBook() {
 function renderChapter(book, chapter, data) {
   titleEnEl.textContent = data.titleEn || book.en;
   titlePtEl.textContent = data.titlePt || book.pt;
+  currentGlossary = data.glossary || { en: {}, pt: {} };
 
   versesEnEl.innerHTML = "";
   versesPtEl.innerHTML = "";
 
   for (const verse of data.verses) {
-    versesEnEl.appendChild(buildVerseEl(verse.number, verse.en));
-    versesPtEl.appendChild(buildVerseEl(verse.number, verse.pt));
+    versesEnEl.appendChild(buildVerseEl(verse.number, verse.en, "en"));
+    versesPtEl.appendChild(buildVerseEl(verse.number, verse.pt, "pt"));
   }
 }
 
-function buildVerseEl(number, text) {
+function buildVerseEl(number, text, lang) {
   const p = document.createElement("p");
   p.className = "verse";
   const sup = document.createElement("span");
   sup.className = "verse-number";
   sup.textContent = number;
   p.appendChild(sup);
-  p.appendChild(document.createTextNode(text));
+
+  let lastIndex = 0;
+  WORD_PATTERN.lastIndex = 0;
+  let match;
+  while ((match = WORD_PATTERN.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      p.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+    }
+    const span = document.createElement("span");
+    span.className = "word";
+    span.textContent = match[0];
+    span.dataset.word = match[0].toLowerCase();
+    span.dataset.lang = lang;
+    span.tabIndex = 0;
+    span.setAttribute("role", "button");
+    p.appendChild(span);
+    lastIndex = WORD_PATTERN.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    p.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
   return p;
 }
 
@@ -138,12 +168,104 @@ async function loadChapter(book, chapter) {
     const data = await response.json();
     readingView.hidden = false;
     emptyStateEl.hidden = true;
+    hideWordPopup();
     renderChapter(book, chapter, data);
   } catch (err) {
     readingView.hidden = true;
     emptyStateEl.hidden = false;
+    hideWordPopup();
   }
 }
+
+// --- Pronúncia e tradução ao clicar em uma palavra ---
+
+function speakWord(word) {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(word);
+  utterance.lang = "en-US";
+  utterance.rate = 0.85;
+  window.speechSynthesis.speak(utterance);
+}
+
+function showWordPopup(anchorEl, word, translation) {
+  wordPopupOriginalEl.textContent = word;
+  wordPopupTranslationEl.textContent = translation || "tradução não encontrada";
+  wordPopupEl.classList.toggle("word-popup--missing", !translation);
+  wordPopupEl.hidden = false;
+  positionWordPopup(anchorEl.getBoundingClientRect());
+}
+
+function positionWordPopup(anchorRect) {
+  const margin = 8;
+  const popupRect = wordPopupEl.getBoundingClientRect();
+
+  let top = anchorRect.top - popupRect.height - margin;
+  if (top < margin) {
+    top = anchorRect.bottom + margin;
+  }
+
+  let left = anchorRect.left + anchorRect.width / 2 - popupRect.width / 2;
+  left = Math.max(margin, Math.min(left, window.innerWidth - popupRect.width - margin));
+
+  wordPopupEl.style.top = `${top}px`;
+  wordPopupEl.style.left = `${left}px`;
+}
+
+function hideWordPopup() {
+  wordPopupEl.hidden = true;
+  document.querySelectorAll(".word--active").forEach((el) => el.classList.remove("word--active"));
+}
+
+function handleWordActivate(span) {
+  document.querySelectorAll(".word--active").forEach((el) => el.classList.remove("word--active"));
+  span.classList.add("word--active");
+
+  const word = span.dataset.word;
+  const lang = span.dataset.lang;
+
+  if (lang === "en") {
+    speakWord(word);
+    showWordPopup(span, word, currentGlossary.en[word]);
+  } else {
+    showWordPopup(span, word, currentGlossary.pt[word]);
+  }
+}
+
+function handleVersesClick(event) {
+  const span = event.target.closest(".word");
+  if (!span) return;
+  handleWordActivate(span);
+}
+
+function handleVersesKeydown(event) {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const span = event.target.closest(".word");
+  if (!span) return;
+  event.preventDefault();
+  handleWordActivate(span);
+}
+
+for (const versesEl of [versesEnEl, versesPtEl]) {
+  versesEl.addEventListener("click", handleVersesClick);
+  versesEl.addEventListener("keydown", handleVersesKeydown);
+}
+
+document.addEventListener("click", (event) => {
+  if (!wordPopupEl.hidden && !event.target.closest(".word")) {
+    hideWordPopup();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") hideWordPopup();
+});
+
+for (const column of document.querySelectorAll(".column")) {
+  column.addEventListener("scroll", hideWordPopup, { passive: true });
+}
+
+window.addEventListener("resize", hideWordPopup);
 
 bookSelect.addEventListener("change", () => {
   const book = getSelectedBook();
