@@ -284,20 +284,21 @@ for (const column of document.querySelectorAll(".column")) {
 // sincronizamos pela proporção rolada para o outro lado acompanhar junto.
 // Em telas largas as colunas não têm scroll próprio (a página toda rola),
 // então esses eventos simplesmente não disparam ali.
-let isSyncingScroll = false;
-
+//
+// Em vez de uma flag por tempo (que pode falhar com muitos eventos de
+// scroll em sequência durante um gesto de toque), comparamos a proporção
+// atual dos dois lados: só corrigimos quando elas realmente divergem, o
+// que também impede o loop de retroalimentação entre os dois listeners.
 function syncScroll(source, target) {
-  if (isSyncingScroll) return;
   const sourceRange = source.scrollHeight - source.clientHeight;
-  if (sourceRange <= 0) return;
-
-  isSyncingScroll = true;
-  const ratio = source.scrollTop / sourceRange;
   const targetRange = target.scrollHeight - target.clientHeight;
-  target.scrollTop = ratio * targetRange;
-  requestAnimationFrame(() => {
-    isSyncingScroll = false;
-  });
+  if (sourceRange <= 0 || targetRange <= 0) return;
+
+  const sourceRatio = source.scrollTop / sourceRange;
+  const targetRatio = target.scrollTop / targetRange;
+  if (Math.abs(sourceRatio - targetRatio) < 0.001) return;
+
+  target.scrollTop = sourceRatio * targetRange;
 }
 
 columnEnEl.addEventListener("scroll", () => syncScroll(columnEnEl, columnPtEl), { passive: true });
