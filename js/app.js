@@ -79,6 +79,8 @@ const titleEnEl = document.getElementById("title-en");
 const titlePtEl = document.getElementById("title-pt");
 const versesEnEl = document.getElementById("verses-en");
 const versesPtEl = document.getElementById("verses-pt");
+const columnEnEl = document.querySelector(".column-en");
+const columnPtEl = document.querySelector(".column-pt");
 const readingView = document.querySelector(".reading-view");
 const emptyStateEl = document.getElementById("empty-state");
 const goToSampleBtn = document.getElementById("go-to-sample");
@@ -277,6 +279,29 @@ document.addEventListener("keydown", (event) => {
 for (const column of document.querySelectorAll(".column")) {
   column.addEventListener("scroll", hideWordPopup, { passive: true });
 }
+
+// No layout empilhado (retrato), cada coluna rola de forma independente;
+// sincronizamos pela proporção rolada para o outro lado acompanhar junto.
+// Em telas largas as colunas não têm scroll próprio (a página toda rola),
+// então esses eventos simplesmente não disparam ali.
+let isSyncingScroll = false;
+
+function syncScroll(source, target) {
+  if (isSyncingScroll) return;
+  const sourceRange = source.scrollHeight - source.clientHeight;
+  if (sourceRange <= 0) return;
+
+  isSyncingScroll = true;
+  const ratio = source.scrollTop / sourceRange;
+  const targetRange = target.scrollHeight - target.clientHeight;
+  target.scrollTop = ratio * targetRange;
+  requestAnimationFrame(() => {
+    isSyncingScroll = false;
+  });
+}
+
+columnEnEl.addEventListener("scroll", () => syncScroll(columnEnEl, columnPtEl), { passive: true });
+columnPtEl.addEventListener("scroll", () => syncScroll(columnPtEl, columnEnEl), { passive: true });
 
 // Em telas pequenas as colunas empilham e é a página inteira que rola,
 // não os elementos .column individualmente.
