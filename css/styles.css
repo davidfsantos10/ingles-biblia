@@ -358,15 +358,16 @@ main {
   cursor: pointer;
 }
 
-/* Responsive: stack columns on small screens */
+/* Responsive: columns stay side by side, text shrinks to fit narrow screens */
+
+.verses,
+.column-header h2 {
+  overflow-wrap: break-word;
+}
 
 @media (max-width: 720px) {
-  .reading-view {
-    grid-template-columns: 1fr;
-  }
-
   .column {
-    padding: 1.25rem 1.1rem 2rem;
+    padding: 1.25rem 1rem 2rem;
   }
 
   .verses {
@@ -395,5 +396,46 @@ main {
 
   #book-select {
     text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 520px) {
+  .reading-view {
+    gap: 1px;
+  }
+
+  .column {
+    padding: 0.9rem 0.6rem 1.5rem;
+  }
+
+  .column-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    margin-bottom: 0.9rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .column-header h2 {
+    font-size: 1rem;
+  }
+
+  .version-badge {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.4rem;
+  }
+
+  .verses {
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+
+  .verse {
+    margin: 0 0 0.65rem;
+  }
+
+  .verse-number {
+    font-size: 0.6rem;
+    margin-right: 0.2rem;
   }
 }
