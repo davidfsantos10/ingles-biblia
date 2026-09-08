@@ -229,14 +229,22 @@ function hideWordPopup() {
   document.querySelectorAll(".word--active").forEach((el) => el.classList.remove("word--active"));
 }
 
-// --- Tradução de palavras sob demanda (API pública gratuita) ---
+// --- Tradução de palavras sob demanda (APIs públicas gratuitas) ---
 //
 // Com a Bíblia inteira carregada, não é viável manter um dicionário
 // palavra-a-palavra pronto para todos os 66 livros. Em vez disso, a
-// tradução de cada palavra é buscada na hora em uma API de tradução
-// gratuita e guardada em cache local para não repetir a consulta.
+// tradução de cada palavra é buscada na hora e guardada em cache local
+// para não repetir a consulta.
+//
+// Fonte principal: o endpoint público do Google Translate (o mesmo
+// truque "client=gtx" usado por várias extensões/ferramentas gratuitas
+// de tradução), que traduz pelo sentido da palavra. O MyMemory (memória
+// de tradução por correspondência difusa) é só uma reserva: sozinho ele
+// costuma ecoar a palavra em inglês sem traduzir ou "alucinar" um trecho
+// de outra frase parecida do banco dele, principalmente com uma palavra
+// solta e sem contexto.
 
-const TRANSLATION_CACHE_KEY = "ingles-biblia.translations";
+const TRANSLATION_CACHE_KEY = "ingles-biblia.translations.v2";
 
 function loadTranslationCache() {
   try {
@@ -257,17 +265,38 @@ function saveTranslationCache(cache) {
 
 const translationCache = loadTranslationCache();
 
-async function translateWord(word, from, to) {
-  const cacheKey = `${from}|${to}:${word}`;
-  if (translationCache[cacheKey]) return translationCache[cacheKey];
+async function translateWithGoogle(word, from, to) {
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(word)}`;
+  const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
+  if (!response.ok) throw new Error("Falha na consulta ao Google Translate");
 
+  const data = await response.json();
+  const translated = data && data[0] && data[0].map((segment) => segment[0]).join("");
+  if (!translated) throw new Error("Resposta vazia do Google Translate");
+  return translated;
+}
+
+async function translateWithMyMemory(word, from, to) {
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=${from}|${to}`;
   const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
-  if (!response.ok) throw new Error("Falha na consulta de tradução");
+  if (!response.ok) throw new Error("Falha na consulta ao MyMemory");
 
   const data = await response.json();
   const translated = data && data.responseData && data.responseData.translatedText;
   if (!translated) throw new Error("Resposta sem tradução");
+  return translated;
+}
+
+async function translateWord(word, from, to) {
+  const cacheKey = `${from}|${to}:${word}`;
+  if (translationCache[cacheKey]) return translationCache[cacheKey];
+
+  let translated;
+  try {
+    translated = await translateWithGoogle(word, from, to);
+  } catch (err) {
+    translated = await translateWithMyMemory(word, from, to);
+  }
 
   const result = translated.toLowerCase();
   translationCache[cacheKey] = result;
