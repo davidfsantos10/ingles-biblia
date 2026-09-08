@@ -6,6 +6,8 @@
   --color-text-muted: #6b675e;
   --color-accent: #7a5c3e;
   --color-accent-soft: #efe6d8;
+  --color-history-new: #2f7a4f;
+  --color-history-repeated: #b3261e;
   --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-reading: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
 }
@@ -209,6 +211,17 @@ main {
 .word--active {
   background: var(--color-accent-soft);
   border-bottom-color: var(--color-accent);
+}
+
+/* Histórico visual: verde no primeiro clique, vermelho a partir do segundo. */
+
+.word--history-new {
+  color: var(--color-history-new);
+}
+
+.word--history-repeated {
+  color: var(--color-history-repeated);
+  font-weight: 700;
 }
 
 .word-popup {

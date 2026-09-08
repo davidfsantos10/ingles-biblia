@@ -138,6 +138,8 @@ function renderChapter(book, chapter, data) {
     versesEnEl.appendChild(buildVerseEl(verse.number, verse.en, "en"));
     versesPtEl.appendChild(buildVerseEl(verse.number, verse.pt, "pt"));
   }
+
+  applyWordHistoryStyles();
 }
 
 function buildVerseEl(number, text, lang) {
@@ -318,6 +320,9 @@ async function handleWordActivate(span) {
 
   if (lang === "en") {
     speakWord(word);
+    // Registra o clique no histórico na hora (não espera a tradução),
+    // para a cor da palavra aparecer imediatamente no texto.
+    recordWordClick(word);
   }
 
   showWordPopup(span, word, null, true);
@@ -325,13 +330,11 @@ async function handleWordActivate(span) {
   try {
     const translation =
       lang === "en" ? await translateWord(word, "en", "pt") : await translateWord(word, "pt", "en");
+    if (lang === "en") updateVocabularyTranslation(word, translation);
     if (requestId !== activeWordRequestId) return;
-
-    if (lang === "en") addToVocabulary(word, translation);
     if (!wordPopupEl.hidden) showWordPopup(span, word, translation, false);
   } catch (err) {
     if (requestId !== activeWordRequestId) return;
-    if (lang === "en") addToVocabulary(word, null);
     if (!wordPopupEl.hidden) showWordPopup(span, word, null, false);
   }
 }
@@ -415,19 +418,41 @@ function saveVocabulary(list) {
   localStorage.setItem(VOCABULARY_STORAGE_KEY, JSON.stringify(list));
 }
 
-function addToVocabulary(word, translation) {
+// Registra um clique no histórico: cria a entrada na primeira vez (1 clique)
+// ou soma mais um clique se a palavra já estava salva. Chamado na hora do
+// clique, sem esperar a tradução, para a cor no texto reagir na hora.
+function recordWordClick(word) {
   const list = loadVocabulary();
-  if (list.some((entry) => entry.word === word)) return;
+  const existing = list.find((entry) => entry.word === word);
 
-  list.unshift({
-    word,
-    translation: translation || null,
-    book: currentSource.book,
-    chapter: currentSource.chapter,
-    savedAt: Date.now(),
-  });
+  if (existing) {
+    existing.timesClicked = (existing.timesClicked || 1) + 1;
+  } else {
+    list.unshift({
+      word,
+      translation: null,
+      book: currentSource.book,
+      chapter: currentSource.chapter,
+      savedAt: Date.now(),
+      timesClicked: 1,
+    });
+  }
+
   saveVocabulary(list);
   renderVocabularyBadge();
+  if (!vocabularyViewEl.hidden) renderVocabularyList();
+  applyWordHistoryStyles();
+}
+
+// Preenche a tradução assim que ela chega, sem mexer na contagem de cliques.
+function updateVocabularyTranslation(word, translation) {
+  if (!translation) return;
+  const list = loadVocabulary();
+  const entry = list.find((e) => e.word === word);
+  if (!entry || entry.translation === translation) return;
+
+  entry.translation = translation;
+  saveVocabulary(list);
   if (!vocabularyViewEl.hidden) renderVocabularyList();
 }
 
@@ -436,6 +461,23 @@ function removeFromVocabulary(word) {
   saveVocabulary(list);
   renderVocabularyBadge();
   renderVocabularyList();
+  applyWordHistoryStyles();
+}
+
+// Pinta no texto as palavras em inglês já clicadas: verde na primeira vez,
+// vermelho a partir da segunda (e some quando a palavra é apagada do
+// vocabulário). Roda em toda palavra em inglês visível no capítulo atual.
+function applyWordHistoryStyles() {
+  const clickCounts = {};
+  for (const entry of loadVocabulary()) {
+    clickCounts[entry.word] = entry.timesClicked || 1;
+  }
+
+  for (const span of document.querySelectorAll('.word[data-lang="en"]')) {
+    const count = clickCounts[span.dataset.word] || 0;
+    span.classList.toggle("word--history-new", count === 1);
+    span.classList.toggle("word--history-repeated", count >= 2);
+  }
 }
 
 function renderVocabularyBadge() {
