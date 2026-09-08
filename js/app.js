@@ -262,7 +262,7 @@ async function translateWord(word, from, to) {
   if (translationCache[cacheKey]) return translationCache[cacheKey];
 
   const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=${from}|${to}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(6000) });
   if (!response.ok) throw new Error("Falha na consulta de tradução");
 
   const data = await response.json();
