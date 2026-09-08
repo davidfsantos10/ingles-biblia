@@ -84,9 +84,12 @@ const columnPtEl = document.querySelector(".column-pt");
 const readingView = document.querySelector(".reading-view");
 const emptyStateEl = document.getElementById("empty-state");
 const goToSampleBtn = document.getElementById("go-to-sample");
+const wordPopupBackdropEl = document.getElementById("word-popup-backdrop");
 const wordPopupEl = document.getElementById("word-popup");
+const wordPopupCloseEl = document.getElementById("word-popup-close");
 const wordPopupOriginalEl = document.getElementById("word-popup-original");
 const wordPopupTranslationEl = document.getElementById("word-popup-translation");
+const wordPopupSaveEl = document.getElementById("word-popup-save");
 const viewTabButtons = document.querySelectorAll(".view-tab");
 const readingContainerEl = document.getElementById("reading-container");
 const vocabularyViewEl = document.getElementById("vocabulary-view");
@@ -200,35 +203,36 @@ function speakWord(word) {
   window.speechSynthesis.speak(utterance);
 }
 
-function showWordPopup(anchorEl, word, translation, isLoading) {
+// Palavra atualmente mostrada no popup, usada pelo botão "Salvar".
+let currentPopupWord = null;
+let currentPopupLang = null;
+
+function showWordPopup(word, lang, translation, isLoading) {
+  currentPopupWord = word;
+  currentPopupLang = lang;
+
   wordPopupOriginalEl.textContent = word;
   wordPopupTranslationEl.textContent = isLoading
     ? "traduzindo…"
     : translation || "tradução não encontrada";
   wordPopupEl.classList.toggle("word-popup--missing", !isLoading && !translation);
+  wordPopupSaveEl.hidden = lang !== "en";
+  wordPopupBackdropEl.hidden = false;
   wordPopupEl.hidden = false;
-  positionWordPopup(anchorEl.getBoundingClientRect());
-}
-
-function positionWordPopup(anchorRect) {
-  const margin = 8;
-  const popupRect = wordPopupEl.getBoundingClientRect();
-
-  let top = anchorRect.top - popupRect.height - margin;
-  if (top < margin) {
-    top = anchorRect.bottom + margin;
-  }
-
-  let left = anchorRect.left + anchorRect.width / 2 - popupRect.width / 2;
-  left = Math.max(margin, Math.min(left, window.innerWidth - popupRect.width - margin));
-
-  wordPopupEl.style.top = `${top}px`;
-  wordPopupEl.style.left = `${left}px`;
 }
 
 function hideWordPopup() {
   wordPopupEl.hidden = true;
+  wordPopupBackdropEl.hidden = true;
   document.querySelectorAll(".word--active").forEach((el) => el.classList.remove("word--active"));
+  currentPopupWord = null;
+  currentPopupLang = null;
+}
+
+function handleSaveWordClick() {
+  if (!currentPopupWord || currentPopupLang !== "en") return;
+  recordWordClick(currentPopupWord);
+  hideWordPopup();
 }
 
 // --- Tradução de palavras sob demanda (APIs públicas gratuitas) ---
@@ -320,22 +324,19 @@ async function handleWordActivate(span) {
 
   if (lang === "en") {
     speakWord(word);
-    // Registra o clique no histórico na hora (não espera a tradução),
-    // para a cor da palavra aparecer imediatamente no texto.
-    recordWordClick(word);
   }
 
-  showWordPopup(span, word, null, true);
+  showWordPopup(word, lang, null, true);
 
   try {
     const translation =
       lang === "en" ? await translateWord(word, "en", "pt") : await translateWord(word, "pt", "en");
     if (lang === "en") updateVocabularyTranslation(word, translation);
     if (requestId !== activeWordRequestId) return;
-    if (!wordPopupEl.hidden) showWordPopup(span, word, translation, false);
+    if (!wordPopupEl.hidden) showWordPopup(word, lang, translation, false);
   } catch (err) {
     if (requestId !== activeWordRequestId) return;
-    if (!wordPopupEl.hidden) showWordPopup(span, word, null, false);
+    if (!wordPopupEl.hidden) showWordPopup(word, lang, null, false);
   }
 }
 
@@ -358,11 +359,9 @@ for (const versesEl of [versesEnEl, versesPtEl]) {
   versesEl.addEventListener("keydown", handleVersesKeydown);
 }
 
-document.addEventListener("click", (event) => {
-  if (!wordPopupEl.hidden && !event.target.closest(".word")) {
-    hideWordPopup();
-  }
-});
+wordPopupBackdropEl.addEventListener("click", hideWordPopup);
+wordPopupCloseEl.addEventListener("click", hideWordPopup);
+wordPopupSaveEl.addEventListener("click", handleSaveWordClick);
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") hideWordPopup();

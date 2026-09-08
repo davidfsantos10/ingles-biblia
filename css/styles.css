@@ -224,43 +224,110 @@ main {
   font-weight: 700;
 }
 
+.word-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(20, 16, 10, 0.45);
+}
+
+.word-popup-backdrop[hidden] {
+  display: none;
+}
+
 .word-popup {
   position: fixed;
-  z-index: 100;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 151;
   display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  max-width: min(90vw, 22rem);
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  background: var(--color-text);
-  color: var(--color-surface);
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: min(90vw, 22rem);
+  padding: 1.75rem 1.5rem 1.5rem;
+  border-radius: 0.75rem;
+  background: var(--color-surface);
+  color: var(--color-text);
   font-family: var(--font-ui);
-  font-size: 0.95rem;
-  line-height: 1.4;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  pointer-events: none;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
 .word-popup[hidden] {
   display: none;
 }
 
+.word-popup-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.65rem;
+  font-family: var(--font-ui);
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.word-popup-close:hover {
+  color: var(--color-text);
+}
+
+.word-popup-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
 .word-popup-original {
+  font-family: var(--font-reading);
   font-weight: 700;
 }
 
 .word-popup-arrow {
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .word-popup-translation {
   overflow-wrap: anywhere;
+  color: var(--color-accent);
+  font-weight: 600;
 }
 
 .word-popup--missing .word-popup-translation {
   font-style: italic;
+  font-weight: 400;
   opacity: 0.75;
+  color: var(--color-text-muted);
+}
+
+.word-popup-save {
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-surface);
+  background: var(--color-accent);
+  border: none;
+  border-radius: 0.4rem;
+  padding: 0.6rem 1.25rem;
+  cursor: pointer;
+  width: 100%;
+}
+
+.word-popup-save:hover {
+  filter: brightness(1.08);
+}
+
+.word-popup-save[hidden] {
+  display: none;
 }
 
 /* Vocabulary */
