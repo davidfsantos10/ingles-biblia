@@ -99,6 +99,13 @@ const vocabularyNoMatchEl = document.getElementById("vocabulary-no-match");
 const vocabularySearchEl = document.querySelector(".vocabulary-search");
 const vocabularyFilterEl = document.getElementById("vocabulary-filter");
 const vocabCountEl = document.getElementById("vocab-count");
+const notePopupEl = document.getElementById("note-popup");
+const notePopupCloseEl = document.getElementById("note-popup-close");
+const notePopupReferenceEl = document.getElementById("note-popup-reference");
+const notePopupTextareaEl = document.getElementById("note-popup-textarea");
+const notePopupDeleteEl = document.getElementById("note-popup-delete");
+const notePopupSaveEl = document.getElementById("note-popup-save");
+const toastEl = document.getElementById("toast");
 
 let currentSource = { book: "", chapter: 0 };
 
@@ -138,20 +145,28 @@ function renderChapter(book, chapter, data) {
   versesPtEl.innerHTML = "";
 
   for (const verse of data.verses) {
-    versesEnEl.appendChild(buildVerseEl(verse.number, verse.en, "en"));
-    versesPtEl.appendChild(buildVerseEl(verse.number, verse.pt, "pt"));
+    versesEnEl.appendChild(buildVerseEl(verse, "en", book, chapter));
+    versesPtEl.appendChild(buildVerseEl(verse, "pt", book, chapter));
   }
 
   applyWordHistoryStyles();
 }
 
-function buildVerseEl(number, text, lang) {
+function buildVerseEl(verse, lang, book, chapter) {
+  const container = document.createElement("div");
+  container.className = "verse";
+
+  const verseKey = `${book.slug}-${chapter}-${verse.number}`;
+  container.appendChild(buildVerseToolbar(verse, book, chapter, verseKey));
+  container.appendChild(buildVerseText(verse, lang));
+
+  return container;
+}
+
+function buildVerseText(verse, lang) {
+  const text = lang === "en" ? verse.en : verse.pt;
   const p = document.createElement("p");
-  p.className = "verse";
-  const sup = document.createElement("span");
-  sup.className = "verse-number";
-  sup.textContent = number;
-  p.appendChild(sup);
+  p.className = "verse-text";
 
   let lastIndex = 0;
   WORD_PATTERN.lastIndex = 0;
@@ -176,6 +191,223 @@ function buildVerseEl(number, text, lang) {
   return p;
 }
 
+// --- Painel de ações do versículo: compartilhar, ouvir, anotar, favoritar ---
+
+const ICON_SHARE =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><line x1="8.3" y1="10.6" x2="15.7" y2="6.4"/><line x1="8.3" y1="13.4" x2="15.7" y2="17.6"/></svg>';
+
+const ICON_LISTEN =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.2 8.8a5 5 0 0 1 0 6.4"/><path d="M18.8 6.2a8.5 8.5 0 0 1 0 11.6"/></svg>';
+
+const ICON_NOTE =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3.2V8a1 1 0 0 0 1 1h4.8"/><path d="M6.5 3h7.4L19 8.1V20a1 1 0 0 1-1 1H6.5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><line x1="8.2" y1="13" x2="15.8" y2="13"/><line x1="8.2" y1="16.4" x2="13.2" y2="16.4"/></svg>';
+
+const ICON_HEART =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S3.8 15 3.8 9.4C3.8 6.4 6.1 4 9 4c1.6 0 2.8 0.8 3 1c0.2-0.2 1.4-1 3-1c2.9 0 5.2 2.4 5.2 5.4C20.2 15 12 20.5 12 20.5z"/></svg>';
+
+function buildVerseToolbar(verse, book, chapter, verseKey) {
+  const toolbar = document.createElement("div");
+  toolbar.className = "verse-toolbar";
+
+  const badge = document.createElement("span");
+  badge.className = "verse-number-badge";
+  badge.textContent = verse.number;
+  toolbar.appendChild(badge);
+
+  const actions = document.createElement("div");
+  actions.className = "verse-actions";
+
+  const shareBtn = document.createElement("button");
+  shareBtn.type = "button";
+  shareBtn.className = "verse-action";
+  shareBtn.setAttribute("aria-label", "Compartilhar versículo");
+  shareBtn.title = "Compartilhar";
+  shareBtn.innerHTML = ICON_SHARE;
+  shareBtn.addEventListener("click", () => shareVerse(verse, book, chapter));
+  actions.appendChild(shareBtn);
+
+  const listenBtn = document.createElement("button");
+  listenBtn.type = "button";
+  listenBtn.className = "verse-action";
+  listenBtn.setAttribute("aria-label", "Ouvir versículo em inglês");
+  listenBtn.title = "Ouvir em inglês";
+  listenBtn.innerHTML = ICON_LISTEN;
+  listenBtn.addEventListener("click", () => speakText(verse.en));
+  actions.appendChild(listenBtn);
+
+  const noteBtn = document.createElement("button");
+  noteBtn.type = "button";
+  noteBtn.className = "verse-action verse-action--note";
+  noteBtn.setAttribute("aria-label", "Anotação do versículo");
+  noteBtn.title = "Anotação";
+  noteBtn.innerHTML = ICON_NOTE;
+  if (getNote(verseKey)) noteBtn.classList.add("has-note");
+  noteBtn.addEventListener("click", () => openNotePopup(verseKey, verse, book, chapter, noteBtn));
+  actions.appendChild(noteBtn);
+
+  const favoriteBtn = document.createElement("button");
+  favoriteBtn.type = "button";
+  favoriteBtn.className = "verse-action verse-action--favorite";
+  favoriteBtn.setAttribute("aria-label", "Favoritar versículo");
+  favoriteBtn.title = "Favoritar";
+  favoriteBtn.innerHTML = ICON_HEART;
+  if (isFavorite(verseKey)) favoriteBtn.classList.add("is-active");
+  favoriteBtn.addEventListener("click", () => toggleFavorite(verseKey, favoriteBtn));
+  actions.appendChild(favoriteBtn);
+
+  toolbar.appendChild(actions);
+  return toolbar;
+}
+
+// --- Favoritos (localStorage) ---
+
+const FAVORITES_STORAGE_KEY = "ingles-biblia.favorites";
+
+function loadFavorites() {
+  try {
+    const raw = localStorage.getItem(FAVORITES_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function saveFavorites(favorites) {
+  try {
+    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+  } catch (err) {
+    // Armazenamento indisponível: segue sem persistir.
+  }
+}
+
+function isFavorite(verseKey) {
+  return Boolean(loadFavorites()[verseKey]);
+}
+
+function toggleFavorite(verseKey, button) {
+  const favorites = loadFavorites();
+  if (favorites[verseKey]) {
+    delete favorites[verseKey];
+    button.classList.remove("is-active");
+  } else {
+    favorites[verseKey] = true;
+    button.classList.add("is-active");
+  }
+  saveFavorites(favorites);
+}
+
+// --- Anotações por versículo (localStorage) ---
+
+const NOTES_STORAGE_KEY = "ingles-biblia.notes";
+
+function loadNotes() {
+  try {
+    const raw = localStorage.getItem(NOTES_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function saveNotes(notes) {
+  try {
+    localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
+  } catch (err) {
+    // Armazenamento indisponível: segue sem persistir.
+  }
+}
+
+function getNote(verseKey) {
+  return loadNotes()[verseKey] || "";
+}
+
+function setNote(verseKey, text) {
+  const notes = loadNotes();
+  if (text) {
+    notes[verseKey] = text;
+  } else {
+    delete notes[verseKey];
+  }
+  saveNotes(notes);
+}
+
+let currentNoteVerseKey = null;
+let currentNoteButton = null;
+
+function openNotePopup(verseKey, verse, book, chapter, button) {
+  closeActivePopup();
+  currentNoteVerseKey = verseKey;
+  currentNoteButton = button;
+
+  notePopupReferenceEl.textContent = `${book.pt} ${chapter}:${verse.number}`;
+  notePopupTextareaEl.value = getNote(verseKey);
+  notePopupDeleteEl.hidden = !getNote(verseKey);
+
+  wordPopupBackdropEl.hidden = false;
+  notePopupEl.hidden = false;
+  notePopupTextareaEl.focus();
+}
+
+function closeNotePopup() {
+  notePopupEl.hidden = true;
+  if (wordPopupEl.hidden) wordPopupBackdropEl.hidden = true;
+  currentNoteVerseKey = null;
+  currentNoteButton = null;
+}
+
+function handleNoteSave() {
+  if (!currentNoteVerseKey) return;
+  const text = notePopupTextareaEl.value.trim();
+  setNote(currentNoteVerseKey, text);
+  if (currentNoteButton) currentNoteButton.classList.toggle("has-note", Boolean(text));
+  closeNotePopup();
+  showToast(text ? "Anotação salva." : "Anotação removida.");
+}
+
+function handleNoteDelete() {
+  if (!currentNoteVerseKey) return;
+  setNote(currentNoteVerseKey, "");
+  if (currentNoteButton) currentNoteButton.classList.remove("has-note");
+  closeNotePopup();
+  showToast("Anotação removida.");
+}
+
+// --- Aviso rápido (toast) ---
+
+let toastTimeoutId = null;
+
+function showToast(message) {
+  toastEl.textContent = message;
+  toastEl.hidden = false;
+  clearTimeout(toastTimeoutId);
+  toastTimeoutId = setTimeout(() => {
+    toastEl.hidden = true;
+  }, 2400);
+}
+
+// --- Compartilhar versículo ---
+
+async function shareVerse(verse, book, chapter) {
+  const reference = `${book.pt} ${chapter}:${verse.number}`;
+  const text = `${reference}\n${verse.en}\n${verse.pt}`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: reference, text });
+    } catch (err) {
+      // Usuário cancelou o compartilhamento: nenhuma ação necessária.
+    }
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast("Versículo copiado para a área de transferência.");
+  } catch (err) {
+    showToast("Não foi possível compartilhar este versículo.");
+  }
+}
+
 async function loadChapter(book, chapter) {
   try {
     const response = await fetch(`data/${book.slug}-${chapter}.json`);
@@ -183,24 +415,34 @@ async function loadChapter(book, chapter) {
     const data = await response.json();
     readingView.hidden = false;
     emptyStateEl.hidden = true;
-    hideWordPopup();
+    closeActivePopup();
     renderChapter(book, chapter, data);
   } catch (err) {
     readingView.hidden = true;
     emptyStateEl.hidden = false;
-    hideWordPopup();
+    closeActivePopup();
   }
 }
 
 // --- Pronúncia e tradução ao clicar em uma palavra ---
 
-function speakWord(word) {
+function speakText(text, rate) {
   if (!("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(word);
+  const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "en-US";
-  utterance.rate = 0.85;
+  utterance.rate = rate || 0.9;
   window.speechSynthesis.speak(utterance);
+}
+
+function speakWord(word) {
+  speakText(word, 0.85);
+}
+
+// Fecha qualquer popup/modal aberto no momento (palavra ou anotação).
+function closeActivePopup() {
+  if (!wordPopupEl.hidden) hideWordPopup();
+  if (!notePopupEl.hidden) closeNotePopup();
 }
 
 // Palavra atualmente mostrada no popup, usada pelo botão "Salvar".
@@ -208,6 +450,8 @@ let currentPopupWord = null;
 let currentPopupLang = null;
 
 function showWordPopup(word, lang, translation, isLoading) {
+  if (!notePopupEl.hidden) closeNotePopup();
+
   currentPopupWord = word;
   currentPopupLang = lang;
 
@@ -223,7 +467,7 @@ function showWordPopup(word, lang, translation, isLoading) {
 
 function hideWordPopup() {
   wordPopupEl.hidden = true;
-  wordPopupBackdropEl.hidden = true;
+  if (notePopupEl.hidden) wordPopupBackdropEl.hidden = true;
   document.querySelectorAll(".word--active").forEach((el) => el.classList.remove("word--active"));
   currentPopupWord = null;
   currentPopupLang = null;
@@ -359,12 +603,16 @@ for (const versesEl of [versesEnEl, versesPtEl]) {
   versesEl.addEventListener("keydown", handleVersesKeydown);
 }
 
-wordPopupBackdropEl.addEventListener("click", hideWordPopup);
+wordPopupBackdropEl.addEventListener("click", closeActivePopup);
 wordPopupCloseEl.addEventListener("click", hideWordPopup);
 wordPopupSaveEl.addEventListener("click", handleSaveWordClick);
 
+notePopupCloseEl.addEventListener("click", closeNotePopup);
+notePopupSaveEl.addEventListener("click", handleNoteSave);
+notePopupDeleteEl.addEventListener("click", handleNoteDelete);
+
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") hideWordPopup();
+  if (event.key === "Escape") closeActivePopup();
 });
 
 for (const column of document.querySelectorAll(".column")) {
@@ -537,7 +785,7 @@ function setActiveView(view) {
     btn.setAttribute("aria-pressed", String(btn.dataset.view === view));
   }
   if (!isReading) renderVocabularyList();
-  hideWordPopup();
+  closeActivePopup();
 }
 
 for (const btn of viewTabButtons) {

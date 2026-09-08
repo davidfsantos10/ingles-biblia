@@ -85,6 +85,25 @@
     <button type="button" id="word-popup-save" class="word-popup-save">Salvar no vocabulário</button>
   </div>
 
+  <div id="note-popup" class="word-popup note-popup" role="dialog" aria-modal="true" aria-label="Anotação do versículo" hidden>
+    <button type="button" id="note-popup-close" class="word-popup-close" aria-label="Fechar">×</button>
+
+    <p id="note-popup-reference" class="note-popup-reference"></p>
+    <textarea
+      id="note-popup-textarea"
+      class="note-popup-textarea"
+      rows="5"
+      placeholder="Escreva sua anotação sobre este versículo…"
+    ></textarea>
+
+    <div class="note-popup-actions">
+      <button type="button" id="note-popup-delete" class="note-popup-delete" hidden>Apagar</button>
+      <button type="button" id="note-popup-save" class="word-popup-save">Salvar anotação</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
   <script src="js/app.js"></script>
 </body>
 </html>
