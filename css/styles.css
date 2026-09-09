@@ -277,6 +277,7 @@ main {
 
 .word--history-new {
   color: var(--color-history-new);
+  font-weight: 700;
 }
 
 .word--history-repeated {
@@ -561,6 +562,84 @@ main {
   background: var(--color-accent-soft);
 }
 
+/* Favoritos */
+
+.favorites-list {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  max-width: 40rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.favorite-item {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 0.8rem 1rem;
+}
+
+.favorite-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+}
+
+.favorite-reference {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.favorite-reference:hover {
+  text-decoration: underline;
+}
+
+.favorite-remove {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0.3rem;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-history-repeated);
+  cursor: pointer;
+}
+
+.favorite-remove svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.favorite-remove:hover {
+  background: var(--color-accent-soft);
+}
+
+.favorite-text-en {
+  font-family: var(--font-reading);
+  margin: 0 0 0.3rem;
+}
+
+.favorite-text-pt {
+  font-family: var(--font-reading);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
 /* Empty state */
 
 .empty-state {
@@ -604,6 +683,16 @@ main {
 
   .app-header {
     padding: 0.75rem 0.9rem;
+  }
+
+  .view-tabs {
+    flex-wrap: wrap;
+    row-gap: 0.35rem;
+  }
+
+  .view-tab {
+    font-size: 0.82rem;
+    padding: 0.35rem 0.6rem;
   }
 
   .chapter-selector {

@@ -16,6 +16,14 @@
         Vocabulário
         <span id="vocab-count" class="vocab-count" hidden>0</span>
       </button>
+      <button type="button" class="view-tab" data-view="favorites" aria-pressed="false">
+        Favoritos
+        <span id="favorites-count" class="vocab-count" hidden>0</span>
+      </button>
+      <button type="button" class="view-tab" data-view="notes" aria-pressed="false">
+        Anotações
+        <span id="notes-count" class="vocab-count" hidden>0</span>
+      </button>
     </nav>
 
     <div class="chapter-selector">
@@ -68,6 +76,22 @@
         Nenhuma palavra encontrada para essa busca.
       </p>
       <ul id="vocabulary-list" class="vocabulary-list"></ul>
+    </section>
+
+    <section id="favorites-view" class="vocabulary-view" hidden aria-label="Versículos favoritos">
+      <p id="favorites-empty" class="empty-state" hidden>
+        Nenhum versículo favoritado ainda. Toque no coração de um versículo durante a leitura
+        para adicioná-lo aqui.
+      </p>
+      <ul id="favorites-list" class="favorites-list"></ul>
+    </section>
+
+    <section id="notes-view" class="vocabulary-view" hidden aria-label="Anotações">
+      <p id="notes-empty" class="empty-state" hidden>
+        Nenhuma anotação ainda. Toque no ícone de nota em um versículo durante a leitura para
+        escrever uma.
+      </p>
+      <ul id="notes-list" class="favorites-list"></ul>
     </section>
   </main>
 

@@ -99,6 +99,14 @@ const vocabularyNoMatchEl = document.getElementById("vocabulary-no-match");
 const vocabularySearchEl = document.querySelector(".vocabulary-search");
 const vocabularyFilterEl = document.getElementById("vocabulary-filter");
 const vocabCountEl = document.getElementById("vocab-count");
+const favoritesViewEl = document.getElementById("favorites-view");
+const favoritesListEl = document.getElementById("favorites-list");
+const favoritesEmptyEl = document.getElementById("favorites-empty");
+const favoritesCountEl = document.getElementById("favorites-count");
+const notesViewEl = document.getElementById("notes-view");
+const notesListEl = document.getElementById("notes-list");
+const notesEmptyEl = document.getElementById("notes-empty");
+const notesCountEl = document.getElementById("notes-count");
 const notePopupEl = document.getElementById("note-popup");
 const notePopupCloseEl = document.getElementById("note-popup-close");
 const notePopupReferenceEl = document.getElementById("note-popup-reference");
@@ -157,6 +165,7 @@ function buildVerseEl(verse, lang, book, chapter) {
   container.className = "verse";
 
   const verseKey = `${book.slug}-${chapter}-${verse.number}`;
+  container.dataset.verseKey = verseKey;
   container.appendChild(buildVerseToolbar(verse, book, chapter, verseKey));
   container.appendChild(buildVerseText(verse, lang));
 
@@ -252,11 +261,27 @@ function buildVerseToolbar(verse, book, chapter, verseKey) {
   favoriteBtn.title = "Favoritar";
   favoriteBtn.innerHTML = ICON_HEART;
   if (isFavorite(verseKey)) favoriteBtn.classList.add("is-active");
-  favoriteBtn.addEventListener("click", () => toggleFavorite(verseKey, favoriteBtn));
+  favoriteBtn.addEventListener("click", () => toggleFavorite(verseKey, verse, book, chapter, favoriteBtn));
   actions.appendChild(favoriteBtn);
 
   toolbar.appendChild(actions);
   return toolbar;
+}
+
+// --- Navegar até um versículo salvo (a partir de Favoritos/Anotações) ---
+
+async function goToVerse(bookSlug, chapter, verseKey) {
+  const book = BOOKS.find((b) => b.slug === bookSlug);
+  if (!book) return;
+
+  setActiveView("reading");
+  bookSelect.value = bookSlug;
+  populateChapterSelect(book);
+  chapterSelect.value = String(chapter);
+  await loadChapter(book, chapter);
+
+  const verseEl = versesEnEl.querySelector(`[data-verse-key="${verseKey}"]`);
+  if (verseEl) verseEl.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 // --- Favoritos (localStorage) ---
@@ -284,16 +309,89 @@ function isFavorite(verseKey) {
   return Boolean(loadFavorites()[verseKey]);
 }
 
-function toggleFavorite(verseKey, button) {
+function toggleFavorite(verseKey, verse, book, chapter, button) {
   const favorites = loadFavorites();
   if (favorites[verseKey]) {
     delete favorites[verseKey];
     button.classList.remove("is-active");
   } else {
-    favorites[verseKey] = true;
+    favorites[verseKey] = {
+      book: book.pt,
+      bookSlug: book.slug,
+      chapter,
+      number: verse.number,
+      en: verse.en,
+      pt: verse.pt,
+      savedAt: Date.now(),
+    };
     button.classList.add("is-active");
   }
   saveFavorites(favorites);
+  renderFavoritesBadge();
+  if (!favoritesViewEl.hidden) renderFavoritesList();
+}
+
+function removeFavorite(verseKey) {
+  const favorites = loadFavorites();
+  delete favorites[verseKey];
+  saveFavorites(favorites);
+  renderFavoritesBadge();
+  renderFavoritesList();
+
+  const button = document.querySelector(`.verse[data-verse-key="${verseKey}"] .verse-action--favorite`);
+  if (button) button.classList.remove("is-active");
+}
+
+function renderFavoritesBadge() {
+  const count = Object.keys(loadFavorites()).length;
+  favoritesCountEl.textContent = String(count);
+  favoritesCountEl.hidden = count === 0;
+}
+
+function renderFavoritesList() {
+  const favorites = loadFavorites();
+  const entries = Object.entries(favorites).sort((a, b) => b[1].savedAt - a[1].savedAt);
+
+  favoritesListEl.innerHTML = "";
+  favoritesEmptyEl.hidden = entries.length > 0;
+
+  for (const [verseKey, entry] of entries) {
+    const li = document.createElement("li");
+    li.className = "favorite-item";
+
+    const header = document.createElement("div");
+    header.className = "favorite-header";
+
+    const referenceBtn = document.createElement("button");
+    referenceBtn.type = "button";
+    referenceBtn.className = "favorite-reference";
+    referenceBtn.textContent = `${entry.book} ${entry.chapter}:${entry.number}`;
+    referenceBtn.addEventListener("click", () => goToVerse(entry.bookSlug, entry.chapter, verseKey));
+    header.appendChild(referenceBtn);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "favorite-remove";
+    removeBtn.setAttribute("aria-label", "Remover dos favoritos");
+    removeBtn.title = "Remover dos favoritos";
+    removeBtn.innerHTML = ICON_HEART;
+    removeBtn.addEventListener("click", () => removeFavorite(verseKey));
+    header.appendChild(removeBtn);
+
+    li.appendChild(header);
+
+    const enText = document.createElement("p");
+    enText.className = "favorite-text-en";
+    enText.textContent = entry.en;
+    li.appendChild(enText);
+
+    const ptText = document.createElement("p");
+    ptText.className = "favorite-text-pt";
+    ptText.textContent = entry.pt;
+    li.appendChild(ptText);
+
+    favoritesListEl.appendChild(li);
+  }
 }
 
 // --- Anotações por versículo (localStorage) ---
@@ -318,25 +416,106 @@ function saveNotes(notes) {
 }
 
 function getNote(verseKey) {
-  return loadNotes()[verseKey] || "";
+  const entry = loadNotes()[verseKey];
+  return entry ? entry.text : "";
 }
 
-function setNote(verseKey, text) {
+function setNote(verseKey, text, verse, book, chapter) {
   const notes = loadNotes();
   if (text) {
-    notes[verseKey] = text;
+    notes[verseKey] = {
+      book: book.pt,
+      bookSlug: book.slug,
+      chapter,
+      number: verse.number,
+      en: verse.en,
+      pt: verse.pt,
+      text,
+      savedAt: Date.now(),
+    };
   } else {
     delete notes[verseKey];
   }
   saveNotes(notes);
+  renderNotesBadge();
+  if (!notesViewEl.hidden) renderNotesList();
+}
+
+function removeNote(verseKey) {
+  const notes = loadNotes();
+  delete notes[verseKey];
+  saveNotes(notes);
+  renderNotesBadge();
+  renderNotesList();
+
+  const button = document.querySelector(`.verse[data-verse-key="${verseKey}"] .verse-action--note`);
+  if (button) button.classList.remove("has-note");
+}
+
+function renderNotesBadge() {
+  const count = Object.keys(loadNotes()).length;
+  notesCountEl.textContent = String(count);
+  notesCountEl.hidden = count === 0;
+}
+
+function renderNotesList() {
+  const notes = loadNotes();
+  const entries = Object.entries(notes).sort((a, b) => b[1].savedAt - a[1].savedAt);
+
+  notesListEl.innerHTML = "";
+  notesEmptyEl.hidden = entries.length > 0;
+
+  for (const [verseKey, entry] of entries) {
+    const li = document.createElement("li");
+    li.className = "favorite-item";
+
+    const header = document.createElement("div");
+    header.className = "favorite-header";
+
+    const referenceBtn = document.createElement("button");
+    referenceBtn.type = "button";
+    referenceBtn.className = "favorite-reference";
+    referenceBtn.textContent = `${entry.book} ${entry.chapter}:${entry.number}`;
+    referenceBtn.addEventListener("click", () => goToVerse(entry.bookSlug, entry.chapter, verseKey));
+    header.appendChild(referenceBtn);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "favorite-remove";
+    removeBtn.setAttribute("aria-label", "Apagar anotação");
+    removeBtn.title = "Apagar anotação";
+    removeBtn.textContent = "×";
+    removeBtn.addEventListener("click", () => removeNote(verseKey));
+    header.appendChild(removeBtn);
+
+    li.appendChild(header);
+
+    const noteText = document.createElement("p");
+    noteText.className = "favorite-text-en";
+    noteText.textContent = entry.text;
+    li.appendChild(noteText);
+
+    const verseText = document.createElement("p");
+    verseText.className = "favorite-text-pt";
+    verseText.textContent = entry.en;
+    li.appendChild(verseText);
+
+    notesListEl.appendChild(li);
+  }
 }
 
 let currentNoteVerseKey = null;
+let currentNoteVerse = null;
+let currentNoteBook = null;
+let currentNoteChapter = null;
 let currentNoteButton = null;
 
 function openNotePopup(verseKey, verse, book, chapter, button) {
   closeActivePopup();
   currentNoteVerseKey = verseKey;
+  currentNoteVerse = verse;
+  currentNoteBook = book;
+  currentNoteChapter = chapter;
   currentNoteButton = button;
 
   notePopupReferenceEl.textContent = `${book.pt} ${chapter}:${verse.number}`;
@@ -352,13 +531,16 @@ function closeNotePopup() {
   notePopupEl.hidden = true;
   if (wordPopupEl.hidden) wordPopupBackdropEl.hidden = true;
   currentNoteVerseKey = null;
+  currentNoteVerse = null;
+  currentNoteBook = null;
+  currentNoteChapter = null;
   currentNoteButton = null;
 }
 
 function handleNoteSave() {
   if (!currentNoteVerseKey) return;
   const text = notePopupTextareaEl.value.trim();
-  setNote(currentNoteVerseKey, text);
+  setNote(currentNoteVerseKey, text, currentNoteVerse, currentNoteBook, currentNoteChapter);
   if (currentNoteButton) currentNoteButton.classList.toggle("has-note", Boolean(text));
   closeNotePopup();
   showToast(text ? "Anotação salva." : "Anotação removida.");
@@ -366,7 +548,7 @@ function handleNoteSave() {
 
 function handleNoteDelete() {
   if (!currentNoteVerseKey) return;
-  setNote(currentNoteVerseKey, "");
+  setNote(currentNoteVerseKey, "", currentNoteVerse, currentNoteBook, currentNoteChapter);
   if (currentNoteButton) currentNoteButton.classList.remove("has-note");
   closeNotePopup();
   showToast("Anotação removida.");
@@ -778,13 +960,18 @@ function renderVocabularyList() {
 }
 
 function setActiveView(view) {
-  const isReading = view === "reading";
-  readingContainerEl.hidden = !isReading;
-  vocabularyViewEl.hidden = isReading;
+  readingContainerEl.hidden = view !== "reading";
+  vocabularyViewEl.hidden = view !== "vocabulary";
+  favoritesViewEl.hidden = view !== "favorites";
+  notesViewEl.hidden = view !== "notes";
+
   for (const btn of viewTabButtons) {
     btn.setAttribute("aria-pressed", String(btn.dataset.view === view));
   }
-  if (!isReading) renderVocabularyList();
+
+  if (view === "vocabulary") renderVocabularyList();
+  if (view === "favorites") renderFavoritesList();
+  if (view === "notes") renderNotesList();
   closeActivePopup();
 }
 
@@ -819,3 +1006,5 @@ populateChapterSelect(getSelectedBook());
 chapterSelect.value = String(DEFAULT_CHAPTER);
 loadChapter(getSelectedBook(), DEFAULT_CHAPTER);
 renderVocabularyBadge();
+renderFavoritesBadge();
+renderNotesBadge();
