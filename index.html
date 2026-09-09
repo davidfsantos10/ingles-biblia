@@ -126,6 +126,35 @@
     </div>
   </div>
 
+  <div id="share-popup" class="word-popup share-popup" role="dialog" aria-modal="true" aria-label="Compartilhar versículo" hidden>
+    <button type="button" id="share-popup-close" class="word-popup-close" aria-label="Fechar">×</button>
+
+    <p class="share-popup-title">Compartilhar versículo</p>
+
+    <div class="share-preview-wrap">
+      <canvas id="share-canvas" class="share-canvas" width="1080" height="1350"></canvas>
+    </div>
+
+    <div class="share-control">
+      <span class="share-control-label">Fundo</span>
+      <div id="share-backgrounds" class="share-backgrounds"></div>
+    </div>
+
+    <div class="share-control">
+      <span class="share-control-label">Tamanho da fonte</span>
+      <div class="share-font-control">
+        <button type="button" id="share-font-decrease" class="share-font-btn" aria-label="Diminuir fonte">A−</button>
+        <input type="range" id="share-font-slider" class="share-font-slider" min="26" max="64" step="2" value="44">
+        <button type="button" id="share-font-increase" class="share-font-btn" aria-label="Aumentar fonte">A+</button>
+      </div>
+    </div>
+
+    <div class="share-popup-actions">
+      <button type="button" id="share-download-btn" class="note-popup-delete">Baixar imagem</button>
+      <button type="button" id="share-native-btn" class="word-popup-save">Compartilhar</button>
+    </div>
+  </div>
+
   <div id="toast" class="toast" hidden></div>
 
   <script src="js/app.js"></script>

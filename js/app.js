@@ -113,6 +113,15 @@ const notePopupReferenceEl = document.getElementById("note-popup-reference");
 const notePopupTextareaEl = document.getElementById("note-popup-textarea");
 const notePopupDeleteEl = document.getElementById("note-popup-delete");
 const notePopupSaveEl = document.getElementById("note-popup-save");
+const sharePopupEl = document.getElementById("share-popup");
+const sharePopupCloseEl = document.getElementById("share-popup-close");
+const shareCanvasEl = document.getElementById("share-canvas");
+const shareBackgroundsEl = document.getElementById("share-backgrounds");
+const shareFontSliderEl = document.getElementById("share-font-slider");
+const shareFontDecreaseEl = document.getElementById("share-font-decrease");
+const shareFontIncreaseEl = document.getElementById("share-font-increase");
+const shareDownloadBtnEl = document.getElementById("share-download-btn");
+const shareNativeBtnEl = document.getElementById("share-native-btn");
 const toastEl = document.getElementById("toast");
 
 let currentSource = { book: "", chapter: 0 };
@@ -232,7 +241,7 @@ function buildVerseToolbar(verse, book, chapter, verseKey) {
   shareBtn.setAttribute("aria-label", "Compartilhar versículo");
   shareBtn.title = "Compartilhar";
   shareBtn.innerHTML = ICON_SHARE;
-  shareBtn.addEventListener("click", () => shareVerse(verse, book, chapter));
+  shareBtn.addEventListener("click", () => openSharePopup(verse, book, chapter));
   actions.appendChild(shareBtn);
 
   const listenBtn = document.createElement("button");
@@ -529,7 +538,7 @@ function openNotePopup(verseKey, verse, book, chapter, button) {
 
 function closeNotePopup() {
   notePopupEl.hidden = true;
-  if (wordPopupEl.hidden) wordPopupBackdropEl.hidden = true;
+  if (wordPopupEl.hidden && sharePopupEl.hidden) wordPopupBackdropEl.hidden = true;
   currentNoteVerseKey = null;
   currentNoteVerse = null;
   currentNoteBook = null;
@@ -567,27 +576,267 @@ function showToast(message) {
   }, 2400);
 }
 
-// --- Compartilhar versículo ---
+// --- Compartilhar versículo (cartão de imagem personalizável) ---
 
-async function shareVerse(verse, book, chapter) {
-  const reference = `${book.pt} ${chapter}:${verse.number}`;
-  const text = `${reference}\n${verse.en}\n${verse.pt}`;
+const SHARE_BACKGROUNDS = [
+  {
+    id: "classic",
+    label: "Clássico",
+    css: "linear-gradient(160deg, #efe6d8, #c9ad7f)",
+    stops: [
+      [0, "#f5eee0"],
+      [1, "#c9ad7f"],
+    ],
+    textColor: "#2b2822",
+    subTextColor: "rgba(43, 40, 34, 0.72)",
+  },
+  {
+    id: "sunset",
+    label: "Pôr do sol",
+    css: "linear-gradient(160deg, #ffb56b, #f4685c, #5b2a86)",
+    stops: [
+      [0, "#ffb56b"],
+      [0.55, "#f2645a"],
+      [1, "#5b2a86"],
+    ],
+    textColor: "#ffffff",
+    subTextColor: "rgba(255, 255, 255, 0.85)",
+  },
+  {
+    id: "ocean",
+    label: "Oceano",
+    css: "linear-gradient(160deg, #4d86b8, #132846)",
+    stops: [
+      [0, "#4d86b8"],
+      [1, "#132846"],
+    ],
+    textColor: "#ffffff",
+    subTextColor: "rgba(255, 255, 255, 0.85)",
+  },
+  {
+    id: "forest",
+    label: "Floresta",
+    css: "linear-gradient(160deg, #6f9a72, #1f3a26)",
+    stops: [
+      [0, "#6f9a72"],
+      [1, "#1f3a26"],
+    ],
+    textColor: "#ffffff",
+    subTextColor: "rgba(255, 255, 255, 0.85)",
+  },
+  {
+    id: "night",
+    label: "Céu noturno",
+    css: "linear-gradient(160deg, #2f3b63, #0a0d1a)",
+    stops: [
+      [0, "#2f3b63"],
+      [1, "#0a0d1a"],
+    ],
+    textColor: "#ffffff",
+    subTextColor: "rgba(255, 255, 255, 0.75)",
+  },
+  {
+    id: "desert",
+    label: "Deserto",
+    css: "linear-gradient(160deg, #f0d38c, #b56a35)",
+    stops: [
+      [0, "#f0d38c"],
+      [1, "#b56a35"],
+    ],
+    textColor: "#3a2410",
+    subTextColor: "rgba(58, 36, 16, 0.75)",
+  },
+];
 
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: reference, text });
-    } catch (err) {
-      // Usuário cancelou o compartilhamento: nenhuma ação necessária.
+let currentShareVerse = null;
+let currentShareBook = null;
+let currentShareChapter = null;
+let currentShareReference = "";
+let currentShareBackgroundIndex = 0;
+let currentShareFontSize = 44;
+
+function renderShareBackgroundSwatches() {
+  shareBackgroundsEl.innerHTML = "";
+  SHARE_BACKGROUNDS.forEach((bg, index) => {
+    const swatch = document.createElement("button");
+    swatch.type = "button";
+    swatch.className = "share-swatch";
+    swatch.style.background = bg.css;
+    swatch.setAttribute("aria-label", bg.label);
+    swatch.title = bg.label;
+    swatch.classList.toggle("is-active", index === currentShareBackgroundIndex);
+    swatch.addEventListener("click", () => {
+      currentShareBackgroundIndex = index;
+      for (const el of shareBackgroundsEl.children) el.classList.remove("is-active");
+      swatch.classList.add("is-active");
+      drawShareCard();
+    });
+    shareBackgroundsEl.appendChild(swatch);
+  });
+}
+
+function wrapCanvasText(ctx, text, maxWidth) {
+  const words = text.split(" ");
+  const lines = [];
+  let current = "";
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word;
+    if (current && ctx.measureText(test).width > maxWidth) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
     }
-    return;
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+function measureShareLayout(ctx, maxWidth, fontSize) {
+  const ptFontSize = Math.round(fontSize * 0.72);
+  const refFontSize = Math.max(24, Math.round(fontSize * 0.5));
+
+  ctx.font = `700 ${fontSize}px Georgia, 'Iowan Old Style', serif`;
+  const enLines = wrapCanvasText(ctx, currentShareVerse.en, maxWidth);
+
+  ctx.font = `${ptFontSize}px Georgia, serif`;
+  const ptLines = wrapCanvasText(ctx, currentShareVerse.pt, maxWidth);
+
+  const enLineHeight = fontSize * 1.35;
+  const ptLineHeight = ptFontSize * 1.4;
+  const gapBetween = fontSize * 0.9;
+  const refHeight = refFontSize * 1.8;
+
+  const totalHeight =
+    enLines.length * enLineHeight + gapBetween + ptLines.length * ptLineHeight + gapBetween + refHeight;
+
+  return { fontSize, ptFontSize, refFontSize, enLines, ptLines, enLineHeight, ptLineHeight, gapBetween, totalHeight };
+}
+
+function drawShareCard() {
+  if (!currentShareVerse) return;
+  const ctx = shareCanvasEl.getContext("2d");
+  const w = shareCanvasEl.width;
+  const h = shareCanvasEl.height;
+  const bg = SHARE_BACKGROUNDS[currentShareBackgroundIndex];
+  const paddingX = 90;
+  const maxWidth = w - paddingX * 2;
+  const maxContentHeight = h - 260;
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+
+  let layout = measureShareLayout(ctx, maxWidth, currentShareFontSize);
+  let scale = 1;
+  while (layout.totalHeight > maxContentHeight && currentShareFontSize * scale > 18) {
+    scale *= 0.9;
+    layout = measureShareLayout(ctx, maxWidth, currentShareFontSize * scale);
   }
 
-  try {
-    await navigator.clipboard.writeText(text);
-    showToast("Versículo copiado para a área de transferência.");
-  } catch (err) {
-    showToast("Não foi possível compartilhar este versículo.");
+  const gradient = ctx.createLinearGradient(0, 0, w * 0.25, h);
+  bg.stops.forEach(([offset, color]) => gradient.addColorStop(offset, color));
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, w, h);
+
+  let y = h / 2 - layout.totalHeight / 2 + layout.enLineHeight * 0.8;
+
+  ctx.font = `700 ${layout.fontSize}px Georgia, 'Iowan Old Style', serif`;
+  ctx.fillStyle = bg.textColor;
+  for (const line of layout.enLines) {
+    ctx.fillText(line, w / 2, y);
+    y += layout.enLineHeight;
   }
+
+  y += layout.gapBetween - layout.enLineHeight * 0.35;
+
+  ctx.font = `${layout.ptFontSize}px Georgia, serif`;
+  ctx.fillStyle = bg.subTextColor;
+  for (const line of layout.ptLines) {
+    ctx.fillText(line, w / 2, y);
+    y += layout.ptLineHeight;
+  }
+
+  y += layout.gapBetween - layout.ptLineHeight * 0.35;
+
+  ctx.font = `700 ${layout.refFontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+  ctx.fillStyle = bg.textColor;
+  ctx.fillText(currentShareReference, w / 2, y);
+
+  ctx.font = `500 ${Math.max(16, Math.round(currentShareFontSize * 0.28))}px -apple-system, BlinkMacSystemFont, sans-serif`;
+  ctx.fillStyle = bg.subTextColor;
+  ctx.fillText("Inglês com a Bíblia", w / 2, h - 50);
+}
+
+function openSharePopup(verse, book, chapter) {
+  closeActivePopup();
+  currentShareVerse = verse;
+  currentShareBook = book;
+  currentShareChapter = chapter;
+  currentShareReference = `${book.pt} ${chapter}:${verse.number}`;
+  currentShareBackgroundIndex = 0;
+  currentShareFontSize = 44;
+  shareFontSliderEl.value = String(currentShareFontSize);
+
+  renderShareBackgroundSwatches();
+  drawShareCard();
+
+  wordPopupBackdropEl.hidden = false;
+  sharePopupEl.hidden = false;
+}
+
+function closeSharePopup() {
+  sharePopupEl.hidden = true;
+  if (wordPopupEl.hidden && notePopupEl.hidden) wordPopupBackdropEl.hidden = true;
+  currentShareVerse = null;
+  currentShareBook = null;
+  currentShareChapter = null;
+}
+
+function changeShareFontSize(delta) {
+  const min = Number(shareFontSliderEl.min);
+  const max = Number(shareFontSliderEl.max);
+  currentShareFontSize = Math.max(min, Math.min(max, currentShareFontSize + delta));
+  shareFontSliderEl.value = String(currentShareFontSize);
+  drawShareCard();
+}
+
+function downloadShareImage() {
+  shareCanvasEl.toBlob((blob) => {
+    if (!blob) {
+      showToast("Não foi possível gerar a imagem.");
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${currentShareReference.replace(/[:\s]+/g, "-")}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, "image/png");
+}
+
+function shareCardNatively() {
+  shareCanvasEl.toBlob(async (blob) => {
+    if (!blob) {
+      showToast("Não foi possível gerar a imagem.");
+      return;
+    }
+    const file = new File([blob], `${currentShareReference.replace(/[:\s]+/g, "-")}.png`, { type: "image/png" });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: currentShareReference });
+      } catch (err) {
+        // Usuário cancelou o compartilhamento: nenhuma ação necessária.
+      }
+      return;
+    }
+
+    downloadShareImage();
+    showToast("Compartilhamento direto não é suportado aqui; a imagem foi baixada.");
+  }, "image/png");
 }
 
 async function loadChapter(book, chapter) {
@@ -625,6 +874,7 @@ function speakWord(word) {
 function closeActivePopup() {
   if (!wordPopupEl.hidden) hideWordPopup();
   if (!notePopupEl.hidden) closeNotePopup();
+  if (!sharePopupEl.hidden) closeSharePopup();
 }
 
 // Palavra atualmente mostrada no popup, usada pelo botão "Salvar".
@@ -633,6 +883,7 @@ let currentPopupLang = null;
 
 function showWordPopup(word, lang, translation, isLoading) {
   if (!notePopupEl.hidden) closeNotePopup();
+  if (!sharePopupEl.hidden) closeSharePopup();
 
   currentPopupWord = word;
   currentPopupLang = lang;
@@ -649,7 +900,7 @@ function showWordPopup(word, lang, translation, isLoading) {
 
 function hideWordPopup() {
   wordPopupEl.hidden = true;
-  if (notePopupEl.hidden) wordPopupBackdropEl.hidden = true;
+  if (notePopupEl.hidden && sharePopupEl.hidden) wordPopupBackdropEl.hidden = true;
   document.querySelectorAll(".word--active").forEach((el) => el.classList.remove("word--active"));
   currentPopupWord = null;
   currentPopupLang = null;
@@ -792,6 +1043,16 @@ wordPopupSaveEl.addEventListener("click", handleSaveWordClick);
 notePopupCloseEl.addEventListener("click", closeNotePopup);
 notePopupSaveEl.addEventListener("click", handleNoteSave);
 notePopupDeleteEl.addEventListener("click", handleNoteDelete);
+
+sharePopupCloseEl.addEventListener("click", closeSharePopup);
+shareFontSliderEl.addEventListener("input", () => {
+  currentShareFontSize = Number(shareFontSliderEl.value);
+  drawShareCard();
+});
+shareFontDecreaseEl.addEventListener("click", () => changeShareFontSize(-2));
+shareFontIncreaseEl.addEventListener("click", () => changeShareFontSize(2));
+shareDownloadBtnEl.addEventListener("click", downloadShareImage);
+shareNativeBtnEl.addEventListener("click", shareCardNatively);
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeActivePopup();
