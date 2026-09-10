@@ -10,6 +10,16 @@
   <header class="app-header">
     <h1 class="app-title">Inglês com a Bíblia</h1>
 
+    <div class="menu-wrap">
+      <button type="button" id="menu-toggle" class="menu-toggle" aria-haspopup="true" aria-expanded="false" aria-label="Abrir menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div id="menu-dropdown" class="menu-dropdown" role="menu" aria-label="Menu" hidden>
+        <button type="button" class="menu-dropdown-item" data-menu-view="grammar" role="menuitem">Gramática</button>
+        <button type="button" class="menu-dropdown-item" data-menu-view="flashcards" role="menuitem">Flashcards</button>
+      </div>
+    </div>
+
     <nav class="view-tabs" aria-label="Navegação">
       <button type="button" class="view-tab" data-view="reading" aria-pressed="true">Leitura</button>
       <button type="button" class="view-tab" data-view="vocabulary" aria-pressed="false">
@@ -99,6 +109,30 @@
         escrever uma.
       </p>
       <ul id="notes-list" class="favorites-list"></ul>
+    </section>
+
+    <section id="grammar-view" class="vocabulary-view" hidden aria-label="Gramática">
+      <p class="empty-state">Conteúdo de gramática em construção — em breve!</p>
+    </section>
+
+    <section id="flashcards-view" class="vocabulary-view" hidden aria-label="Cartões de estudo (flashcards)">
+      <p id="flashcards-empty" class="empty-state" hidden>
+        Nenhuma palavra salva ainda. Vá até a Leitura, toque em uma palavra em inglês e depois em
+        "Salvar no vocabulário" para criar seus flashcards.
+      </p>
+      <div id="flashcards-panel" class="flashcards-panel" hidden>
+        <p id="flashcards-progress" class="flashcards-progress"></p>
+        <button type="button" id="flashcard" class="flashcard" aria-label="Toque para virar o cartão">
+          <span id="flashcard-front" class="flashcard-face flashcard-front"></span>
+          <span id="flashcard-back" class="flashcard-face flashcard-back" hidden></span>
+        </button>
+        <div class="flashcards-controls">
+          <button type="button" id="flashcards-prev" class="flashcards-nav-btn" aria-label="Cartão anterior">‹</button>
+          <button type="button" id="flashcards-flip" class="flashcards-flip-btn">Virar cartão</button>
+          <button type="button" id="flashcards-next" class="flashcards-nav-btn" aria-label="Próximo cartão">›</button>
+        </div>
+        <button type="button" id="flashcards-shuffle" class="flashcards-shuffle-btn">Embaralhar</button>
+      </div>
     </section>
   </main>
 

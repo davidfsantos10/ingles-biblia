@@ -42,7 +42,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.9rem 1.25rem;
+  padding: 0.9rem 3.5rem 0.9rem 1.25rem;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   position: sticky;
@@ -55,6 +55,80 @@ body {
   font-weight: 600;
   margin: 0;
   color: var(--color-accent);
+}
+
+/* Menu "hambúrguer" (Gramática / Flashcards), fixo no canto superior direito */
+
+.menu-wrap {
+  position: absolute;
+  top: 0.9rem;
+  right: 1.25rem;
+}
+
+.menu-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 0.4rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.menu-toggle:hover,
+.menu-toggle[aria-expanded="true"] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.menu-toggle svg {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 9.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+  z-index: 20;
+}
+
+.menu-dropdown[hidden] {
+  display: none;
+}
+
+.menu-dropdown-item {
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+}
+
+.menu-dropdown-item:hover {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.menu-dropdown-item[aria-pressed="true"] {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
 }
 
 .view-tabs {
@@ -900,6 +974,121 @@ main {
   margin: 0;
 }
 
+/* Flashcards */
+
+.flashcards-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  max-width: 28rem;
+  margin: 2rem auto;
+  padding: 0 1.25rem;
+}
+
+.flashcards-panel[hidden] {
+  display: none;
+}
+
+.flashcards-progress {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.flashcard {
+  width: 100%;
+  min-height: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  text-align: center;
+}
+
+.flashcard-face {
+  font-family: var(--font-reading);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.flashcard-face[hidden] {
+  display: none;
+}
+
+.flashcard-back {
+  color: var(--color-accent);
+}
+
+.flashcards-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.flashcards-nav-btn {
+  width: 2.4rem;
+  height: 2.4rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.flashcards-nav-btn:hover {
+  background: var(--color-accent-soft);
+}
+
+.flashcards-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.flashcards-flip-btn {
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-surface);
+  background: var(--color-accent);
+  border: none;
+  border-radius: 0.4rem;
+  padding: 0.6rem 1.25rem;
+  cursor: pointer;
+}
+
+.flashcards-flip-btn:hover {
+  filter: brightness(1.08);
+}
+
+.flashcards-shuffle-btn {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+}
+
+.flashcards-shuffle-btn:hover {
+  color: var(--color-text);
+}
+
 /* Empty state */
 
 .empty-state {
@@ -942,7 +1131,12 @@ main {
   }
 
   .app-header {
-    padding: 0.75rem 0.9rem;
+    padding: 0.75rem 3.1rem 0.75rem 0.9rem;
+  }
+
+  .menu-wrap {
+    top: 0.7rem;
+    right: 0.9rem;
   }
 
   .view-tabs {

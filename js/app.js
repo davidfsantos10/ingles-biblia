@@ -155,6 +155,21 @@ const shareNativeBtnEl = document.getElementById("share-native-btn");
 const shareWhatsappBtnEl = document.getElementById("share-whatsapp-btn");
 const shareTelegramBtnEl = document.getElementById("share-telegram-btn");
 const toastEl = document.getElementById("toast");
+const menuToggleEl = document.getElementById("menu-toggle");
+const menuDropdownEl = document.getElementById("menu-dropdown");
+const menuDropdownItems = document.querySelectorAll(".menu-dropdown-item");
+const grammarViewEl = document.getElementById("grammar-view");
+const flashcardsViewEl = document.getElementById("flashcards-view");
+const flashcardsEmptyEl = document.getElementById("flashcards-empty");
+const flashcardsPanelEl = document.getElementById("flashcards-panel");
+const flashcardsProgressEl = document.getElementById("flashcards-progress");
+const flashcardEl = document.getElementById("flashcard");
+const flashcardFrontEl = document.getElementById("flashcard-front");
+const flashcardBackEl = document.getElementById("flashcard-back");
+const flashcardsPrevEl = document.getElementById("flashcards-prev");
+const flashcardsFlipEl = document.getElementById("flashcards-flip");
+const flashcardsNextEl = document.getElementById("flashcards-next");
+const flashcardsShuffleEl = document.getElementById("flashcards-shuffle");
 
 let currentSource = { book: "", chapter: 0 };
 
@@ -976,6 +991,7 @@ function closeActivePopup() {
 let currentPopupWord = null;
 let currentPopupLang = null;
 let currentPopupColor = "blue";
+let currentPopupTranslation = null;
 
 function setPopupColor(color) {
   currentPopupColor = color;
@@ -994,6 +1010,7 @@ function showWordPopup(word, lang, translation, isLoading) {
 
   currentPopupWord = word;
   currentPopupLang = lang;
+  currentPopupTranslation = isLoading ? null : translation || null;
 
   wordPopupOriginalEl.textContent = word;
   wordPopupTranslationEl.textContent = isLoading
@@ -1022,7 +1039,7 @@ function hideWordPopup() {
 
 function handleSaveWordClick() {
   if (!currentPopupWord || currentPopupLang !== "en") return;
-  recordWordClick(currentPopupWord, currentPopupColor);
+  recordWordClick(currentPopupWord, currentPopupColor, currentPopupTranslation);
   hideWordPopup();
 }
 
@@ -1378,18 +1395,21 @@ function saveVocabulary(list) {
 
 // Salva a palavra no vocabulário com a cor escolhida no popup (ou atualiza a
 // cor se a palavra já estava salva). Chamado só ao apertar "Salvar", para a
-// cor no texto reagir na hora.
-function recordWordClick(word, color) {
+// cor no texto reagir na hora. A tradução vem do que já estava mostrado no
+// popup no momento do clique (se ainda não tinha carregado, fica null e é
+// preenchida depois por updateVocabularyTranslation).
+function recordWordClick(word, color, translation) {
   const list = loadVocabulary();
   const existing = list.find((entry) => entry.word === word);
 
   if (existing) {
     existing.timesClicked = (existing.timesClicked || 1) + 1;
     existing.color = color;
+    if (translation) existing.translation = translation;
   } else {
     list.unshift({
       word,
-      translation: null,
+      translation: translation || null,
       book: currentSource.book,
       chapter: currentSource.chapter,
       savedAt: Date.now(),
@@ -1492,24 +1512,114 @@ function renderVocabularyList() {
   }
 }
 
+// --- Flashcards (usa as palavras já salvas no vocabulário como baralho) ---
+
+let flashcardsDeck = [];
+let flashcardsIndex = 0;
+let flashcardsFlipped = false;
+
+function showFlashcard(index) {
+  flashcardsIndex = index;
+  flashcardsFlipped = false;
+
+  const entry = flashcardsDeck[flashcardsIndex];
+  flashcardFrontEl.textContent = entry.word;
+  flashcardBackEl.textContent = entry.translation || "tradução não encontrada";
+  flashcardFrontEl.hidden = false;
+  flashcardBackEl.hidden = true;
+
+  flashcardsProgressEl.textContent = `${flashcardsIndex + 1} / ${flashcardsDeck.length}`;
+  flashcardsPrevEl.disabled = flashcardsIndex === 0;
+  flashcardsNextEl.disabled = flashcardsIndex === flashcardsDeck.length - 1;
+}
+
+function flipCurrentFlashcard() {
+  if (flashcardsDeck.length === 0) return;
+  flashcardsFlipped = !flashcardsFlipped;
+  flashcardFrontEl.hidden = flashcardsFlipped;
+  flashcardBackEl.hidden = !flashcardsFlipped;
+}
+
+function goToFlashcard(delta) {
+  const nextIndex = flashcardsIndex + delta;
+  if (nextIndex < 0 || nextIndex >= flashcardsDeck.length) return;
+  showFlashcard(nextIndex);
+}
+
+function shuffleFlashcards() {
+  for (let i = flashcardsDeck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [flashcardsDeck[i], flashcardsDeck[j]] = [flashcardsDeck[j], flashcardsDeck[i]];
+  }
+  showFlashcard(0);
+}
+
+function renderFlashcards() {
+  flashcardsDeck = loadVocabulary();
+  const hasCards = flashcardsDeck.length > 0;
+  flashcardsEmptyEl.hidden = hasCards;
+  flashcardsPanelEl.hidden = !hasCards;
+  if (hasCards) showFlashcard(0);
+}
+
+flashcardEl.addEventListener("click", flipCurrentFlashcard);
+flashcardsFlipEl.addEventListener("click", flipCurrentFlashcard);
+flashcardsPrevEl.addEventListener("click", () => goToFlashcard(-1));
+flashcardsNextEl.addEventListener("click", () => goToFlashcard(1));
+flashcardsShuffleEl.addEventListener("click", shuffleFlashcards);
+
 function setActiveView(view) {
   readingContainerEl.hidden = view !== "reading";
   vocabularyViewEl.hidden = view !== "vocabulary";
   favoritesViewEl.hidden = view !== "favorites";
   notesViewEl.hidden = view !== "notes";
+  grammarViewEl.hidden = view !== "grammar";
+  flashcardsViewEl.hidden = view !== "flashcards";
 
   for (const btn of viewTabButtons) {
     btn.setAttribute("aria-pressed", String(btn.dataset.view === view));
+  }
+  for (const item of menuDropdownItems) {
+    item.setAttribute("aria-pressed", String(item.dataset.menuView === view));
   }
 
   if (view === "vocabulary") renderVocabularyList();
   if (view === "favorites") renderFavoritesList();
   if (view === "notes") renderNotesList();
+  if (view === "flashcards") renderFlashcards();
   closeActivePopup();
 }
 
 for (const btn of viewTabButtons) {
   btn.addEventListener("click", () => setActiveView(btn.dataset.view));
+}
+
+// --- Menu "hambúrguer" (Gramática / Flashcards) ---
+
+function toggleMenu(forceOpen) {
+  const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : menuDropdownEl.hidden;
+  menuDropdownEl.hidden = !shouldOpen;
+  menuToggleEl.setAttribute("aria-expanded", String(shouldOpen));
+}
+
+menuToggleEl.addEventListener("click", (event) => {
+  event.stopPropagation();
+  toggleMenu();
+});
+
+document.addEventListener("click", (event) => {
+  if (!menuDropdownEl.hidden && !event.target.closest(".menu-wrap")) toggleMenu(false);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !menuDropdownEl.hidden) toggleMenu(false);
+});
+
+for (const item of menuDropdownItems) {
+  item.addEventListener("click", () => {
+    toggleMenu(false);
+    setActiveView(item.dataset.menuView);
+  });
 }
 
 vocabularyFilterEl.addEventListener("input", renderVocabularyList);
