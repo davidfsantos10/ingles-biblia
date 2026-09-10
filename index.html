@@ -30,14 +30,21 @@
       <select id="book-select" aria-label="Livro"></select>
       <select id="chapter-select" aria-label="Capítulo"></select>
     </div>
+
+    <div class="en-version-selector" role="group" aria-label="Versão do texto em inglês">
+      <span class="en-version-label">Inglês:</span>
+      <button type="button" class="en-version-btn" data-en-version="kjv" aria-pressed="true" title="King James Version — inglês clássico/arcaico (thee, thou, hath…)">KJV</button>
+      <button type="button" class="en-version-btn" data-en-version="web" aria-pressed="false" title="World English Bible — inglês moderno e natural">WEB</button>
+      <button type="button" class="en-version-btn" data-en-version="bbe" aria-pressed="false" title="Bible in Basic English — vocabulário simplificado, ideal para iniciantes">BBE</button>
+    </div>
   </header>
 
   <main>
     <div id="reading-container">
       <div class="reading-view">
-        <section class="column column-en" aria-label="Texto em inglês (King James Version)">
+        <section class="column column-en" aria-label="Texto em inglês">
           <div class="column-header">
-            <span class="version-badge">KJV</span>
+            <span class="version-badge" id="version-badge-en">KJV</span>
             <h2 id="title-en">&nbsp;</h2>
           </div>
           <div class="verses" id="verses-en"></div>

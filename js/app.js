@@ -73,12 +73,40 @@ const BOOKS = [
 const DEFAULT_BOOK_SLUG = "genesis";
 const DEFAULT_CHAPTER = 1;
 
+// Três versões do texto em inglês para escolher, guardadas lado a lado no
+// mesmo arquivo de capítulo (campos "en", "en_web", "en_bbe"): do inglês
+// clássico/arcaico da KJV até o vocabulário bem simples da BBE, feita para
+// quem está aprendendo o idioma. Todas de domínio público.
+const EN_VERSIONS = {
+  kjv: { field: "en", label: "KJV", fullName: "King James Version" },
+  web: { field: "en_web", label: "WEB", fullName: "World English Bible" },
+  bbe: { field: "en_bbe", label: "BBE", fullName: "Bible in Basic English" },
+};
+const EN_VERSION_STORAGE_KEY = "ingles-biblia.en-version";
+
+function loadEnVersion() {
+  try {
+    const stored = localStorage.getItem(EN_VERSION_STORAGE_KEY);
+    return stored && EN_VERSIONS[stored] ? stored : "kjv";
+  } catch (err) {
+    return "kjv";
+  }
+}
+
+let currentEnVersion = loadEnVersion();
+
+function getEnglishText(verse) {
+  return verse[EN_VERSIONS[currentEnVersion].field] || verse.en;
+}
+
 const bookSelect = document.getElementById("book-select");
 const chapterSelect = document.getElementById("chapter-select");
 const titleEnEl = document.getElementById("title-en");
 const titlePtEl = document.getElementById("title-pt");
 const versesEnEl = document.getElementById("verses-en");
 const versesPtEl = document.getElementById("verses-pt");
+const versionBadgeEnEl = document.getElementById("version-badge-en");
+const enVersionButtons = document.querySelectorAll(".en-version-btn");
 const columnEnEl = document.querySelector(".column-en");
 const columnPtEl = document.querySelector(".column-pt");
 const readingView = document.querySelector(".reading-view");
@@ -184,7 +212,7 @@ function buildVerseEl(verse, lang, book, chapter) {
 }
 
 function buildVerseText(verse, lang) {
-  const text = lang === "en" ? verse.en : verse.pt;
+  const text = lang === "en" ? getEnglishText(verse) : verse.pt;
   const p = document.createElement("p");
   p.className = "verse-text";
 
@@ -252,7 +280,7 @@ function buildVerseToolbar(verse, book, chapter, verseKey) {
   listenBtn.setAttribute("aria-label", "Ouvir versículo em inglês");
   listenBtn.title = "Ouvir em inglês";
   listenBtn.innerHTML = ICON_LISTEN;
-  listenBtn.addEventListener("click", () => speakText(verse.en));
+  listenBtn.addEventListener("click", () => speakText(getEnglishText(verse)));
   actions.appendChild(listenBtn);
 
   const noteBtn = document.createElement("button");
@@ -331,7 +359,7 @@ function toggleFavorite(verseKey, verse, book, chapter, button) {
       bookSlug: book.slug,
       chapter,
       number: verse.number,
-      en: verse.en,
+      en: getEnglishText(verse),
       pt: verse.pt,
       savedAt: Date.now(),
     };
@@ -439,7 +467,7 @@ function setNote(verseKey, text, verse, book, chapter) {
       bookSlug: book.slug,
       chapter,
       number: verse.number,
-      en: verse.en,
+      en: getEnglishText(verse),
       pt: verse.pt,
       text,
       savedAt: Date.now(),
@@ -700,7 +728,7 @@ function measureShareLayout(ctx, maxWidth, fontSize) {
   const refFontSize = Math.max(24, Math.round(fontSize * 0.5));
 
   ctx.font = `700 ${fontSize}px Georgia, 'Iowan Old Style', serif`;
-  const enLines = wrapCanvasText(ctx, currentShareVerse.en, maxWidth);
+  const enLines = wrapCanvasText(ctx, getEnglishText(currentShareVerse), maxWidth);
 
   ctx.font = `${ptFontSize}px Georgia, serif`;
   const ptLines = wrapCanvasText(ctx, currentShareVerse.pt, maxWidth);
@@ -776,7 +804,8 @@ function drawShareCard() {
 }
 
 function buildShareText() {
-  return `"${currentShareVerse.en}"\n"${currentShareVerse.pt}"\n— ${currentShareReference} (KJV / ARC)`;
+  const enLabel = EN_VERSIONS[currentEnVersion].label;
+  return `"${getEnglishText(currentShareVerse)}"\n"${currentShareVerse.pt}"\n— ${currentShareReference} (${enLabel} / ARC)`;
 }
 
 function openSharePopup(verse, book, chapter) {
@@ -1480,6 +1509,34 @@ goToSampleBtn.addEventListener("click", () => {
   loadChapter(book, DEFAULT_CHAPTER);
 });
 
+function saveEnVersion(version) {
+  try {
+    localStorage.setItem(EN_VERSION_STORAGE_KEY, version);
+  } catch (err) {
+    // Preferência não persistida (ex.: armazenamento indisponível): segue mesmo assim.
+  }
+}
+
+function applyEnVersionUI() {
+  versionBadgeEnEl.textContent = EN_VERSIONS[currentEnVersion].label;
+  for (const btn of enVersionButtons) {
+    btn.setAttribute("aria-pressed", String(btn.dataset.enVersion === currentEnVersion));
+  }
+}
+
+function setEnVersion(version) {
+  if (!EN_VERSIONS[version] || version === currentEnVersion) return;
+  currentEnVersion = version;
+  saveEnVersion(version);
+  applyEnVersionUI();
+  loadChapter(getSelectedBook(), Number(chapterSelect.value));
+}
+
+for (const btn of enVersionButtons) {
+  btn.addEventListener("click", () => setEnVersion(btn.dataset.enVersion));
+}
+
+applyEnVersionUI();
 populateBookSelect();
 populateChapterSelect(getSelectedBook());
 chapterSelect.value = String(DEFAULT_CHAPTER);
