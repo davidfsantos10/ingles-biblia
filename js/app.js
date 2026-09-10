@@ -991,7 +991,7 @@ function handleSaveWordClick() {
 // de outra frase parecida do banco dele, principalmente com uma palavra
 // solta e sem contexto.
 
-const TRANSLATION_CACHE_KEY = "ingles-biblia.translations.v2";
+const TRANSLATION_CACHE_KEY = "ingles-biblia.translations.v3";
 
 function loadTranslationCache() {
   try {
@@ -1011,6 +1011,134 @@ function saveTranslationCache(cache) {
 }
 
 const translationCache = loadTranslationCache();
+
+// Palavras arcaicas do inglês (pronomes/verbos do estilo "thee/thou/hath")
+// e vocabulário bíblico pouco comum fora desse contexto: motores de
+// tradução genéricos frequentemente devolvem a própria palavra em inglês
+// sem traduzir, ou "alucinam" algo sem relação, já que são raras em textos
+// modernos. Como aparecem centenas de vezes na Bíblia inteira, valem uma
+// tradução fixa em vez de depender da API para elas.
+const ARCHAIC_EN_PT_GLOSSARY = {
+  thee: "te, ti",
+  thou: "tu",
+  thy: "teu, tua",
+  thine: "teu, tua",
+  ye: "vós",
+  hath: "tem, há",
+  hast: "tens, hás",
+  doth: "faz",
+  dost: "fazes",
+  art: "és",
+  wast: "eras, foste",
+  wert: "eras",
+  shalt: "deverás, hás de",
+  wilt: "queres, hás de",
+  couldst: "poderias",
+  wouldst: "quererias",
+  shouldst: "deverias",
+  mayest: "podes",
+  mayst: "podes",
+  canst: "podes",
+  knowest: "sabes",
+  sayest: "dizes",
+  seest: "vês",
+  goest: "vais",
+  givest: "dás",
+  lovest: "amas",
+  believest: "crês",
+  unto: "para, a",
+  verily: "em verdade, certamente",
+  wherefore: "por isso, portanto",
+  whence: "de onde",
+  whither: "para onde",
+  hither: "para cá, aqui",
+  thither: "para lá, ali",
+  hence: "daqui, por isso",
+  thence: "de lá",
+  whereof: "do qual, do que",
+  betwixt: "entre",
+  peradventure: "talvez, porventura",
+  sojourn: "peregrinar, morar temporariamente",
+  sojourner: "peregrino, estrangeiro",
+  begat: "gerou",
+  begotten: "gerado",
+  brethren: "irmãos",
+  damsel: "donzela",
+  handmaid: "serva",
+  handmaiden: "serva",
+  bondmaid: "escrava",
+  bondservant: "servo",
+  manservant: "servo",
+  maidservant: "serva",
+  kine: "vacas",
+  raiment: "vestimenta, roupa",
+  girdle: "cinto",
+  countenance: "semblante, rosto",
+  smote: "feriu",
+  smite: "ferir",
+  slew: "matou",
+  slay: "matar",
+  spake: "falou",
+  speaketh: "fala",
+  saith: "diz",
+  cometh: "vem",
+  goeth: "vai",
+  giveth: "dá",
+  maketh: "faz",
+  taketh: "toma",
+  knoweth: "sabe",
+  loveth: "ama",
+  liveth: "vive",
+  dieth: "morre",
+  abideth: "permanece",
+  worketh: "trabalha, opera",
+  believeth: "crê",
+  seeketh: "busca",
+  findeth: "acha, encontra",
+  walketh: "anda",
+  nigh: "perto",
+  yea: "sim, de fato",
+  nay: "não",
+  yonder: "ali, além",
+  aught: "algo",
+  naught: "nada",
+  oft: "frequentemente",
+  ere: "antes",
+  lest: "para que não",
+  albeit: "ainda que, embora",
+  notwithstanding: "apesar disso, não obstante",
+  howbeit: "contudo",
+  wist: "soube, sabia",
+  trow: "creio, suponho",
+  selah: "selá",
+  firmament: "firmamento",
+  tabernacle: "tabernáculo",
+  covenant: "aliança",
+  transgression: "transgressão",
+  iniquity: "iniquidade",
+  righteousness: "justiça",
+  unrighteousness: "injustiça",
+  lovingkindness: "benignidade, bondade",
+  longsuffering: "paciência, longanimidade",
+  meekness: "mansidão",
+  propitiation: "propiciação",
+  firstfruits: "primícias",
+  leviathan: "leviatã",
+  behemoth: "beemote",
+  publican: "publicano",
+  centurion: "centurião",
+  cubit: "côvado",
+  shekel: "siclo",
+};
+
+// Detecta respostas inúteis que ainda assim "parecem" uma tradução válida,
+// como o aviso de limite diário do MyMemory — sem isso, esse texto acabava
+// sendo salvo no cache como se fosse a tradução real da palavra.
+function isUsableTranslation(text) {
+  if (!text) return false;
+  if (/MYMEMORY WARNING|QUERY LENGTH LIMIT|INVALID (SOURCE|TARGET) LANGUAGE/i.test(text)) return false;
+  return true;
+}
 
 async function translateWithGoogle(word, from, to) {
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${from}&tl=${to}&dt=t&q=${encodeURIComponent(word)}`;
@@ -1034,17 +1162,41 @@ async function translateWithMyMemory(word, from, to) {
   return translated;
 }
 
+// Tenta o Google, depois o MyMemory e, se os dois falharem (rede instável,
+// limite de uso momentâneo), tenta o Google mais uma vez — cobre a maior
+// parte dos casos de "às vezes não traduz" causados por uma falha passageira.
+async function fetchTranslation(word, from, to) {
+  try {
+    const translated = await translateWithGoogle(word, from, to);
+    if (isUsableTranslation(translated)) return translated;
+  } catch (err) {
+    // segue para a próxima fonte
+  }
+
+  try {
+    const translated = await translateWithMyMemory(word, from, to);
+    if (isUsableTranslation(translated)) return translated;
+  } catch (err) {
+    // segue para a nova tentativa
+  }
+
+  const translated = await translateWithGoogle(word, from, to);
+  if (!isUsableTranslation(translated)) throw new Error("Nenhuma fonte devolveu uma tradução utilizável");
+  return translated;
+}
+
 async function translateWord(word, from, to) {
   const cacheKey = `${from}|${to}:${word}`;
   if (translationCache[cacheKey]) return translationCache[cacheKey];
 
-  let translated;
-  try {
-    translated = await translateWithGoogle(word, from, to);
-  } catch (err) {
-    translated = await translateWithMyMemory(word, from, to);
+  if (from === "en" && to === "pt" && ARCHAIC_EN_PT_GLOSSARY[word]) {
+    const result = ARCHAIC_EN_PT_GLOSSARY[word];
+    translationCache[cacheKey] = result;
+    saveTranslationCache(translationCache);
+    return result;
   }
 
+  const translated = await fetchTranslation(word, from, to);
   const result = translated.toLowerCase();
   translationCache[cacheKey] = result;
   saveTranslationCache(translationCache);
