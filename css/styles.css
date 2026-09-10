@@ -42,7 +42,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.9rem 3.5rem 0.9rem 1.25rem;
+  padding: 0.9rem 1.25rem 0.9rem 3.5rem;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   position: sticky;
@@ -57,12 +57,12 @@ body {
   color: var(--color-accent);
 }
 
-/* Menu "hambúrguer" (Gramática / Flashcards), fixo no canto superior direito */
+/* Menu "hambúrguer" (Gramática / Flashcards), fixo no canto superior esquerdo */
 
 .menu-wrap {
   position: absolute;
   top: 0.9rem;
-  right: 1.25rem;
+  left: 1.25rem;
 }
 
 .menu-toggle {
@@ -93,7 +93,7 @@ body {
 .menu-dropdown {
   position: absolute;
   top: calc(100% + 0.4rem);
-  right: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
   min-width: 9.5rem;
@@ -1131,12 +1131,12 @@ main {
   }
 
   .app-header {
-    padding: 0.75rem 3.1rem 0.75rem 0.9rem;
+    padding: 0.75rem 0.9rem 0.75rem 3.1rem;
   }
 
   .menu-wrap {
     top: 0.7rem;
-    right: 0.9rem;
+    left: 0.9rem;
   }
 
   .view-tabs {
