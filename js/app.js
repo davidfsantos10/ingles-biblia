@@ -166,10 +166,17 @@ const flashcardsProgressEl = document.getElementById("flashcards-progress");
 const flashcardEl = document.getElementById("flashcard");
 const flashcardFrontEl = document.getElementById("flashcard-front");
 const flashcardBackEl = document.getElementById("flashcard-back");
+const flashcardFrontRefEl = document.getElementById("flashcard-front-ref");
+const flashcardFrontTextEl = document.getElementById("flashcard-front-text");
+const flashcardBackRefEl = document.getElementById("flashcard-back-ref");
+const flashcardBackTextEl = document.getElementById("flashcard-back-text");
 const flashcardsPrevEl = document.getElementById("flashcards-prev");
 const flashcardsFlipEl = document.getElementById("flashcards-flip");
 const flashcardsNextEl = document.getElementById("flashcards-next");
 const flashcardsShuffleEl = document.getElementById("flashcards-shuffle");
+const flashcardsModeButtons = document.querySelectorAll(".flashcards-mode-btn");
+const grammarListEl = document.getElementById("grammar-list");
+const viewBackButtons = document.querySelectorAll(".view-back-btn");
 
 let currentSource = { book: "", chapter: 0 };
 
@@ -1512,8 +1519,17 @@ function renderVocabularyList() {
   }
 }
 
-// --- Flashcards (usa as palavras já salvas no vocabulário como baralho) ---
+// --- Flashcards: treina com as palavras do vocabulário ou com os
+// versículos favoritados, à escolha do usuário ---
 
+const FLASHCARDS_EMPTY_MESSAGES = {
+  vocabulary:
+    'Nenhuma palavra salva ainda. Vá até a Leitura, toque em uma palavra em inglês e depois em "Salvar no vocabulário" para criar seus flashcards.',
+  favorites:
+    "Nenhum versículo favoritado ainda. Toque no coração de um versículo durante a leitura para adicioná-lo aqui e treinar com ele.",
+};
+
+let flashcardsMode = "vocabulary";
 let flashcardsDeck = [];
 let flashcardsIndex = 0;
 let flashcardsFlipped = false;
@@ -1523,8 +1539,23 @@ function showFlashcard(index) {
   flashcardsFlipped = false;
 
   const entry = flashcardsDeck[flashcardsIndex];
-  flashcardFrontEl.textContent = entry.word;
-  flashcardBackEl.textContent = entry.translation || "tradução não encontrada";
+  const isVerseMode = flashcardsMode === "favorites";
+  flashcardFrontEl.classList.toggle("flashcard-face--verse", isVerseMode);
+  flashcardBackEl.classList.toggle("flashcard-face--verse", isVerseMode);
+
+  if (isVerseMode) {
+    const reference = `${entry.book} ${entry.chapter}:${entry.number}`;
+    flashcardFrontRefEl.textContent = reference;
+    flashcardFrontTextEl.textContent = entry.en;
+    flashcardBackRefEl.textContent = reference;
+    flashcardBackTextEl.textContent = entry.pt;
+  } else {
+    flashcardFrontRefEl.textContent = "";
+    flashcardFrontTextEl.textContent = entry.word;
+    flashcardBackRefEl.textContent = "";
+    flashcardBackTextEl.textContent = entry.translation || "tradução não encontrada";
+  }
+
   flashcardFrontEl.hidden = false;
   flashcardBackEl.hidden = true;
 
@@ -1555,8 +1586,13 @@ function shuffleFlashcards() {
 }
 
 function renderFlashcards() {
-  flashcardsDeck = loadVocabulary();
+  flashcardsDeck =
+    flashcardsMode === "favorites"
+      ? Object.values(loadFavorites()).sort((a, b) => b.savedAt - a.savedAt)
+      : loadVocabulary();
+
   const hasCards = flashcardsDeck.length > 0;
+  flashcardsEmptyEl.textContent = FLASHCARDS_EMPTY_MESSAGES[flashcardsMode];
   flashcardsEmptyEl.hidden = hasCards;
   flashcardsPanelEl.hidden = !hasCards;
   if (hasCards) showFlashcard(0);
@@ -1567,6 +1603,209 @@ flashcardsFlipEl.addEventListener("click", flipCurrentFlashcard);
 flashcardsPrevEl.addEventListener("click", () => goToFlashcard(-1));
 flashcardsNextEl.addEventListener("click", () => goToFlashcard(1));
 flashcardsShuffleEl.addEventListener("click", shuffleFlashcards);
+
+for (const btn of flashcardsModeButtons) {
+  btn.addEventListener("click", () => {
+    if (btn.dataset.flashcardsMode === flashcardsMode) return;
+    flashcardsMode = btn.dataset.flashcardsMode;
+    for (const b of flashcardsModeButtons) b.setAttribute("aria-pressed", String(b === btn));
+    renderFlashcards();
+  });
+}
+
+// --- Gramática: guia de referência rápida, conteúdo original em português ---
+
+const GRAMMAR_TOPICS = [
+  {
+    title: "Pronomes pessoais (Subject Pronouns)",
+    explanation:
+      'Os pronomes pessoais substituem o nome de quem pratica a ação do verbo. Em inglês eles sempre vêm antes do verbo, e o pronome "I" (eu) é sempre escrito com letra maiúscula, não importa onde apareça na frase.',
+    examples: [
+      { en: "I believe in God.", pt: "Eu creio em Deus." },
+      { en: "She prays every morning.", pt: "Ela reza todas as manhãs." },
+      { en: "We are family.", pt: "Nós somos uma família." },
+      { en: "They live in a small town.", pt: "Eles moram em uma cidade pequena." },
+    ],
+  },
+  {
+    title: 'O verbo "to be" no presente (am / is / are)',
+    explanation:
+      '"To be" significa "ser" ou "estar" e é um dos verbos mais usados em inglês. No presente tem três formas: am (com "I"), is (com he/she/it e nomes no singular) e are (com you/we/they e nomes no plural).',
+    examples: [
+      { en: "I am happy.", pt: "Eu estou feliz." },
+      { en: "She is a teacher.", pt: "Ela é professora." },
+      { en: "The Bible is an ancient book.", pt: "A Bíblia é um livro antigo." },
+      { en: "We are ready.", pt: "Nós estamos prontos." },
+    ],
+  },
+  {
+    title: "Artigos: a, an, the",
+    explanation:
+      '"A" e "an" são artigos indefinidos (equivalem a "um"/"uma"), usados para falar de algo não específico. Use "an" antes de palavras que começam com som de vogal, e "a" antes de som de consoante. "The" é o artigo definido (equivale a "o"/"a"/"os"/"as"), usado para algo específico ou já mencionado antes.',
+    examples: [
+      { en: "I saw a star in the sky.", pt: "Eu vi uma estrela no céu." },
+      { en: "She is an honest woman.", pt: "Ela é uma mulher honesta." },
+      { en: "The book on the table is mine.", pt: "O livro na mesa é meu." },
+    ],
+  },
+  {
+    title: "Plural dos substantivos",
+    explanation:
+      "Na maioria das vezes, basta acrescentar \"-s\" ao substantivo para formar o plural. Palavras terminadas em -s, -ss, -sh, -ch, -x ou -z recebem \"-es\". Também existem plurais irregulares, que precisam ser memorizados.",
+    examples: [
+      { en: "one book, two books", pt: "um livro, dois livros" },
+      { en: "one church, two churches", pt: "uma igreja, duas igrejas" },
+      { en: "one child, two children", pt: "uma criança, duas crianças" },
+      { en: "one man, two men", pt: "um homem, dois homens" },
+    ],
+  },
+  {
+    title: "Presente Simples (Simple Present)",
+    explanation:
+      'Usado para hábitos, rotinas e fatos permanentes. Na afirmativa, o verbo recebe "-s" (ou "-es") quando o sujeito é he/she/it. Na negativa e na interrogativa, usa-se "do"/"does" + o verbo no infinitivo, sem "-s".',
+    examples: [
+      { en: "I read the Bible every night.", pt: "Eu leio a Bíblia todas as noites." },
+      { en: "He goes to church on Sundays.", pt: "Ele vai à igreja aos domingos." },
+      { en: "She doesn't like coffee.", pt: "Ela não gosta de café." },
+      { en: "Do you believe in miracles?", pt: "Você acredita em milagres?" },
+    ],
+  },
+  {
+    title: "Presente Contínuo (Present Continuous)",
+    explanation:
+      'Descreve ações acontecendo agora, no momento em que se fala. É formado com o verbo "to be" (am/is/are) + o verbo principal terminado em "-ing".',
+    examples: [
+      { en: "I am reading the book of Psalms.", pt: "Eu estou lendo o livro de Salmos." },
+      { en: "She is singing a hymn.", pt: "Ela está cantando um hino." },
+      { en: "They are walking to the temple.", pt: "Eles estão caminhando para o templo." },
+      { en: "Are you listening?", pt: "Você está escutando?" },
+    ],
+  },
+  {
+    title: "Passado Simples (Simple Past)",
+    explanation:
+      'Usado para ações já concluídas no passado. Verbos regulares recebem "-ed" (walk → walked). Muitos verbos comuns são irregulares e mudam de forma completamente — por exemplo: be→was/were, go→went, have→had, do→did, say→said, see→saw, come→came, know→knew, take→took, give→gave, make→made.',
+    examples: [
+      { en: "God created the heavens and the earth.", pt: "Deus criou os céus e a terra." },
+      { en: "Jesus walked on water.", pt: "Jesus andou sobre a água." },
+      { en: "They prayed together.", pt: "Eles oraram juntos." },
+      { en: "She went to Jerusalem.", pt: "Ela foi a Jerusalém." },
+    ],
+  },
+  {
+    title: 'Futuro: "will" e "going to"',
+    explanation:
+      'Há duas formas comuns de falar do futuro. "Will" + verbo no infinitivo é usado para decisões espontâneas, promessas e previsões. "Going to" + verbo no infinitivo é usado para planos já decididos ou algo que parece certo pelo que vemos agora.',
+    examples: [
+      { en: "I will pray for you.", pt: "Eu vou orar por você." },
+      { en: "It will rain tomorrow.", pt: "Vai chover amanhã." },
+      { en: "We are going to visit the church next week.", pt: "Nós vamos visitar a igreja na próxima semana." },
+    ],
+  },
+  {
+    title: "Pronomes e adjetivos possessivos",
+    explanation:
+      "Os adjetivos possessivos (my, your, his, her, its, our, their) vêm antes de um substantivo, indicando de quem é algo. Os pronomes possessivos (mine, yours, his, hers, ours, theirs) substituem o substantivo e ficam sozinhos na frase.",
+    examples: [
+      { en: "This is my Bible.", pt: "Esta é minha Bíblia." },
+      { en: "Is this book yours?", pt: "Este livro é seu?" },
+      { en: "Their faith is strong.", pt: "A fé deles é forte." },
+      { en: "The victory is ours.", pt: "A vitória é nossa." },
+    ],
+  },
+  {
+    title: "Preposições de lugar e tempo: in, on, at",
+    explanation:
+      '"In" é usado para lugares maiores/fechados e para meses, anos e estações (in the city, in 2024). "On" é usado para superfícies, dias e datas (on the table, on Sunday). "At" é usado para pontos específicos e horários (at the door, at 6 o\'clock).',
+    examples: [
+      { en: "They met in Bethlehem.", pt: "Eles se encontraram em Belém." },
+      { en: "The service starts on Sunday.", pt: "O culto começa no domingo." },
+      { en: "We will meet at the church.", pt: "Nós vamos nos encontrar na igreja." },
+      { en: "He arrived at noon.", pt: "Ele chegou ao meio-dia." },
+    ],
+  },
+  {
+    title: "Perguntas com Wh- (What, Who, Where, When, Why, How)",
+    explanation:
+      'As palavras interrogativas ficam no início da pergunta, seguidas de "do/does/did" (ou do verbo "to be") e depois o sujeito. What = o quê; Who = quem; Where = onde; When = quando; Why = por quê; How = como.',
+    examples: [
+      { en: "What is your name?", pt: "Qual é o seu nome?" },
+      { en: "Who wrote this letter?", pt: "Quem escreveu esta carta?" },
+      { en: "Where do you live?", pt: "Onde você mora?" },
+      { en: "Why do you believe?", pt: "Por que você acredita?" },
+    ],
+  },
+  {
+    title: "Comparativo e superlativo",
+    explanation:
+      'Para adjetivos curtos, acrescente "-er" para o comparativo e "-est" para o superlativo (com "the" antes). Para adjetivos longos, use "more" (comparativo) e "the most" (superlativo) antes do adjetivo, sem mudar a palavra.',
+    examples: [
+      { en: "David was strong, but Samson was stronger.", pt: "Davi era forte, mas Sansão era mais forte." },
+      { en: "Solomon was the wisest king.", pt: "Salomão foi o rei mais sábio." },
+      { en: "Love is the most important thing.", pt: "O amor é a coisa mais importante." },
+    ],
+  },
+];
+
+function renderGrammar() {
+  grammarListEl.innerHTML = "";
+
+  GRAMMAR_TOPICS.forEach((topic) => {
+    const item = document.createElement("div");
+    item.className = "grammar-item";
+
+    const header = document.createElement("button");
+    header.type = "button";
+    header.className = "grammar-item-header";
+    header.setAttribute("aria-expanded", "false");
+
+    const titleSpan = document.createElement("span");
+    titleSpan.textContent = topic.title;
+    const chevron = document.createElement("span");
+    chevron.className = "grammar-item-chevron";
+    chevron.setAttribute("aria-hidden", "true");
+    chevron.textContent = "▾";
+    header.append(titleSpan, chevron);
+
+    const body = document.createElement("div");
+    body.className = "grammar-item-body";
+    body.hidden = true;
+
+    const explanation = document.createElement("p");
+    explanation.className = "grammar-explanation";
+    explanation.textContent = topic.explanation;
+    body.appendChild(explanation);
+
+    const examplesList = document.createElement("ul");
+    examplesList.className = "grammar-examples";
+    for (const example of topic.examples) {
+      const li = document.createElement("li");
+      const enSpan = document.createElement("span");
+      enSpan.className = "grammar-example-en";
+      enSpan.textContent = example.en;
+      const ptSpan = document.createElement("span");
+      ptSpan.className = "grammar-example-pt";
+      ptSpan.textContent = example.pt;
+      li.append(enSpan, ptSpan);
+      examplesList.appendChild(li);
+    }
+    body.appendChild(examplesList);
+
+    header.addEventListener("click", () => {
+      const willOpen = body.hidden;
+      body.hidden = !willOpen;
+      header.setAttribute("aria-expanded", String(willOpen));
+      item.classList.toggle("is-open", willOpen);
+    });
+
+    item.append(header, body);
+    grammarListEl.appendChild(item);
+  });
+}
+
+for (const btn of viewBackButtons) {
+  btn.addEventListener("click", () => setActiveView("reading"));
+}
 
 function setActiveView(view) {
   readingContainerEl.hidden = view !== "reading";
@@ -1679,3 +1918,4 @@ loadChapter(getSelectedBook(), DEFAULT_CHAPTER);
 renderVocabularyBadge();
 renderFavoritesBadge();
 renderNotesBadge();
+renderGrammar();

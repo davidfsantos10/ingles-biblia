@@ -112,19 +112,35 @@
     </section>
 
     <section id="grammar-view" class="vocabulary-view" hidden aria-label="Gramática">
-      <p class="empty-state">Conteúdo de gramática em construção — em breve!</p>
+      <button type="button" class="view-back-btn" data-back-view>‹ Voltar</button>
+      <p class="grammar-intro">
+        Guia rápido de gramática do inglês, com explicações em português e exemplos. Toque em um
+        tópico para abrir.
+      </p>
+      <div id="grammar-list" class="grammar-list"></div>
     </section>
 
     <section id="flashcards-view" class="vocabulary-view" hidden aria-label="Cartões de estudo (flashcards)">
-      <p id="flashcards-empty" class="empty-state" hidden>
-        Nenhuma palavra salva ainda. Vá até a Leitura, toque em uma palavra em inglês e depois em
-        "Salvar no vocabulário" para criar seus flashcards.
-      </p>
+      <button type="button" class="view-back-btn" data-back-view>‹ Voltar</button>
+
+      <div class="flashcards-mode-selector" role="group" aria-label="Tipo de flashcard">
+        <button type="button" class="flashcards-mode-btn" data-flashcards-mode="vocabulary" aria-pressed="true">Vocabulário</button>
+        <button type="button" class="flashcards-mode-btn" data-flashcards-mode="favorites" aria-pressed="false">Versículos favoritos</button>
+      </div>
+
+      <p id="flashcards-empty" class="empty-state" hidden></p>
+
       <div id="flashcards-panel" class="flashcards-panel" hidden>
         <p id="flashcards-progress" class="flashcards-progress"></p>
         <button type="button" id="flashcard" class="flashcard" aria-label="Toque para virar o cartão">
-          <span id="flashcard-front" class="flashcard-face flashcard-front"></span>
-          <span id="flashcard-back" class="flashcard-face flashcard-back" hidden></span>
+          <span id="flashcard-front" class="flashcard-face flashcard-front">
+            <span id="flashcard-front-ref" class="flashcard-ref"></span>
+            <span id="flashcard-front-text" class="flashcard-text"></span>
+          </span>
+          <span id="flashcard-back" class="flashcard-face flashcard-back" hidden>
+            <span id="flashcard-back-ref" class="flashcard-ref"></span>
+            <span id="flashcard-back-text" class="flashcard-text"></span>
+          </span>
         </button>
         <div class="flashcards-controls">
           <button type="button" id="flashcards-prev" class="flashcards-nav-btn" aria-label="Cartão anterior">‹</button>
