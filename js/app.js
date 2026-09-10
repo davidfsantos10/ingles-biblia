@@ -118,6 +118,8 @@ const wordPopupCloseEl = document.getElementById("word-popup-close");
 const wordPopupOriginalEl = document.getElementById("word-popup-original");
 const wordPopupTranslationEl = document.getElementById("word-popup-translation");
 const wordPopupSaveEl = document.getElementById("word-popup-save");
+const wordPopupColorsEl = document.getElementById("word-popup-colors");
+const wordColorSwatchButtons = document.querySelectorAll(".word-color-swatch");
 const viewTabButtons = document.querySelectorAll(".view-tab");
 const readingContainerEl = document.getElementById("reading-container");
 const vocabularyViewEl = document.getElementById("vocabulary-view");
@@ -973,6 +975,18 @@ function closeActivePopup() {
 // Palavra atualmente mostrada no popup, usada pelo botão "Salvar".
 let currentPopupWord = null;
 let currentPopupLang = null;
+let currentPopupColor = "blue";
+
+function setPopupColor(color) {
+  currentPopupColor = color;
+  for (const btn of wordColorSwatchButtons) {
+    btn.classList.toggle("is-active", btn.dataset.color === color);
+  }
+}
+
+for (const btn of wordColorSwatchButtons) {
+  btn.addEventListener("click", () => setPopupColor(btn.dataset.color));
+}
 
 function showWordPopup(word, lang, translation, isLoading) {
   if (!notePopupEl.hidden) closeNotePopup();
@@ -987,6 +1001,13 @@ function showWordPopup(word, lang, translation, isLoading) {
     : translation || "tradução não encontrada";
   wordPopupEl.classList.toggle("word-popup--missing", !isLoading && !translation);
   wordPopupSaveEl.hidden = lang !== "en";
+  wordPopupColorsEl.hidden = lang !== "en";
+
+  if (lang === "en") {
+    const existing = loadVocabulary().find((entry) => entry.word === word);
+    setPopupColor((existing && existing.color) || "blue");
+  }
+
   wordPopupBackdropEl.hidden = false;
   wordPopupEl.hidden = false;
 }
@@ -1001,7 +1022,7 @@ function hideWordPopup() {
 
 function handleSaveWordClick() {
   if (!currentPopupWord || currentPopupLang !== "en") return;
-  recordWordClick(currentPopupWord);
+  recordWordClick(currentPopupWord, currentPopupColor);
   hideWordPopup();
 }
 
@@ -1355,15 +1376,16 @@ function saveVocabulary(list) {
   localStorage.setItem(VOCABULARY_STORAGE_KEY, JSON.stringify(list));
 }
 
-// Registra um clique no histórico: cria a entrada na primeira vez (1 clique)
-// ou soma mais um clique se a palavra já estava salva. Chamado na hora do
-// clique, sem esperar a tradução, para a cor no texto reagir na hora.
-function recordWordClick(word) {
+// Salva a palavra no vocabulário com a cor escolhida no popup (ou atualiza a
+// cor se a palavra já estava salva). Chamado só ao apertar "Salvar", para a
+// cor no texto reagir na hora.
+function recordWordClick(word, color) {
   const list = loadVocabulary();
   const existing = list.find((entry) => entry.word === word);
 
   if (existing) {
     existing.timesClicked = (existing.timesClicked || 1) + 1;
+    existing.color = color;
   } else {
     list.unshift({
       word,
@@ -1372,6 +1394,7 @@ function recordWordClick(word) {
       chapter: currentSource.chapter,
       savedAt: Date.now(),
       timesClicked: 1,
+      color,
     });
   }
 
@@ -1401,19 +1424,21 @@ function removeFromVocabulary(word) {
   applyWordHistoryStyles();
 }
 
-// Pinta no texto as palavras em inglês já clicadas: verde na primeira vez,
-// vermelho a partir da segunda (e some quando a palavra é apagada do
-// vocabulário). Roda em toda palavra em inglês visível no capítulo atual.
+const WORD_COLOR_CLASSES = ["word--saved-blue", "word--saved-red", "word--saved-yellow", "word--saved-green"];
+
+// Pinta no texto as palavras salvas no vocabulário com a cor escolhida no
+// popup (some quando a palavra é apagada do vocabulário). Roda em toda
+// palavra em inglês visível no capítulo atual.
 function applyWordHistoryStyles() {
-  const clickCounts = {};
+  const colors = {};
   for (const entry of loadVocabulary()) {
-    clickCounts[entry.word] = entry.timesClicked || 1;
+    colors[entry.word] = entry.color || "blue";
   }
 
   for (const span of document.querySelectorAll('.word[data-lang="en"]')) {
-    const count = clickCounts[span.dataset.word] || 0;
-    span.classList.toggle("word--history-new", count === 1);
-    span.classList.toggle("word--history-repeated", count >= 2);
+    span.classList.remove(...WORD_COLOR_CLASSES);
+    const color = colors[span.dataset.word];
+    if (color) span.classList.add(`word--saved-${color}`);
   }
 }
 
@@ -1444,7 +1469,7 @@ function renderVocabularyList() {
     li.className = "vocabulary-item";
 
     const wordEl = document.createElement("span");
-    wordEl.className = "vocabulary-word";
+    wordEl.className = `vocabulary-word word--saved-${entry.color || "blue"}`;
     wordEl.textContent = entry.word;
 
     const translationEl = document.createElement("span");
