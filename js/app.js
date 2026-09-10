@@ -838,13 +838,15 @@ function downloadShareImage() {
   }, "image/png");
 }
 
+function buildShareFile() {
+  if (!currentShareBlob) return null;
+  return new File([currentShareBlob], `${currentShareReference.replace(/[:\s]+/g, "-")}.png`, { type: "image/png" });
+}
+
 function shareCardNatively() {
   // Usa o blob já pré-gerado (em vez de esperar um novo toBlob) para não perder
   // o gesto do usuário, exigido pelo Web Share API em navegadores mais estritos.
-  const blob = currentShareBlob;
-  const file = blob
-    ? new File([blob], `${currentShareReference.replace(/[:\s]+/g, "-")}.png`, { type: "image/png" })
-    : null;
+  const file = buildShareFile();
 
   if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
     navigator.share({ files: [file], title: currentShareReference, text: buildShareText() }).catch(() => {
@@ -864,16 +866,41 @@ function shareCardNatively() {
   showToast("Compartilhamento direto não é suportado aqui; a imagem foi baixada.");
 }
 
+// wa.me/t.me só aceitam texto na URL — não há como anexar a imagem por um link,
+// já que o site não tem servidor para hospedá-la. Por isso, quando o navegador
+// suporta compartilhar arquivos (Web Share API), abrimos o menu nativo, que já
+// inclui WhatsApp/Telegram com a imagem anexada; sem esse suporte, baixamos a
+// imagem automaticamente e abrimos o app com o texto, para o usuário só anexar.
+function shareImageAndTextTo(target) {
+  const file = buildShareFile();
+
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator
+      .share({ files: [file], title: currentShareReference, text: buildShareText() })
+      .catch(() => {
+        // Usuário cancelou o compartilhamento: nenhuma ação necessária.
+      });
+    return;
+  }
+
+  downloadShareImage();
+
+  const appName = target === "whatsapp" ? "WhatsApp" : "Telegram";
+  const url =
+    target === "whatsapp"
+      ? `https://wa.me/?text=${encodeURIComponent(`${buildShareText()}\n\n${location.href}`)}`
+      : `https://t.me/share/url?url=${encodeURIComponent(location.href)}&text=${encodeURIComponent(buildShareText())}`;
+
+  window.open(url, "_blank", "noopener");
+  showToast(`A imagem foi baixada — anexe-a na conversa do ${appName}.`);
+}
+
 function shareToWhatsApp() {
-  const text = `${buildShareText()}\n\n${location.href}`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
-  showToast("Baixe a imagem para anexá-la à conversa, se quiser.");
+  shareImageAndTextTo("whatsapp");
 }
 
 function shareToTelegram() {
-  const url = `https://t.me/share/url?url=${encodeURIComponent(location.href)}&text=${encodeURIComponent(buildShareText())}`;
-  window.open(url, "_blank", "noopener");
-  showToast("Baixe a imagem para anexá-la à conversa, se quiser.");
+  shareImageAndTextTo("telegram");
 }
 
 async function loadChapter(book, chapter) {
