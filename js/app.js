@@ -1277,6 +1277,27 @@ async function translateWord(word, from, to) {
   return result;
 }
 
+// Busca a tradução de uma palavra do vocabulário que ficou sem tradução
+// salva (ex.: entradas antigas, de antes de uma correção, ou uma falha
+// pontual da API na hora de salvar). Evita duas buscas em paralelo para a
+// mesma palavra caso ela apareça em mais de um lugar (vocabulário e
+// flashcards) ao mesmo tempo.
+const pendingTranslationBackfills = new Set();
+
+function backfillTranslation(word, onResolve, onReject) {
+  if (pendingTranslationBackfills.has(word)) return;
+  pendingTranslationBackfills.add(word);
+  translateWord(word, "en", "pt")
+    .then((translation) => {
+      pendingTranslationBackfills.delete(word);
+      onResolve(translation);
+    })
+    .catch(() => {
+      pendingTranslationBackfills.delete(word);
+      if (onReject) onReject();
+    });
+}
+
 // Evita que a resposta de um clique antigo (ainda em andamento) sobrescreva
 // o popup depois que o usuário já clicou em outra palavra.
 let activeWordRequestId = 0;
@@ -1441,6 +1462,14 @@ function updateVocabularyTranslation(word, translation) {
   entry.translation = translation;
   saveVocabulary(list);
   if (!vocabularyViewEl.hidden) renderVocabularyList();
+
+  if (flashcardsMode === "vocabulary") {
+    const deckEntry = flashcardsDeck.find((e) => e.word === word);
+    if (deckEntry) deckEntry.translation = translation;
+    if (!flashcardsViewEl.hidden && flashcardsDeck[flashcardsIndex] === deckEntry) {
+      flashcardBackTextEl.textContent = translation;
+    }
+  }
 }
 
 function removeFromVocabulary(word) {
@@ -1501,7 +1530,18 @@ function renderVocabularyList() {
 
     const translationEl = document.createElement("span");
     translationEl.className = "vocabulary-translation";
-    translationEl.textContent = entry.translation || "tradução não encontrada";
+    if (entry.translation) {
+      translationEl.textContent = entry.translation;
+    } else {
+      translationEl.textContent = "traduzindo…";
+      backfillTranslation(
+        entry.word,
+        (translation) => updateVocabularyTranslation(entry.word, translation),
+        () => {
+          translationEl.textContent = "tradução não encontrada";
+        }
+      );
+    }
 
     const sourceEl = document.createElement("span");
     sourceEl.className = "vocabulary-source";
@@ -1553,7 +1593,21 @@ function showFlashcard(index) {
     flashcardFrontRefEl.textContent = "";
     flashcardFrontTextEl.textContent = entry.word;
     flashcardBackRefEl.textContent = "";
-    flashcardBackTextEl.textContent = entry.translation || "tradução não encontrada";
+
+    if (entry.translation) {
+      flashcardBackTextEl.textContent = entry.translation;
+    } else {
+      flashcardBackTextEl.textContent = "traduzindo…";
+      backfillTranslation(
+        entry.word,
+        (translation) => updateVocabularyTranslation(entry.word, translation),
+        () => {
+          if (flashcardsMode === "vocabulary" && flashcardsIndex === index) {
+            flashcardBackTextEl.textContent = "tradução não encontrada";
+          }
+        }
+      );
+    }
   }
 
   flashcardFrontEl.hidden = false;
