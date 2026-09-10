@@ -122,6 +122,8 @@ const shareFontDecreaseEl = document.getElementById("share-font-decrease");
 const shareFontIncreaseEl = document.getElementById("share-font-increase");
 const shareDownloadBtnEl = document.getElementById("share-download-btn");
 const shareNativeBtnEl = document.getElementById("share-native-btn");
+const shareWhatsappBtnEl = document.getElementById("share-whatsapp-btn");
+const shareTelegramBtnEl = document.getElementById("share-telegram-btn");
 const toastEl = document.getElementById("toast");
 
 let currentSource = { book: "", chapter: 0 };
@@ -654,6 +656,7 @@ let currentShareChapter = null;
 let currentShareReference = "";
 let currentShareBackgroundIndex = 0;
 let currentShareFontSize = 44;
+let currentShareBlob = null;
 
 function renderShareBackgroundSwatches() {
   shareBackgroundsEl.innerHTML = "";
@@ -765,6 +768,15 @@ function drawShareCard() {
   ctx.font = `500 ${Math.max(16, Math.round(currentShareFontSize * 0.28))}px -apple-system, BlinkMacSystemFont, sans-serif`;
   ctx.fillStyle = bg.subTextColor;
   ctx.fillText("Inglês com a Bíblia", w / 2, h - 50);
+
+  currentShareBlob = null;
+  shareCanvasEl.toBlob((blob) => {
+    currentShareBlob = blob;
+  }, "image/png");
+}
+
+function buildShareText() {
+  return `"${currentShareVerse.en}"\n"${currentShareVerse.pt}"\n— ${currentShareReference} (KJV / ARC)`;
 }
 
 function openSharePopup(verse, book, chapter) {
@@ -790,6 +802,7 @@ function closeSharePopup() {
   currentShareVerse = null;
   currentShareBook = null;
   currentShareChapter = null;
+  currentShareBlob = null;
 }
 
 function changeShareFontSize(delta) {
@@ -800,43 +813,67 @@ function changeShareFontSize(delta) {
   drawShareCard();
 }
 
+function downloadShareImageBlob(blob) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${currentShareReference.replace(/[:\s]+/g, "-")}.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function downloadShareImage() {
+  if (currentShareBlob) {
+    downloadShareImageBlob(currentShareBlob);
+    return;
+  }
   shareCanvasEl.toBlob((blob) => {
     if (!blob) {
       showToast("Não foi possível gerar a imagem.");
       return;
     }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${currentShareReference.replace(/[:\s]+/g, "-")}.png`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadShareImageBlob(blob);
   }, "image/png");
 }
 
 function shareCardNatively() {
-  shareCanvasEl.toBlob(async (blob) => {
-    if (!blob) {
-      showToast("Não foi possível gerar a imagem.");
-      return;
-    }
-    const file = new File([blob], `${currentShareReference.replace(/[:\s]+/g, "-")}.png`, { type: "image/png" });
+  // Usa o blob já pré-gerado (em vez de esperar um novo toBlob) para não perder
+  // o gesto do usuário, exigido pelo Web Share API em navegadores mais estritos.
+  const blob = currentShareBlob;
+  const file = blob
+    ? new File([blob], `${currentShareReference.replace(/[:\s]+/g, "-")}.png`, { type: "image/png" })
+    : null;
 
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: currentShareReference });
-      } catch (err) {
-        // Usuário cancelou o compartilhamento: nenhuma ação necessária.
-      }
-      return;
-    }
+  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: currentShareReference, text: buildShareText() }).catch(() => {
+      // Usuário cancelou o compartilhamento: nenhuma ação necessária.
+    });
+    return;
+  }
 
-    downloadShareImage();
-    showToast("Compartilhamento direto não é suportado aqui; a imagem foi baixada.");
-  }, "image/png");
+  if (navigator.share) {
+    navigator.share({ title: currentShareReference, text: buildShareText() }).catch(() => {
+      // Usuário cancelou o compartilhamento: nenhuma ação necessária.
+    });
+    return;
+  }
+
+  downloadShareImage();
+  showToast("Compartilhamento direto não é suportado aqui; a imagem foi baixada.");
+}
+
+function shareToWhatsApp() {
+  const text = `${buildShareText()}\n\n${location.href}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+  showToast("Baixe a imagem para anexá-la à conversa, se quiser.");
+}
+
+function shareToTelegram() {
+  const url = `https://t.me/share/url?url=${encodeURIComponent(location.href)}&text=${encodeURIComponent(buildShareText())}`;
+  window.open(url, "_blank", "noopener");
+  showToast("Baixe a imagem para anexá-la à conversa, se quiser.");
 }
 
 async function loadChapter(book, chapter) {
@@ -1053,6 +1090,8 @@ shareFontDecreaseEl.addEventListener("click", () => changeShareFontSize(-2));
 shareFontIncreaseEl.addEventListener("click", () => changeShareFontSize(2));
 shareDownloadBtnEl.addEventListener("click", downloadShareImage);
 shareNativeBtnEl.addEventListener("click", shareCardNatively);
+shareWhatsappBtnEl.addEventListener("click", shareToWhatsApp);
+shareTelegramBtnEl.addEventListener("click", shareToTelegram);
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeActivePopup();
