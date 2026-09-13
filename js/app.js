@@ -190,6 +190,11 @@ const homeProgressRingEl = document.getElementById("home-progress-ring");
 const homeProgressTextEl = document.getElementById("home-progress-text");
 const homeProCardEl = document.getElementById("home-pro-card");
 const homeSoonButtons = document.querySelectorAll("[data-home-soon]");
+const homeHeaderEl = document.getElementById("home-header");
+const appHeaderEl = document.getElementById("app-header");
+const homeDarkModeBtnEl = document.getElementById("home-darkmode-btn");
+const homeNotificationsBtnEl = document.getElementById("home-notifications-btn");
+const homeAvatarBtnEl = document.getElementById("home-avatar-btn");
 
 let currentSource = { book: "", chapter: 0 };
 
@@ -2148,7 +2153,21 @@ for (const btn of homeSoonButtons) {
   });
 }
 
+homeDarkModeBtnEl.addEventListener("click", () => {
+  showToast("Modo escuro em breve!");
+});
+
+homeNotificationsBtnEl.addEventListener("click", () => {
+  showToast("Notificações em breve!");
+});
+
+homeAvatarBtnEl.addEventListener("click", () => {
+  showToast("Perfil em breve! Por enquanto, tudo já é salvo automaticamente neste navegador.");
+});
+
 function setActiveView(view) {
+  homeHeaderEl.hidden = view !== "home";
+  appHeaderEl.hidden = view === "home";
   homeViewEl.hidden = view !== "home";
   readingContainerEl.hidden = view !== "reading";
   vocabularyViewEl.hidden = view !== "vocabulary";
