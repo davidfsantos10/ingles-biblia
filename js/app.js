@@ -155,6 +155,7 @@ const shareNativeBtnEl = document.getElementById("share-native-btn");
 const shareWhatsappBtnEl = document.getElementById("share-whatsapp-btn");
 const shareTelegramBtnEl = document.getElementById("share-telegram-btn");
 const toastEl = document.getElementById("toast");
+const backToHomeBtnEl = document.getElementById("back-to-home-btn");
 const menuToggleEl = document.getElementById("menu-toggle");
 const menuDropdownEl = document.getElementById("menu-dropdown");
 const menuDropdownItems = document.querySelectorAll(".menu-dropdown-item");
@@ -2209,6 +2210,8 @@ menuToggleEl.addEventListener("click", (event) => {
   event.stopPropagation();
   toggleMenu();
 });
+
+backToHomeBtnEl.addEventListener("click", () => setActiveView("home"));
 
 document.addEventListener("click", (event) => {
   if (!menuDropdownEl.hidden && !event.target.closest(".menu-wrap")) toggleMenu(false);
