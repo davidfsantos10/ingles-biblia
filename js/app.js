@@ -177,6 +177,19 @@ const flashcardsShuffleEl = document.getElementById("flashcards-shuffle");
 const flashcardsModeButtons = document.querySelectorAll(".flashcards-mode-btn");
 const grammarListEl = document.getElementById("grammar-list");
 const viewBackButtons = document.querySelectorAll(".view-back-btn");
+const homeViewEl = document.getElementById("home-view");
+const homeFabAudioEl = document.getElementById("home-fab-audio");
+const homeVerseEnEl = document.getElementById("home-verse-en");
+const homeVerseRefEl = document.getElementById("home-verse-ref");
+const homeVersePtEl = document.getElementById("home-verse-pt");
+const homeVerseShareBtnEl = document.getElementById("home-verse-share-btn");
+const homeStreakEl = document.getElementById("home-streak");
+const homeContinueRefEl = document.getElementById("home-continue-ref");
+const homeContinueBtnEl = document.getElementById("home-continue-btn");
+const homeProgressRingEl = document.getElementById("home-progress-ring");
+const homeProgressTextEl = document.getElementById("home-progress-text");
+const homeProCardEl = document.getElementById("home-pro-card");
+const homeSoonButtons = document.querySelectorAll("[data-home-soon]");
 
 let currentSource = { book: "", chapter: 0 };
 
@@ -337,11 +350,11 @@ async function goToVerse(bookSlug, chapter, verseKey) {
   const book = BOOKS.find((b) => b.slug === bookSlug);
   if (!book) return;
 
-  setActiveView("reading");
   bookSelect.value = bookSlug;
   populateChapterSelect(book);
   chapterSelect.value = String(chapter);
   await loadChapter(book, chapter);
+  setActiveView("reading");
 
   const verseEl = versesEnEl.querySelector(`[data-verse-key="${verseKey}"]`);
   if (verseEl) verseEl.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -965,6 +978,8 @@ async function loadChapter(book, chapter) {
     emptyStateEl.hidden = true;
     closeActivePopup();
     renderChapter(book, chapter, data);
+    saveLastRead(book.slug, chapter);
+    markChapterRead(book.slug, chapter);
   } catch (err) {
     readingView.hidden = true;
     emptyStateEl.hidden = false;
@@ -1861,13 +1876,287 @@ for (const btn of viewBackButtons) {
   btn.addEventListener("click", () => setActiveView("reading"));
 }
 
+// --- Início: versículo do dia, continuar leitura e sequência de dias ---
+// Painel de abertura do app (prévia do visual pensado para a versão que vai
+// para a Play Store). Tudo aqui roda só com o que já existe no navegador —
+// sem servidor — inclusive a seção "Minha conta"/PRO, que por enquanto é só
+// visual (mostra "em breve" ao tocar).
+
+const LAST_READ_STORAGE_KEY = "ingles-biblia.last-read";
+const READ_CHAPTERS_STORAGE_KEY = "ingles-biblia.read-chapters";
+const STREAK_STORAGE_KEY = "ingles-biblia.streak";
+const TOTAL_BIBLE_CHAPTERS = BOOKS.reduce((sum, book) => sum + book.chapters, 0);
+
+// Referências de versículos bem conhecidos, usados como "Versículo do Dia"
+// (um por dia, escolhido pelo dia do ano — muda todo dia, mas é o mesmo
+// para todo mundo no mesmo dia, sem precisar de servidor).
+const VERSE_OF_THE_DAY_REFS = [
+  { slug: "genesis", chapter: 1, number: 1 },
+  { slug: "genesis", chapter: 1, number: 27 },
+  { slug: "exodus", chapter: 14, number: 14 },
+  { slug: "deuteronomy", chapter: 31, number: 6 },
+  { slug: "joshua", chapter: 1, number: 9 },
+  { slug: "joshua", chapter: 24, number: 15 },
+  { slug: "psalms", chapter: 19, number: 1 },
+  { slug: "psalms", chapter: 23, number: 1 },
+  { slug: "psalms", chapter: 27, number: 1 },
+  { slug: "psalms", chapter: 34, number: 8 },
+  { slug: "psalms", chapter: 37, number: 4 },
+  { slug: "psalms", chapter: 46, number: 1 },
+  { slug: "psalms", chapter: 91, number: 1 },
+  { slug: "psalms", chapter: 100, number: 1 },
+  { slug: "psalms", chapter: 118, number: 24 },
+  { slug: "psalms", chapter: 121, number: 1 },
+  { slug: "psalms", chapter: 139, number: 14 },
+  { slug: "proverbs", chapter: 3, number: 5 },
+  { slug: "proverbs", chapter: 3, number: 6 },
+  { slug: "proverbs", chapter: 16, number: 3 },
+  { slug: "proverbs", chapter: 18, number: 10 },
+  { slug: "proverbs", chapter: 22, number: 6 },
+  { slug: "ecclesiastes", chapter: 3, number: 1 },
+  { slug: "isaiah", chapter: 40, number: 31 },
+  { slug: "isaiah", chapter: 41, number: 10 },
+  { slug: "isaiah", chapter: 53, number: 5 },
+  { slug: "jeremiah", chapter: 29, number: 11 },
+  { slug: "matthew", chapter: 5, number: 16 },
+  { slug: "matthew", chapter: 6, number: 33 },
+  { slug: "matthew", chapter: 11, number: 28 },
+  { slug: "matthew", chapter: 28, number: 19 },
+  { slug: "matthew", chapter: 28, number: 20 },
+  { slug: "mark", chapter: 11, number: 24 },
+  { slug: "luke", chapter: 1, number: 37 },
+  { slug: "john", chapter: 3, number: 16 },
+  { slug: "john", chapter: 8, number: 32 },
+  { slug: "john", chapter: 14, number: 6 },
+  { slug: "acts", chapter: 1, number: 8 },
+  { slug: "romans", chapter: 3, number: 23 },
+  { slug: "romans", chapter: 6, number: 23 },
+  { slug: "romans", chapter: 8, number: 28 },
+  { slug: "romans", chapter: 10, number: 9 },
+  { slug: "romans", chapter: 12, number: 2 },
+  { slug: "1-corinthians", chapter: 10, number: 13 },
+  { slug: "1-corinthians", chapter: 13, number: 4 },
+  { slug: "2-corinthians", chapter: 5, number: 17 },
+  { slug: "galatians", chapter: 2, number: 20 },
+  { slug: "galatians", chapter: 5, number: 22 },
+  { slug: "ephesians", chapter: 2, number: 8 },
+  { slug: "ephesians", chapter: 6, number: 10 },
+  { slug: "philippians", chapter: 1, number: 6 },
+  { slug: "philippians", chapter: 4, number: 6 },
+  { slug: "philippians", chapter: 4, number: 7 },
+  { slug: "philippians", chapter: 4, number: 13 },
+  { slug: "colossians", chapter: 3, number: 2 },
+  { slug: "colossians", chapter: 3, number: 23 },
+  { slug: "1-thessalonians", chapter: 5, number: 16 },
+  { slug: "1-thessalonians", chapter: 5, number: 18 },
+  { slug: "2-timothy", chapter: 1, number: 7 },
+  { slug: "titus", chapter: 3, number: 5 },
+  { slug: "hebrews", chapter: 4, number: 16 },
+  { slug: "hebrews", chapter: 11, number: 1 },
+  { slug: "hebrews", chapter: 13, number: 5 },
+  { slug: "hebrews", chapter: 13, number: 8 },
+  { slug: "james", chapter: 1, number: 2 },
+  { slug: "james", chapter: 1, number: 5 },
+  { slug: "james", chapter: 4, number: 7 },
+  { slug: "1-peter", chapter: 2, number: 9 },
+  { slug: "1-peter", chapter: 5, number: 7 },
+  { slug: "1-john", chapter: 1, number: 9 },
+  { slug: "1-john", chapter: 4, number: 19 },
+  { slug: "revelation", chapter: 3, number: 20 },
+  { slug: "revelation", chapter: 21, number: 4 },
+];
+
+function loadLastRead() {
+  try {
+    const raw = localStorage.getItem(LAST_READ_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function saveLastRead(bookSlug, chapter) {
+  try {
+    localStorage.setItem(LAST_READ_STORAGE_KEY, JSON.stringify({ bookSlug, chapter }));
+  } catch (err) {
+    // Sem armazenamento disponível: só não lembra a posição na próxima visita.
+  }
+}
+
+function loadReadChapters() {
+  try {
+    const raw = localStorage.getItem(READ_CHAPTERS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function markChapterRead(bookSlug, chapter) {
+  const key = `${bookSlug}-${chapter}`;
+  const list = loadReadChapters();
+  if (list.includes(key)) return;
+  list.push(key);
+  try {
+    localStorage.setItem(READ_CHAPTERS_STORAGE_KEY, JSON.stringify(list));
+  } catch (err) {
+    // Sem armazenamento disponível: só não conta esse capítulo no progresso.
+  }
+}
+
+function getReadingProgressPercent() {
+  const readCount = loadReadChapters().length;
+  if (readCount === 0) return 0;
+  // Arredondar para baixo até 0% depois de ler algo de verdade seria
+  // desanimador (1189 capítulos ao todo — leva muitos capítulos lidos
+  // para o primeiro 1% "de verdade" aparecer).
+  return Math.max(1, Math.min(100, Math.round((readCount / TOTAL_BIBLE_CHAPTERS) * 100)));
+}
+
+// Conta dias seguidos com o app aberto (um "dia" muda à meia-noite UTC).
+// Só soma quando o dia muda; abrir várias vezes no mesmo dia não infla a
+// contagem, e pular um dia zera a sequência.
+function updateStreak() {
+  const todayKey = new Date().toISOString().slice(0, 10);
+  let streak;
+  try {
+    streak = JSON.parse(localStorage.getItem(STREAK_STORAGE_KEY) || "null");
+  } catch (err) {
+    streak = null;
+  }
+
+  if (!streak) {
+    streak = { count: 1, lastDate: todayKey };
+  } else if (streak.lastDate !== todayKey) {
+    const yesterdayKey = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    streak.count = streak.lastDate === yesterdayKey ? streak.count + 1 : 1;
+    streak.lastDate = todayKey;
+  }
+
+  try {
+    localStorage.setItem(STREAK_STORAGE_KEY, JSON.stringify(streak));
+  } catch (err) {
+    // Sem armazenamento disponível: sequência não é lembrada entre visitas.
+  }
+  return streak.count;
+}
+
+function getVerseOfDayRef() {
+  const start = new Date(new Date().getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((Date.now() - start) / 86400000);
+  return VERSE_OF_THE_DAY_REFS[dayOfYear % VERSE_OF_THE_DAY_REFS.length];
+}
+
+// Guarda o versículo do dia já carregado, para o botão de compartilhar e o
+// de ouvir reaproveitarem sem buscar de novo.
+let currentVerseOfDay = null;
+
+async function renderVerseOfDay() {
+  const ref = getVerseOfDayRef();
+  const book = BOOKS.find((b) => b.slug === ref.slug);
+
+  try {
+    const response = await fetch(`data/${ref.slug}-${ref.chapter}.json`);
+    if (!response.ok) throw new Error("not found");
+    const data = await response.json();
+    const verse = data.verses.find((v) => v.number === ref.number);
+    if (!verse) throw new Error("verse not found");
+
+    currentVerseOfDay = { verse, book, chapter: ref.chapter };
+    homeVerseEnEl.textContent = `"${getEnglishText(verse)}"`;
+    homeVerseRefEl.textContent = `${book.en} ${ref.chapter}:${ref.number} · ${EN_VERSIONS[currentEnVersion].label}`;
+    homeVersePtEl.textContent = `"${verse.pt}"`;
+  } catch (err) {
+    currentVerseOfDay = null;
+    homeVerseEnEl.textContent = "Não foi possível carregar o versículo agora.";
+    homeVerseRefEl.textContent = "";
+    homeVersePtEl.textContent = "";
+  }
+}
+
+function updateProgressRing(percent) {
+  const circumference = 144.5; // 2 * PI * 23 (raio do círculo no SVG)
+  homeProgressRingEl.style.strokeDashoffset = String(circumference * (1 - percent / 100));
+  homeProgressTextEl.textContent = `${percent}%`;
+}
+
+function renderContinueReadingCard() {
+  const last = loadLastRead();
+  const book = last ? BOOKS.find((b) => b.slug === last.bookSlug) : null;
+
+  homeContinueRefEl.innerHTML = book
+    ? `<b>${book.pt} ${last.chapter}</b> · ${EN_VERSIONS[currentEnVersion].label}`
+    : `Comece por <b>${BOOKS[0].pt} 1</b>`;
+
+  updateProgressRing(getReadingProgressPercent());
+}
+
+function renderHome() {
+  const streakCount = updateStreak();
+  homeStreakEl.textContent = `🔥 ${streakCount} dia${streakCount === 1 ? "" : "s"} seguido${streakCount === 1 ? "" : "s"}`;
+  renderVerseOfDay();
+  renderContinueReadingCard();
+}
+
+// Retorna para onde "Continuar leitura" (e a primeira visita à aba Leitura)
+// deve levar: a última posição salva, ou Gênesis 1 se ainda não houver uma.
+function getContinueReadingTarget() {
+  const last = loadLastRead();
+  const book = last ? BOOKS.find((b) => b.slug === last.bookSlug) : null;
+  return { book: book || BOOKS[0], chapter: book ? last.chapter : DEFAULT_CHAPTER };
+}
+
+// Carrega a leitura na primeira vez que a aba é aberta nesta visita (se o
+// usuário for direto para "Leitura" sem passar pelo Início).
+function ensureReadingLoaded() {
+  if (currentSource.chapter !== 0) return;
+  const { book, chapter } = getContinueReadingTarget();
+  bookSelect.value = book.slug;
+  populateChapterSelect(book);
+  chapterSelect.value = String(chapter);
+  loadChapter(book, chapter);
+}
+
+async function continueReading() {
+  const { book, chapter } = getContinueReadingTarget();
+  bookSelect.value = book.slug;
+  populateChapterSelect(book);
+  chapterSelect.value = String(chapter);
+  await loadChapter(book, chapter);
+  setActiveView("reading");
+}
+
+homeContinueBtnEl.addEventListener("click", continueReading);
+
+homeVerseShareBtnEl.addEventListener("click", () => {
+  if (!currentVerseOfDay) return;
+  openSharePopup(currentVerseOfDay.verse, currentVerseOfDay.book, currentVerseOfDay.chapter);
+});
+
+homeFabAudioEl.addEventListener("click", () => {
+  if (!currentVerseOfDay) return;
+  speakText(getEnglishText(currentVerseOfDay.verse), 0.85);
+});
+
+homeProCardEl.addEventListener("click", () => {
+  showToast("PRO chegando em breve! Por enquanto, o app é gratuito e completo.");
+});
+
+for (const btn of homeSoonButtons) {
+  btn.addEventListener("click", () => {
+    showToast("Login em breve! Por enquanto, tudo já é salvo automaticamente neste navegador.");
+  });
+}
+
 function setActiveView(view) {
+  homeViewEl.hidden = view !== "home";
   readingContainerEl.hidden = view !== "reading";
   vocabularyViewEl.hidden = view !== "vocabulary";
   favoritesViewEl.hidden = view !== "favorites";
   notesViewEl.hidden = view !== "notes";
   grammarViewEl.hidden = view !== "grammar";
   flashcardsViewEl.hidden = view !== "flashcards";
+  homeFabAudioEl.hidden = view !== "home";
 
   for (const btn of viewTabButtons) {
     btn.setAttribute("aria-pressed", String(btn.dataset.view === view));
@@ -1876,6 +2165,8 @@ function setActiveView(view) {
     item.setAttribute("aria-pressed", String(item.dataset.menuView === view));
   }
 
+  if (view === "home") renderHome();
+  if (view === "reading") ensureReadingLoaded();
   if (view === "vocabulary") renderVocabularyList();
   if (view === "favorites") renderFavoritesList();
   if (view === "notes") renderNotesList();
@@ -1957,7 +2248,8 @@ function setEnVersion(version) {
   currentEnVersion = version;
   saveEnVersion(version);
   applyEnVersionUI();
-  loadChapter(getSelectedBook(), Number(chapterSelect.value));
+  if (currentSource.chapter !== 0) loadChapter(getSelectedBook(), Number(chapterSelect.value));
+  if (!homeViewEl.hidden) renderVerseOfDay();
 }
 
 for (const btn of enVersionButtons) {
@@ -1968,8 +2260,8 @@ applyEnVersionUI();
 populateBookSelect();
 populateChapterSelect(getSelectedBook());
 chapterSelect.value = String(DEFAULT_CHAPTER);
-loadChapter(getSelectedBook(), DEFAULT_CHAPTER);
 renderVocabularyBadge();
 renderFavoritesBadge();
 renderNotesBadge();
 renderGrammar();
+setActiveView("home");
