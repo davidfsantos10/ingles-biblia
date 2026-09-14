@@ -2166,7 +2166,39 @@ homeAvatarBtnEl.addEventListener("click", () => {
   showToast("Perfil em breve! Por enquanto, tudo já é salvo automaticamente neste navegador.");
 });
 
+// --- Botão/gesto "voltar" nativo do celular volta para o Início ---
+//
+// Sem isso, como o app troca de tela só escondendo/mostrando elementos (sem
+// navegar de verdade), o histórico do navegador fica com uma única entrada:
+// apertar voltar (ou arrastar da borda, no gesto do Android) sai do site
+// direto. Em vez disso, ao sair do Início empilhamos uma entrada extra no
+// histórico; apertar voltar consome essa entrada e cai num "popstate", que
+// interceptamos para voltar ao Início em vez de deixar o navegador navegar
+// para fora do app. Só uma "profundidade" de histórico é usada de propósito:
+// não importa quantas abas o usuário troque, voltar sempre leva direto ao
+// Início — e voltar de novo a partir do Início aí sim sai do site.
+let suppressHistoryPush = false;
+
+function pushHistoryStateForView(view) {
+  if (suppressHistoryPush) return;
+  if (view === "home") {
+    history.replaceState({ view: "home" }, "");
+  } else if (!history.state || history.state.view === "home") {
+    history.pushState({ view }, "");
+  } else {
+    history.replaceState({ view }, "");
+  }
+}
+
+window.addEventListener("popstate", () => {
+  suppressHistoryPush = true;
+  setActiveView("home");
+  suppressHistoryPush = false;
+});
+
 function setActiveView(view) {
+  pushHistoryStateForView(view);
+
   homeHeaderEl.hidden = view !== "home";
   appHeaderEl.hidden = view === "home";
   homeViewEl.hidden = view !== "home";
