@@ -210,6 +210,28 @@ body {
   display: none;
 }
 
+/* Ao rolar a leitura para baixo, esconde as abas/seletores (mais espaço de
+   leitura) mas mantém sempre visíveis: voltar ao Início, o menu e o título. */
+
+.app-header-collapsible {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  max-height: 15rem;
+  margin-top: 0.6rem;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease, margin-top 0.25s ease;
+}
+
+.app-header.is-collapsed .app-header-collapsible {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  pointer-events: none;
+}
+
 .app-title {
   font-size: 1.15rem;
   font-weight: 600;

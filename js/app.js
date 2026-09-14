@@ -1425,6 +1425,44 @@ columnPtEl.addEventListener("scroll", () => syncScroll(columnPtEl, columnEnEl), 
 window.addEventListener("scroll", hideWordPopup, { passive: true });
 window.addEventListener("resize", hideWordPopup);
 
+// Esconde as abas/seletores do cabeçalho ao rolar para baixo (mais espaço
+// pra leitura), mostra de novo ao rolar para cima — sem nunca esconder a
+// linha de cima (voltar, menu, título). Cada view rola de um jeito
+// diferente (as colunas de leitura, os `.vocabulary-view` compartilhados
+// por Vocabulário/Favoritos/Anotações/Gramática/Flashcards, ou a página
+// inteira em telas largas/paisagem), então ouvimos todas as fontes.
+let headerScrollBaseline = 0;
+
+function handleHeaderCollapseScroll(scrollTop) {
+  if (scrollTop <= 4) {
+    appHeaderEl.classList.remove("is-collapsed");
+    headerScrollBaseline = scrollTop;
+    return;
+  }
+  const delta = scrollTop - headerScrollBaseline;
+  if (delta > 10) {
+    appHeaderEl.classList.add("is-collapsed");
+    headerScrollBaseline = scrollTop;
+  } else if (delta < -10) {
+    appHeaderEl.classList.remove("is-collapsed");
+    headerScrollBaseline = scrollTop;
+  }
+}
+
+for (const column of document.querySelectorAll(".column")) {
+  column.addEventListener("scroll", () => handleHeaderCollapseScroll(column.scrollTop), { passive: true });
+}
+
+for (const view of document.querySelectorAll(".vocabulary-view")) {
+  view.addEventListener("scroll", () => handleHeaderCollapseScroll(view.scrollTop), { passive: true });
+}
+
+window.addEventListener(
+  "scroll",
+  () => handleHeaderCollapseScroll(window.scrollY || document.documentElement.scrollTop),
+  { passive: true }
+);
+
 // --- Vocabulário salvo (localStorage) ---
 
 const VOCABULARY_STORAGE_KEY = "ingles-biblia.vocabulary";
@@ -2198,6 +2236,9 @@ window.addEventListener("popstate", () => {
 
 function setActiveView(view) {
   pushHistoryStateForView(view);
+
+  appHeaderEl.classList.remove("is-collapsed");
+  headerScrollBaseline = 0;
 
   homeHeaderEl.hidden = view !== "home";
   appHeaderEl.hidden = view === "home";

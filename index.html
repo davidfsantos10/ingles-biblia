@@ -49,32 +49,34 @@
 
     <h1 class="app-title">Inglês com a Bíblia</h1>
 
-    <nav class="view-tabs" aria-label="Navegação">
-      <button type="button" class="view-tab" data-view="reading" aria-pressed="false">Leitura</button>
-      <button type="button" class="view-tab" data-view="vocabulary" aria-pressed="false">
-        Vocabulário
-        <span id="vocab-count" class="vocab-count" hidden>0</span>
-      </button>
-      <button type="button" class="view-tab" data-view="favorites" aria-pressed="false">
-        Favoritos
-        <span id="favorites-count" class="vocab-count" hidden>0</span>
-      </button>
-      <button type="button" class="view-tab" data-view="notes" aria-pressed="false">
-        Anotações
-        <span id="notes-count" class="vocab-count" hidden>0</span>
-      </button>
-    </nav>
+    <div class="app-header-collapsible">
+      <nav class="view-tabs" aria-label="Navegação">
+        <button type="button" class="view-tab" data-view="reading" aria-pressed="false">Leitura</button>
+        <button type="button" class="view-tab" data-view="vocabulary" aria-pressed="false">
+          Vocabulário
+          <span id="vocab-count" class="vocab-count" hidden>0</span>
+        </button>
+        <button type="button" class="view-tab" data-view="favorites" aria-pressed="false">
+          Favoritos
+          <span id="favorites-count" class="vocab-count" hidden>0</span>
+        </button>
+        <button type="button" class="view-tab" data-view="notes" aria-pressed="false">
+          Anotações
+          <span id="notes-count" class="vocab-count" hidden>0</span>
+        </button>
+      </nav>
 
-    <div class="chapter-selector">
-      <select id="book-select" aria-label="Livro"></select>
-      <select id="chapter-select" aria-label="Capítulo"></select>
-    </div>
+      <div class="chapter-selector">
+        <select id="book-select" aria-label="Livro"></select>
+        <select id="chapter-select" aria-label="Capítulo"></select>
+      </div>
 
-    <div class="en-version-selector" role="group" aria-label="Versão do texto em inglês">
-      <span class="en-version-label">Inglês:</span>
-      <button type="button" class="en-version-btn" data-en-version="kjv" aria-pressed="true" title="King James Version — inglês clássico/arcaico (thee, thou, hath…)">KJV</button>
-      <button type="button" class="en-version-btn" data-en-version="web" aria-pressed="false" title="World English Bible — inglês moderno e natural">WEB</button>
-      <button type="button" class="en-version-btn" data-en-version="bbe" aria-pressed="false" title="Bible in Basic English — vocabulário simplificado, ideal para iniciantes">BBE</button>
+      <div class="en-version-selector" role="group" aria-label="Versão do texto em inglês">
+        <span class="en-version-label">Inglês:</span>
+        <button type="button" class="en-version-btn" data-en-version="kjv" aria-pressed="true" title="King James Version — inglês clássico/arcaico (thee, thou, hath…)">KJV</button>
+        <button type="button" class="en-version-btn" data-en-version="web" aria-pressed="false" title="World English Bible — inglês moderno e natural">WEB</button>
+        <button type="button" class="en-version-btn" data-en-version="bbe" aria-pressed="false" title="Bible in Basic English — vocabulário simplificado, ideal para iniciantes">BBE</button>
+      </div>
     </div>
   </header>
 
