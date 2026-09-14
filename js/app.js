@@ -196,6 +196,27 @@ const appHeaderEl = document.getElementById("app-header");
 const homeDarkModeBtnEl = document.getElementById("home-darkmode-btn");
 const homeNotificationsBtnEl = document.getElementById("home-notifications-btn");
 const homeAvatarBtnEl = document.getElementById("home-avatar-btn");
+const homeLessonsStatusEl = document.getElementById("home-lessons-status");
+const homeLessonsRingEl = document.getElementById("home-lessons-ring");
+const homeLessonsProgressTextEl = document.getElementById("home-lessons-progress-text");
+const homeLessonsBtnEl = document.getElementById("home-lessons-btn");
+const lessonsOverlayEl = document.getElementById("lessons-overlay");
+const lessonsCloseBtnEl = document.getElementById("lessons-close-btn");
+const lessonsProgressFillEl = document.getElementById("lessons-progress-fill");
+const lessonsExerciseEl = document.getElementById("lessons-exercise");
+const lessonInstructionEl = document.getElementById("lesson-instruction");
+const lessonPromptEl = document.getElementById("lesson-prompt");
+const lessonRefEl = document.getElementById("lesson-ref");
+const lessonInputEl = document.getElementById("lesson-input");
+const lessonFeedbackEl = document.getElementById("lesson-feedback");
+const lessonFeedbackTitleEl = document.getElementById("lesson-feedback-title");
+const lessonFeedbackAnswerEl = document.getElementById("lesson-feedback-answer");
+const lessonsCompleteEl = document.getElementById("lessons-complete");
+const lessonsCompleteScoreEl = document.getElementById("lessons-complete-score");
+const lessonsCompleteCloseBtnEl = document.getElementById("lessons-complete-close-btn");
+const lessonsActionsEl = document.getElementById("lessons-actions");
+const lessonCheckBtnEl = document.getElementById("lesson-check-btn");
+const lessonContinueBtnEl = document.getElementById("lesson-continue-btn");
 
 let currentSource = { book: "", chapter: 0 };
 
@@ -2102,6 +2123,7 @@ function renderHome() {
   homeStreakEl.textContent = `🔥 ${streakCount} dia${streakCount === 1 ? "" : "s"} seguido${streakCount === 1 ? "" : "s"}`;
   renderVerseOfDay();
   renderContinueReadingCard();
+  renderLessonsCard();
 }
 
 // Retorna para onde "Continuar leitura" (e a primeira visita à aba Leitura)
@@ -2166,6 +2188,371 @@ homeAvatarBtnEl.addEventListener("click", () => {
   showToast("Perfil em breve! Por enquanto, tudo já é salvo automaticamente neste navegador.");
 });
 
+// --- Lições: exercícios de tradução gerados a partir da própria Bíblia do
+// app (versículos conhecidos + palavras do glossário/vocabulário salvo),
+// sem depender de nenhuma IA — a correção é por comparação de texto. A
+// lição do dia é sorteada de forma determinística pelo dia do ano, então
+// todo mundo recebe a mesma lição num dia, e ela muda sozinha à meia-noite.
+
+const LESSON_SENTENCE_COUNT = 6;
+const LESSON_WORD_COUNT = 4;
+const LESSONS_PROGRESS_STORAGE_KEY = "ingles-biblia.lessons-progress";
+const LESSON_ARROW_ICON =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+
+// Gerador pseudoaleatório determinístico (mesma semente → mesma sequência),
+// usado pra sortear a lição do dia de um jeito que dá o mesmo resultado
+// pra todo mundo, sem precisar de servidor guardando nada.
+function mulberry32(seed) {
+  return function () {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function seededShuffle(list, rng) {
+  const result = list.slice();
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+function getLessonSeed() {
+  const now = new Date();
+  const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  return now.getFullYear() * 1000 + dayOfYear;
+}
+
+function todayDateKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// --- Correção das respostas por comparação de texto (sem IA/serviço externo) ---
+
+function normalizeLessonText(text) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function levenshteinDistance(a, b) {
+  const m = a.length;
+  const n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+
+  let prevRow = Array.from({ length: n + 1 }, (_, j) => j);
+  let currRow = new Array(n + 1);
+
+  for (let i = 1; i <= m; i++) {
+    currRow[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      currRow[j] = Math.min(currRow[j - 1] + 1, prevRow[j] + 1, prevRow[j - 1] + cost);
+    }
+    [prevRow, currRow] = [currRow, prevRow];
+  }
+  return prevRow[n];
+}
+
+function similarityRatio(a, b) {
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1;
+  return 1 - levenshteinDistance(a, b) / maxLen;
+}
+
+function wordOverlapRatio(userText, correctText) {
+  const userWords = new Set(userText.split(" ").filter(Boolean));
+  const correctWords = correctText.split(" ").filter(Boolean);
+  if (correctWords.length === 0) return 0;
+  return correctWords.filter((word) => userWords.has(word)).length / correctWords.length;
+}
+
+// Não existe um serviço de correção por trás disso — é só comparação de
+// texto. Por isso a resposta é aceita quando fica "bem próxima" do
+// esperado, em vez de exigir bater exatamente com pontuação e acentos.
+function isLessonAnswerCorrect(userAnswer, acceptedAnswers, isSentence) {
+  const normalizedUser = normalizeLessonText(userAnswer);
+  if (!normalizedUser) return false;
+
+  return acceptedAnswers.some((accepted) => {
+    const normalizedAccepted = normalizeLessonText(accepted);
+    if (normalizedUser === normalizedAccepted) return true;
+    if (isSentence) {
+      return (
+        wordOverlapRatio(normalizedUser, normalizedAccepted) >= 0.6 &&
+        similarityRatio(normalizedUser, normalizedAccepted) >= 0.45
+      );
+    }
+    return similarityRatio(normalizedUser, normalizedAccepted) >= 0.75;
+  });
+}
+
+// --- Montagem da lição do dia ---
+
+function buildLessonWordPool() {
+  const pool = [];
+  const seen = new Set();
+
+  for (const entry of loadVocabulary()) {
+    if (entry.translation && !seen.has(entry.word)) {
+      pool.push({ word: entry.word, translations: [entry.translation] });
+      seen.add(entry.word);
+    }
+  }
+
+  for (const [word, translations] of Object.entries(ARCHAIC_EN_PT_GLOSSARY)) {
+    if (!seen.has(word)) {
+      pool.push({ word, translations: translations.split(",").map((t) => t.trim()) });
+      seen.add(word);
+    }
+  }
+
+  return pool;
+}
+
+async function buildTodaysLessonExercises() {
+  const rng = mulberry32(getLessonSeed());
+  const exercises = [];
+
+  const sentenceRefs = seededShuffle(VERSE_OF_THE_DAY_REFS, rng).slice(0, LESSON_SENTENCE_COUNT);
+  for (const ref of sentenceRefs) {
+    try {
+      const response = await fetch(`data/${ref.slug}-${ref.chapter}.json`);
+      if (!response.ok) continue;
+      const data = await response.json();
+      const verse = data.verses.find((v) => v.number === ref.number);
+      const book = BOOKS.find((b) => b.slug === ref.slug);
+      if (!verse || !book) continue;
+
+      const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
+      const enText = getEnglishText(verse);
+      exercises.push({
+        type: "sentence",
+        direction,
+        prompt: direction === "en-to-pt" ? enText : verse.pt,
+        acceptedAnswers: direction === "en-to-pt" ? [verse.pt] : [enText],
+        reference: `${book.pt} ${ref.chapter}:${ref.number}`,
+      });
+    } catch (err) {
+      // Essa referência falhou (ex.: sem conexão); segue com as demais.
+    }
+  }
+
+  const wordPool = seededShuffle(buildLessonWordPool(), rng).slice(0, LESSON_WORD_COUNT);
+  for (const entry of wordPool) {
+    const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
+    exercises.push({
+      type: "word",
+      direction,
+      prompt: direction === "en-to-pt" ? entry.word : entry.translations[0],
+      acceptedAnswers: direction === "en-to-pt" ? entry.translations : [entry.word],
+      reference: "",
+    });
+  }
+
+  return seededShuffle(exercises, rng);
+}
+
+// --- Progresso do dia (localStorage) ---
+
+function loadLessonsProgress() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LESSONS_PROGRESS_STORAGE_KEY) || "null");
+    if (raw && raw.date === todayDateKey()) return raw;
+  } catch (err) {
+    // segue com progresso zerado
+  }
+  return { date: todayDateKey(), completed: 0, correct: 0, total: 0 };
+}
+
+function saveLessonsProgress(progress) {
+  try {
+    localStorage.setItem(LESSONS_PROGRESS_STORAGE_KEY, JSON.stringify(progress));
+  } catch (err) {
+    // Sem armazenamento disponível: progresso não persiste entre visitas.
+  }
+}
+
+function renderLessonsCard() {
+  const progress = loadLessonsProgress();
+  const total = progress.total || LESSON_SENTENCE_COUNT + LESSON_WORD_COUNT;
+  const percent = total > 0 ? Math.round((progress.completed / total) * 100) : 0;
+
+  const circumference = 144.5;
+  homeLessonsRingEl.style.strokeDashoffset = String(circumference * (1 - percent / 100));
+  homeLessonsProgressTextEl.textContent = `${percent}%`;
+
+  if (progress.completed === 0) {
+    homeLessonsStatusEl.textContent = `${total} exercícios de tradução`;
+    homeLessonsBtnEl.innerHTML = `COMEÇAR LIÇÃO ${LESSON_ARROW_ICON}`;
+  } else if (progress.completed < total) {
+    homeLessonsStatusEl.textContent = `${progress.completed} de ${total} exercícios feitos`;
+    homeLessonsBtnEl.innerHTML = `CONTINUAR LIÇÃO ${LESSON_ARROW_ICON}`;
+  } else {
+    homeLessonsStatusEl.textContent = `Lição de hoje concluída — ${progress.correct}/${total} certas`;
+    homeLessonsBtnEl.innerHTML = `FAZER DE NOVO ${LESSON_ARROW_ICON}`;
+  }
+}
+
+// --- Sessão de exercícios (tela cheia) ---
+
+let currentLessonExercises = [];
+let currentLessonIndex = 0;
+let currentLessonProgress = null;
+let lessonAnswered = false;
+
+function renderLessonExercise() {
+  lessonAnswered = false;
+  const exercise = currentLessonExercises[currentLessonIndex];
+  const isSentence = exercise.type === "sentence";
+  const targetLang = exercise.direction === "en-to-pt" ? "português" : "inglês";
+
+  lessonsProgressFillEl.style.width = `${Math.round((currentLessonIndex / currentLessonExercises.length) * 100)}%`;
+  lessonInstructionEl.textContent = isSentence
+    ? `Traduza a frase para o ${targetLang}:`
+    : `Traduza a palavra para o ${targetLang}:`;
+  lessonPromptEl.textContent = exercise.prompt;
+  lessonRefEl.textContent = exercise.reference;
+
+  lessonInputEl.value = "";
+  lessonInputEl.disabled = false;
+
+  lessonFeedbackEl.hidden = true;
+  lessonFeedbackEl.classList.remove("is-correct", "is-incorrect");
+
+  lessonCheckBtnEl.hidden = false;
+  lessonCheckBtnEl.disabled = false;
+  lessonContinueBtnEl.hidden = true;
+
+  lessonsExerciseEl.hidden = false;
+  lessonsCompleteEl.hidden = true;
+  lessonsActionsEl.hidden = false;
+
+  lessonInputEl.focus();
+}
+
+function showLessonsComplete() {
+  lessonsProgressFillEl.style.width = "100%";
+  lessonsExerciseEl.hidden = true;
+  lessonsCompleteEl.hidden = false;
+  lessonsActionsEl.hidden = true;
+  const progress = currentLessonProgress || loadLessonsProgress();
+  lessonsCompleteScoreEl.textContent = `Você acertou ${progress.correct} de ${progress.total} exercícios hoje.`;
+}
+
+function checkLessonAnswer() {
+  if (lessonAnswered) return;
+  const userAnswer = lessonInputEl.value.trim();
+  if (!userAnswer) {
+    lessonInputEl.focus();
+    return;
+  }
+
+  const exercise = currentLessonExercises[currentLessonIndex];
+  const correct = isLessonAnswerCorrect(userAnswer, exercise.acceptedAnswers, exercise.type === "sentence");
+
+  lessonAnswered = true;
+  lessonInputEl.disabled = true;
+  lessonFeedbackEl.hidden = false;
+  lessonFeedbackEl.classList.toggle("is-correct", correct);
+  lessonFeedbackEl.classList.toggle("is-incorrect", !correct);
+  lessonFeedbackTitleEl.textContent = correct ? "Certinho!" : "Quase lá";
+  lessonFeedbackAnswerEl.textContent = `Resposta: ${exercise.acceptedAnswers[0]}`;
+
+  lessonCheckBtnEl.hidden = true;
+  lessonContinueBtnEl.hidden = false;
+  lessonContinueBtnEl.focus();
+
+  currentLessonProgress.completed += 1;
+  if (correct) currentLessonProgress.correct += 1;
+  saveLessonsProgress(currentLessonProgress);
+  renderLessonsCard();
+}
+
+function advanceLesson() {
+  currentLessonIndex += 1;
+  if (currentLessonIndex >= currentLessonExercises.length) {
+    showLessonsComplete();
+  } else {
+    renderLessonExercise();
+  }
+}
+
+function closeLessonsOverlay() {
+  lessonsOverlayEl.hidden = true;
+}
+
+// Fecha a lição a partir de um toque no × (ou no botão de fim de lição), não
+// do botão/gesto nativo de voltar. Consome a entrada de histórico que a
+// abertura empilhou (em vez de deixá-la parada ali), pra não sobrar um
+// "voltar" extra sem efeito depois de fechar manualmente.
+function requestCloseLessons() {
+  if (history.state && history.state.view === "lessons") {
+    history.back();
+  } else {
+    closeLessonsOverlay();
+  }
+}
+
+async function openLessonsOverlay() {
+  pushHistoryStateForLessons();
+
+  const progress = loadLessonsProgress();
+  if (progress.total > 0 && progress.completed >= progress.total) {
+    saveLessonsProgress({ date: todayDateKey(), completed: 0, correct: 0, total: 0 });
+  }
+
+  lessonsOverlayEl.hidden = false;
+  lessonsExerciseEl.hidden = false;
+  lessonsCompleteEl.hidden = true;
+  lessonsActionsEl.hidden = true;
+  lessonInstructionEl.textContent = "";
+  lessonPromptEl.textContent = "Preparando a lição…";
+  lessonRefEl.textContent = "";
+  lessonsProgressFillEl.style.width = "0%";
+
+  currentLessonExercises = await buildTodaysLessonExercises();
+
+  if (currentLessonExercises.length === 0) {
+    lessonPromptEl.textContent = "Não foi possível preparar a lição agora. Verifique sua conexão e tente de novo.";
+    return;
+  }
+
+  const freshProgress = loadLessonsProgress();
+  currentLessonProgress = { ...freshProgress, total: currentLessonExercises.length };
+  if (freshProgress.total !== currentLessonExercises.length) saveLessonsProgress(currentLessonProgress);
+
+  if (currentLessonProgress.completed >= currentLessonExercises.length) {
+    showLessonsComplete();
+  } else {
+    currentLessonIndex = currentLessonProgress.completed;
+    renderLessonExercise();
+  }
+}
+
+homeLessonsBtnEl.addEventListener("click", openLessonsOverlay);
+lessonsCloseBtnEl.addEventListener("click", requestCloseLessons);
+lessonsCompleteCloseBtnEl.addEventListener("click", requestCloseLessons);
+lessonCheckBtnEl.addEventListener("click", checkLessonAnswer);
+lessonContinueBtnEl.addEventListener("click", advanceLesson);
+
+lessonInputEl.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.shiftKey) return;
+  event.preventDefault();
+  if (lessonAnswered) advanceLesson();
+  else checkLessonAnswer();
+});
+
 // --- Botão/gesto "voltar" nativo do celular volta para o Início ---
 //
 // Sem isso, como o app troca de tela só escondendo/mostrando elementos (sem
@@ -2190,9 +2577,26 @@ function pushHistoryStateForView(view) {
   }
 }
 
+// A lição (tela cheia) não passa por setActiveView, mas também precisa de
+// uma entrada própria: sem isso, apertar voltar com a lição aberta cairia
+// no popstate abaixo sem fechá-la (a tela por trás mudaria escondida atrás
+// da lição, que continuaria cobrindo tudo).
+function pushHistoryStateForLessons() {
+  if (suppressHistoryPush) return;
+  if (!history.state || history.state.view === "home") {
+    history.pushState({ view: "lessons" }, "");
+  } else {
+    history.replaceState({ view: "lessons" }, "");
+  }
+}
+
 window.addEventListener("popstate", () => {
   suppressHistoryPush = true;
-  setActiveView("home");
+  if (!lessonsOverlayEl.hidden) {
+    closeLessonsOverlay();
+  } else {
+    setActiveView("home");
+  }
   suppressHistoryPush = false;
 });
 
