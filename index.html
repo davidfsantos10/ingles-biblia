@@ -132,6 +132,34 @@
         </button>
       </div>
 
+      <div class="home-card home-lessons-card">
+        <div class="home-rc-head">
+          <span class="home-rc-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/></svg>
+            LIÇÕES
+          </span>
+        </div>
+
+        <div class="home-rc-body">
+          <div>
+            <p class="home-rc-sub">Pratique com a própria Bíblia</p>
+            <p id="home-lessons-status" class="home-rc-ref"></p>
+          </div>
+          <div class="home-ring-wrap">
+            <svg width="56" height="56" viewBox="0 0 56 56">
+              <circle cx="28" cy="28" r="23" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="5"/>
+              <circle id="home-lessons-ring" cx="28" cy="28" r="23" fill="none" stroke="#FDE68A" stroke-width="5" stroke-linecap="round" stroke-dasharray="144.5" stroke-dashoffset="144.5" transform="rotate(-90 28 28)"/>
+            </svg>
+            <span id="home-lessons-progress-text" class="home-ring-txt">0%</span>
+          </div>
+        </div>
+
+        <button type="button" id="home-lessons-btn" class="home-btn-lessons">
+          COMEÇAR LIÇÃO
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+
       <button type="button" id="home-pro-card" class="home-pro-card" aria-label="Migrar para o PRO">
         <div class="home-pro-inner">
           <div class="home-pro-head">
@@ -378,6 +406,41 @@
     <div class="share-popup-actions">
       <button type="button" id="share-download-btn" class="note-popup-delete">Baixar imagem</button>
       <button type="button" id="share-native-btn" class="word-popup-save">Compartilhar</button>
+    </div>
+  </div>
+
+  <div id="lessons-overlay" class="lessons-overlay" hidden role="dialog" aria-modal="true" aria-label="Lição de hoje">
+    <div class="lessons-topbar">
+      <button type="button" id="lessons-close-btn" class="lessons-close-btn" aria-label="Fechar lição">×</button>
+      <div class="lessons-progress-track">
+        <div id="lessons-progress-fill" class="lessons-progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="lessons-body">
+      <div id="lessons-exercise" class="lesson-exercise">
+        <p id="lesson-instruction" class="lesson-instruction"></p>
+        <p id="lesson-prompt" class="lesson-prompt"></p>
+        <p id="lesson-ref" class="lesson-ref"></p>
+        <textarea id="lesson-input" class="lesson-input" rows="3" placeholder="Digite sua resposta…"></textarea>
+
+        <div id="lesson-feedback" class="lesson-feedback" hidden>
+          <p id="lesson-feedback-title" class="lesson-feedback-title"></p>
+          <p id="lesson-feedback-answer" class="lesson-feedback-answer"></p>
+        </div>
+      </div>
+
+      <div id="lessons-complete" class="lessons-complete" hidden>
+        <p class="lessons-complete-emoji" aria-hidden="true">🎉</p>
+        <p class="lessons-complete-title">Lição concluída!</p>
+        <p id="lessons-complete-score" class="lessons-complete-score"></p>
+        <button type="button" id="lessons-complete-close-btn" class="home-btn-lessons">Voltar ao Início</button>
+      </div>
+    </div>
+
+    <div id="lessons-actions" class="lessons-actions">
+      <button type="button" id="lesson-check-btn" class="lesson-action-btn">VERIFICAR</button>
+      <button type="button" id="lesson-continue-btn" class="lesson-action-btn" hidden>CONTINUAR</button>
     </div>
   </div>
 
