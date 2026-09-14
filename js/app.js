@@ -1425,67 +1425,6 @@ columnPtEl.addEventListener("scroll", () => syncScroll(columnPtEl, columnEnEl), 
 window.addEventListener("scroll", hideWordPopup, { passive: true });
 window.addEventListener("resize", hideWordPopup);
 
-// Esconde as abas/seletores do cabeçalho ao rolar para baixo (mais espaço
-// pra leitura), mostra de novo ao rolar para cima — sem nunca esconder a
-// linha de cima (voltar, menu, título). Cada view rola de um jeito
-// diferente (as colunas de leitura, os `.vocabulary-view` compartilhados
-// por Vocabulário/Favoritos/Anotações/Gramática/Flashcards, ou a página
-// inteira em telas largas/paisagem), então ouvimos todas as fontes.
-// Limiar bem maior que um simples "mudou de direção": scroll por toque
-// costuma balançar alguns pixels pra lá e pra cá (o dedo nunca é 100%
-// firme, e há desaceleração/inércia no final do gesto), e um limiar
-// pequeno fazia o cabeçalho "tremer" tentando decidir a cada pequena
-// oscilação. Também há um intervalo mínimo entre trocas (perto da duração
-// da transição do CSS) para a animação de uma decisão terminar antes da
-// próxima poder começar, em vez de ficarem brigando no meio do caminho.
-const HEADER_COLLAPSE_THRESHOLD = 48;
-const HEADER_COLLAPSE_LOCK_MS = 320;
-
-let headerScrollBaseline = 0;
-let headerToggleLockedUntil = 0;
-
-function handleHeaderCollapseScroll(scrollTop) {
-  if (scrollTop <= 6) {
-    if (appHeaderEl.classList.contains("is-collapsed")) {
-      appHeaderEl.classList.remove("is-collapsed");
-      headerToggleLockedUntil = Date.now() + HEADER_COLLAPSE_LOCK_MS;
-    }
-    headerScrollBaseline = scrollTop;
-    return;
-  }
-
-  if (Date.now() < headerToggleLockedUntil) return;
-
-  const delta = scrollTop - headerScrollBaseline;
-  if (delta > HEADER_COLLAPSE_THRESHOLD) {
-    if (!appHeaderEl.classList.contains("is-collapsed")) {
-      appHeaderEl.classList.add("is-collapsed");
-      headerToggleLockedUntil = Date.now() + HEADER_COLLAPSE_LOCK_MS;
-    }
-    headerScrollBaseline = scrollTop;
-  } else if (delta < -HEADER_COLLAPSE_THRESHOLD) {
-    if (appHeaderEl.classList.contains("is-collapsed")) {
-      appHeaderEl.classList.remove("is-collapsed");
-      headerToggleLockedUntil = Date.now() + HEADER_COLLAPSE_LOCK_MS;
-    }
-    headerScrollBaseline = scrollTop;
-  }
-}
-
-for (const column of document.querySelectorAll(".column")) {
-  column.addEventListener("scroll", () => handleHeaderCollapseScroll(column.scrollTop), { passive: true });
-}
-
-for (const view of document.querySelectorAll(".vocabulary-view")) {
-  view.addEventListener("scroll", () => handleHeaderCollapseScroll(view.scrollTop), { passive: true });
-}
-
-window.addEventListener(
-  "scroll",
-  () => handleHeaderCollapseScroll(window.scrollY || document.documentElement.scrollTop),
-  { passive: true }
-);
-
 // --- Vocabulário salvo (localStorage) ---
 
 const VOCABULARY_STORAGE_KEY = "ingles-biblia.vocabulary";
@@ -2259,9 +2198,6 @@ window.addEventListener("popstate", () => {
 
 function setActiveView(view) {
   pushHistoryStateForView(view);
-
-  appHeaderEl.classList.remove("is-collapsed");
-  headerScrollBaseline = 0;
 
   homeHeaderEl.hidden = view !== "home";
   appHeaderEl.hidden = view === "home";
