@@ -1109,6 +1109,33 @@ main {
   text-align: center;
 }
 
+.lesson-speak-btn {
+  display: flex;
+  margin: 0 auto 0.6rem;
+  width: 2.4rem;
+  height: 2.4rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.lesson-speak-btn svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.lesson-speak-btn:hover {
+  background: var(--color-accent-soft);
+}
+
+.lesson-speak-btn[hidden] {
+  display: none;
+}
+
 .lesson-prompt {
   margin: 0 0 0.5rem;
   font-family: var(--font-reading);
@@ -1153,6 +1180,65 @@ main {
 .lesson-input:disabled {
   background: var(--color-accent-soft);
   color: var(--color-text-muted);
+}
+
+.lesson-tap-area[hidden] {
+  display: none;
+}
+
+.lesson-tap-answer {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 0.5rem;
+  min-height: 3.4rem;
+  padding: 0.6rem;
+  margin-bottom: 1rem;
+  border-radius: 0.6rem;
+  border: 1.5px dashed var(--color-border);
+  background: var(--color-bg);
+}
+
+.lesson-tap-answer:empty::before {
+  content: "Toque nas palavras abaixo para montar a frase";
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  align-self: center;
+}
+
+.lesson-tap-bank {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.lesson-tap-tile {
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.lesson-tap-tile:hover {
+  background: var(--color-accent-soft);
+}
+
+.lesson-tap-tile.is-placed {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.lesson-tap-tile:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .lesson-feedback {
