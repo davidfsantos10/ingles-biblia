@@ -3075,10 +3075,11 @@ function setActiveView(view) {
   pushHistoryStateForView(view);
 
   homeHeaderEl.hidden = view !== "home";
-  // A gramática tem seu próprio botão "Voltar" e não usa nada do cabeçalho
-  // de leitura (abas, seletor de livro/capítulo, versão do inglês), então
-  // esse cabeçalho fica escondido ali — evita poluição visual sem função.
-  appHeaderEl.hidden = view === "home" || view === "grammar";
+  // Gramática e Flashcards têm seu próprio botão "Voltar" e não usam nada do
+  // cabeçalho de leitura (abas, seletor de livro/capítulo, versão do
+  // inglês), então esse cabeçalho fica escondido nessas telas — evita
+  // poluição visual sem função.
+  appHeaderEl.hidden = view === "home" || view === "grammar" || view === "flashcards";
   homeViewEl.hidden = view !== "home";
   readingContainerEl.hidden = view !== "reading";
   vocabularyViewEl.hidden = view !== "vocabulary";
