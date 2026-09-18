@@ -1798,8 +1798,17 @@ for (const btn of flashcardsModeButtons) {
 
 // --- Gramática: guia de referência rápida, conteúdo original em português ---
 
+// Guia de gramática organizado por categoria (Fundamentos → Tempos verbais →
+// Modais → Frases e conexões → Descrevendo o mundo → Tópicos avançados),
+// do nível básico ao intermediário. As regras gramaticais em si são fatos de
+// domínio público (não é possível ter direitos autorais sobre "como o
+// presente perfeito é formado"); o texto de cada explicação e os exemplos
+// foram escritos diretamente para este app, no mesmo espírito do restante do
+// conteúdo, para manter a voz consistente e os exemplos ligados à Bíblia.
 const GRAMMAR_TOPICS = [
+  // --- Fundamentos ---
   {
+    category: "Fundamentos",
     title: "Pronomes pessoais (Subject Pronouns)",
     explanation:
       'Os pronomes pessoais substituem o nome de quem pratica a ação do verbo. Em inglês eles sempre vêm antes do verbo, e o pronome "I" (eu) é sempre escrito com letra maiúscula, não importa onde apareça na frase.',
@@ -1811,6 +1820,19 @@ const GRAMMAR_TOPICS = [
     ],
   },
   {
+    category: "Fundamentos",
+    title: "Pronomes objeto (Object Pronouns)",
+    explanation:
+      'Os pronomes objeto (me, you, him, her, it, us, them) substituem o nome de quem recebe a ação do verbo, ou aparecem depois de uma preposição (for, to, with...). Diferente dos pronomes pessoais, eles nunca vêm antes do verbo principal da frase.',
+    examples: [
+      { en: "God loves me.", pt: "Deus me ama." },
+      { en: "I will follow him.", pt: "Eu vou segui-lo." },
+      { en: "She gave the book to us.", pt: "Ela deu o livro para nós." },
+      { en: "Pray for them.", pt: "Ore por eles." },
+    ],
+  },
+  {
+    category: "Fundamentos",
     title: 'O verbo "to be" no presente (am / is / are)',
     explanation:
       '"To be" significa "ser" ou "estar" e é um dos verbos mais usados em inglês. No presente tem três formas: am (com "I"), is (com he/she/it e nomes no singular) e are (com you/we/they e nomes no plural).',
@@ -1822,16 +1844,31 @@ const GRAMMAR_TOPICS = [
     ],
   },
   {
+    category: "Fundamentos",
+    title: 'O verbo "to be" no passado (was / were)',
+    explanation:
+      'No passado, "to be" tem só duas formas: "was" (com I/he/she/it) e "were" (com you/we/they). Na negativa, acrescente "not" (was not / were not, ou wasn\'t / weren\'t).',
+    examples: [
+      { en: "Moses was a great leader.", pt: "Moisés foi um grande líder." },
+      { en: "They were in the desert for forty years.", pt: "Eles estiveram no deserto por quarenta anos." },
+      { en: "I wasn't afraid.", pt: "Eu não estava com medo." },
+      { en: "Were you at the service last Sunday?", pt: "Você estava no culto no domingo passado?" },
+    ],
+  },
+  {
+    category: "Fundamentos",
     title: "Artigos: a, an, the",
     explanation:
       '"A" e "an" são artigos indefinidos (equivalem a "um"/"uma"), usados para falar de algo não específico. Use "an" antes de palavras que começam com som de vogal, e "a" antes de som de consoante. "The" é o artigo definido (equivale a "o"/"a"/"os"/"as"), usado para algo específico ou já mencionado antes.',
     examples: [
       { en: "I saw a star in the sky.", pt: "Eu vi uma estrela no céu." },
       { en: "She is an honest woman.", pt: "Ela é uma mulher honesta." },
+      { en: "He is a good shepherd.", pt: "Ele é um bom pastor." },
       { en: "The book on the table is mine.", pt: "O livro na mesa é meu." },
     ],
   },
   {
+    category: "Fundamentos",
     title: "Plural dos substantivos",
     explanation:
       "Na maioria das vezes, basta acrescentar \"-s\" ao substantivo para formar o plural. Palavras terminadas em -s, -ss, -sh, -ch, -x ou -z recebem \"-es\". Também existem plurais irregulares, que precisam ser memorizados.",
@@ -1843,49 +1880,19 @@ const GRAMMAR_TOPICS = [
     ],
   },
   {
-    title: "Presente Simples (Simple Present)",
+    category: "Fundamentos",
+    title: "Substantivos contáveis e incontáveis",
     explanation:
-      'Usado para hábitos, rotinas e fatos permanentes. Na afirmativa, o verbo recebe "-s" (ou "-es") quando o sujeito é he/she/it. Na negativa e na interrogativa, usa-se "do"/"does" + o verbo no infinitivo, sem "-s".',
+      'Substantivos contáveis podem ser contados (one book, two books) e têm plural. Substantivos incontáveis representam algo que normalmente não se separa em unidades (líquidos, sentimentos, conceitos): não têm plural e não usam "a/an" antes. Cuidado com palavras como "advice" (conselho), "information" e "furniture", que são incontáveis em inglês mesmo tendo plural em português.',
     examples: [
-      { en: "I read the Bible every night.", pt: "Eu leio a Bíblia todas as noites." },
-      { en: "He goes to church on Sundays.", pt: "Ele vai à igreja aos domingos." },
-      { en: "She doesn't like coffee.", pt: "Ela não gosta de café." },
-      { en: "Do you believe in miracles?", pt: "Você acredita em milagres?" },
+      { en: "I have three sons.", pt: "Eu tenho três filhos." },
+      { en: "She has great faith.", pt: "Ela tem grande fé." },
+      { en: "We need water and bread.", pt: "Nós precisamos de água e pão." },
+      { en: "He gave good advice.", pt: "Ele deu um bom conselho." },
     ],
   },
   {
-    title: "Presente Contínuo (Present Continuous)",
-    explanation:
-      'Descreve ações acontecendo agora, no momento em que se fala. É formado com o verbo "to be" (am/is/are) + o verbo principal terminado em "-ing".',
-    examples: [
-      { en: "I am reading the book of Psalms.", pt: "Eu estou lendo o livro de Salmos." },
-      { en: "She is singing a hymn.", pt: "Ela está cantando um hino." },
-      { en: "They are walking to the temple.", pt: "Eles estão caminhando para o templo." },
-      { en: "Are you listening?", pt: "Você está escutando?" },
-    ],
-  },
-  {
-    title: "Passado Simples (Simple Past)",
-    explanation:
-      'Usado para ações já concluídas no passado. Verbos regulares recebem "-ed" (walk → walked). Muitos verbos comuns são irregulares e mudam de forma completamente — por exemplo: be→was/were, go→went, have→had, do→did, say→said, see→saw, come→came, know→knew, take→took, give→gave, make→made.',
-    examples: [
-      { en: "God created the heavens and the earth.", pt: "Deus criou os céus e a terra." },
-      { en: "Jesus walked on water.", pt: "Jesus andou sobre a água." },
-      { en: "They prayed together.", pt: "Eles oraram juntos." },
-      { en: "She went to Jerusalem.", pt: "Ela foi a Jerusalém." },
-    ],
-  },
-  {
-    title: 'Futuro: "will" e "going to"',
-    explanation:
-      'Há duas formas comuns de falar do futuro. "Will" + verbo no infinitivo é usado para decisões espontâneas, promessas e previsões. "Going to" + verbo no infinitivo é usado para planos já decididos ou algo que parece certo pelo que vemos agora.',
-    examples: [
-      { en: "I will pray for you.", pt: "Eu vou orar por você." },
-      { en: "It will rain tomorrow.", pt: "Vai chover amanhã." },
-      { en: "We are going to visit the church next week.", pt: "Nós vamos visitar a igreja na próxima semana." },
-    ],
-  },
-  {
+    category: "Fundamentos",
     title: "Pronomes e adjetivos possessivos",
     explanation:
       "Os adjetivos possessivos (my, your, his, her, its, our, their) vêm antes de um substantivo, indicando de quem é algo. Os pronomes possessivos (mine, yours, his, hers, ours, theirs) substituem o substantivo e ficam sozinhos na frase.",
@@ -1897,17 +1904,154 @@ const GRAMMAR_TOPICS = [
     ],
   },
   {
-    title: "Preposições de lugar e tempo: in, on, at",
+    category: "Fundamentos",
+    title: "There is / There are",
     explanation:
-      '"In" é usado para lugares maiores/fechados e para meses, anos e estações (in the city, in 2024). "On" é usado para superfícies, dias e datas (on the table, on Sunday). "At" é usado para pontos específicos e horários (at the door, at 6 o\'clock).',
+      'Usamos "there is" (singular) e "there are" (plural) para dizer que algo existe ou está em algum lugar. Na negativa: there isn\'t / there aren\'t. Na pergunta: Is there...? / Are there...?',
     examples: [
-      { en: "They met in Bethlehem.", pt: "Eles se encontraram em Belém." },
-      { en: "The service starts on Sunday.", pt: "O culto começa no domingo." },
-      { en: "We will meet at the church.", pt: "Nós vamos nos encontrar na igreja." },
-      { en: "He arrived at noon.", pt: "Ele chegou ao meio-dia." },
+      { en: "There is one God.", pt: "Há um só Deus." },
+      { en: "There are twelve apostles.", pt: "Há doze apóstolos." },
+      { en: "There isn't any doubt in my heart.", pt: "Não há nenhuma dúvida no meu coração." },
+      { en: "Is there hope for everyone?", pt: "Há esperança para todos?" },
+    ],
+  },
+
+  // --- Tempos verbais ---
+  {
+    category: "Tempos verbais",
+    title: "Presente Simples (Simple Present)",
+    explanation:
+      'Usado para hábitos, rotinas e fatos permanentes. Na afirmativa, o verbo recebe "-s" (ou "-es") quando o sujeito é he/she/it. Na negativa e na interrogativa, usa-se "do"/"does" + o verbo no infinitivo, sem "-s".',
+    examples: [
+      { en: "I read the Bible every night.", pt: "Eu leio a Bíblia todas as noites." },
+      { en: "He goes to church on Sundays.", pt: "Ele vai à igreja aos domingos." },
+      { en: "She doesn't like coffee.", pt: "Ela não gosta de café." },
+      { en: "Do you believe in miracles?", pt: "Você acredita em milagres?" },
     ],
   },
   {
+    category: "Tempos verbais",
+    title: "Presente Contínuo (Present Continuous)",
+    explanation:
+      'Descreve ações acontecendo agora, no momento em que se fala. É formado com o verbo "to be" (am/is/are) + o verbo principal terminado em "-ing".',
+    examples: [
+      { en: "I am reading the book of Psalms.", pt: "Eu estou lendo o livro de Salmos." },
+      { en: "She is singing a hymn.", pt: "Ela está cantando um hino." },
+      { en: "They are walking to the temple.", pt: "Eles estão caminhando para o templo." },
+      { en: "Are you listening?", pt: "Você está escutando?" },
+    ],
+  },
+  {
+    category: "Tempos verbais",
+    title: "Passado Simples (Simple Past)",
+    explanation:
+      'Usado para ações já concluídas no passado. Verbos regulares recebem "-ed" (walk → walked). Muitos verbos comuns são irregulares e mudam de forma completamente — por exemplo: be→was/were, go→went, have→had, do→did, say→said, see→saw, come→came, know→knew, take→took, give→gave, make→made.',
+    examples: [
+      { en: "God created the heavens and the earth.", pt: "Deus criou os céus e a terra." },
+      { en: "Jesus walked on water.", pt: "Jesus andou sobre a água." },
+      { en: "They prayed together.", pt: "Eles oraram juntos." },
+      { en: "She went to Jerusalem.", pt: "Ela foi a Jerusalém." },
+    ],
+  },
+  {
+    category: "Tempos verbais",
+    title: "Passado Contínuo (Past Continuous)",
+    explanation:
+      'Descreve uma ação que estava em andamento em um momento específico do passado, muitas vezes interrompida por outra ação. Formado com "was/were" + verbo terminado em "-ing".',
+    examples: [
+      { en: "They were praying when the angel appeared.", pt: "Eles estavam orando quando o anjo apareceu." },
+      { en: "I was reading the Gospels last night.", pt: "Eu estava lendo os Evangelhos ontem à noite." },
+      { en: "While Jesus was teaching, the crowd listened.", pt: "Enquanto Jesus estava ensinando, a multidão escutava." },
+    ],
+  },
+  {
+    category: "Tempos verbais",
+    title: "Presente Perfeito (Present Perfect)",
+    explanation:
+      'Liga o passado ao presente: usado para experiências de vida, ações que começaram no passado e continuam agora, ou resultados de algo que aconteceu (sem dizer exatamente quando). Formado com "have/has" + particípio passado (verbo regular + "-ed", ou forma irregular).',
+    examples: [
+      { en: "I have read the whole Bible.", pt: "Eu já li a Bíblia toda." },
+      { en: "She has lived here for ten years.", pt: "Ela mora aqui há dez anos." },
+      { en: "They have never lost their faith.", pt: "Eles nunca perderam a fé." },
+      { en: "Have you ever prayed for a stranger?", pt: "Você já orou por um estranho alguma vez?" },
+    ],
+  },
+  {
+    category: "Tempos verbais",
+    title: 'Futuro: "will" e "going to"',
+    explanation:
+      'Há duas formas comuns de falar do futuro. "Will" + verbo no infinitivo é usado para decisões espontâneas, promessas e previsões. "Going to" + verbo no infinitivo é usado para planos já decididos ou algo que parece certo pelo que vemos agora.',
+    examples: [
+      { en: "I will pray for you.", pt: "Eu vou orar por você." },
+      { en: "It will rain tomorrow.", pt: "Vai chover amanhã." },
+      { en: "We are going to visit the church next week.", pt: "Nós vamos visitar a igreja na próxima semana." },
+      { en: "They will build a new church.", pt: "Eles vão construir uma nova igreja." },
+    ],
+  },
+
+  // --- Verbos modais ---
+  {
+    category: "Verbos modais",
+    title: "Can / Could",
+    explanation:
+      '"Can" expressa capacidade ou permissão no presente ("consigo", "posso"). "Could" é o passado de "can" ou uma forma mais educada de pedir algo. Depois de can/could, o verbo principal fica sempre no infinitivo, sem "to".',
+    examples: [
+      { en: "I can forgive you.", pt: "Eu posso te perdoar." },
+      { en: "She could sing beautifully as a child.", pt: "Ela conseguia cantar lindamente quando criança." },
+      { en: "Can you help me, please?", pt: "Você pode me ajudar, por favor?" },
+      { en: "We cannot live without hope.", pt: "Não conseguimos viver sem esperança." },
+    ],
+  },
+  {
+    category: "Verbos modais",
+    title: "Must / Have to",
+    explanation:
+      '"Must" e "have to" expressam obrigação ("ter que", "dever"). "Must" costuma indicar uma obrigação que vem de quem fala; "have to" indica uma regra ou necessidade externa. Na negativa elas mudam de sentido: "must not" (proibido) e "don\'t have to" (não é necessário).',
+    examples: [
+      { en: "You must love your neighbor.", pt: "Você deve amar o seu próximo." },
+      { en: "I have to go to church today.", pt: "Eu tenho que ir à igreja hoje." },
+      { en: "You must not steal.", pt: "Você não deve roubar." },
+      { en: "You don't have to be afraid.", pt: "Você não precisa ter medo." },
+    ],
+  },
+  {
+    category: "Verbos modais",
+    title: "Should",
+    explanation:
+      '"Should" é usado para dar conselhos ou dizer o que é certo ou recomendado fazer ("deveria"). É mais suave que "must". Na negativa: should not / shouldn\'t.',
+    examples: [
+      { en: "You should read your Bible every day.", pt: "Você deveria ler sua Bíblia todos os dias." },
+      { en: "We should forgive one another.", pt: "Nós deveríamos nos perdoar uns aos outros." },
+      { en: "He shouldn't lie.", pt: "Ele não deveria mentir." },
+    ],
+  },
+  {
+    category: "Verbos modais",
+    title: "May / Might",
+    explanation:
+      '"May" e "might" expressam possibilidade ("pode ser que", "talvez"). "May" também é usado para pedir permissão de forma educada. "Might" indica uma possibilidade um pouco menor ou mais incerta que "may".',
+    examples: [
+      { en: "It may rain later.", pt: "Pode ser que chova mais tarde." },
+      { en: "May I ask you a question?", pt: "Posso te fazer uma pergunta?" },
+      { en: "She might come to church tomorrow.", pt: "Talvez ela venha à igreja amanhã." },
+    ],
+  },
+
+  // --- Frases, perguntas e conexões ---
+  {
+    category: "Frases, perguntas e conexões",
+    title: "Negação (don't, doesn't, isn't...)",
+    explanation:
+      'Para negar uma frase, normalmente se usa "not" depois de um verbo auxiliar (do/does/did, is/are/was/were, have/has) ou modal (can, will, should...). No presente e passado simples, quando não há outro auxiliar, usa-se "don\'t/doesn\'t" ou "didn\'t" antes do verbo principal, que volta ao infinitivo sem "to".',
+    examples: [
+      { en: "I don't understand.", pt: "Eu não entendo." },
+      { en: "She doesn't believe that.", pt: "Ela não acredita nisso." },
+      { en: "They didn't listen.", pt: "Eles não escutaram." },
+      { en: "This is not the way.", pt: "Este não é o caminho." },
+    ],
+  },
+  {
+    category: "Frases, perguntas e conexões",
     title: "Perguntas com Wh- (What, Who, Where, When, Why, How)",
     explanation:
       'As palavras interrogativas ficam no início da pergunta, seguidas de "do/does/did" (ou do verbo "to be") e depois o sujeito. What = o quê; Who = quem; Where = onde; When = quando; Why = por quê; How = como.',
@@ -1919,6 +2063,56 @@ const GRAMMAR_TOPICS = [
     ],
   },
   {
+    category: "Frases, perguntas e conexões",
+    title: "Conjunções: and, but, or, because, so",
+    explanation:
+      'As conjunções ligam palavras ou frases. "And" (e) soma ideias; "but" (mas) contrasta; "or" (ou) apresenta uma escolha; "because" (porque) explica uma causa; "so" (então, por isso) indica uma consequência.',
+    examples: [
+      { en: "Faith and love go together.", pt: "Fé e amor andam juntos." },
+      { en: "He was poor, but he was happy.", pt: "Ele era pobre, mas era feliz." },
+      { en: "You can pray at home or at church.", pt: "Você pode orar em casa ou na igreja." },
+      { en: "She sang because she was joyful.", pt: "Ela cantou porque estava alegre." },
+      { en: "It was late, so they went home.", pt: "Estava tarde, então eles foram para casa." },
+    ],
+  },
+  {
+    category: "Frases, perguntas e conexões",
+    title: "Pronomes relativos: who, which, that",
+    explanation:
+      'Os pronomes relativos introduzem uma oração que dá mais informação sobre um substantivo já mencionado. "Who" é usado para pessoas, "which" para coisas ou animais, e "that" pode substituir os dois em orações essenciais (que não podem ser removidas sem mudar o sentido da frase).',
+    examples: [
+      { en: "The man who healed the sick was Jesus.", pt: "O homem que curava os doentes era Jesus." },
+      { en: "This is the letter which Paul wrote.", pt: "Esta é a carta que Paulo escreveu." },
+      { en: "God is the one that never changes.", pt: "Deus é aquele que nunca muda." },
+    ],
+  },
+  {
+    category: "Frases, perguntas e conexões",
+    title: "Primeiro condicional (if + presente, will)",
+    explanation:
+      'Usado para falar de uma condição real ou provável no futuro e sua consequência. A estrutura é "if" + verbo no presente simples, seguido de "will" + verbo no infinitivo (a ordem das duas partes pode ser invertida).',
+    examples: [
+      { en: "If you seek, you will find.", pt: "Se você buscar, vai encontrar." },
+      { en: "If we love one another, God will be glorified.", pt: "Se nos amarmos uns aos outros, Deus será glorificado." },
+      { en: "I will help you if you ask.", pt: "Eu vou te ajudar se você pedir." },
+    ],
+  },
+
+  // --- Descrevendo o mundo ---
+  {
+    category: "Descrevendo o mundo",
+    title: "Preposições de lugar e tempo: in, on, at",
+    explanation:
+      '"In" é usado para lugares maiores/fechados e para meses, anos e estações (in the city, in 2024). "On" é usado para superfícies, dias e datas (on the table, on Sunday). "At" é usado para pontos específicos e horários (at the door, at 6 o\'clock).',
+    examples: [
+      { en: "They met in Bethlehem.", pt: "Eles se encontraram em Belém." },
+      { en: "The service starts on Sunday.", pt: "O culto começa no domingo." },
+      { en: "We will meet at the church.", pt: "Nós vamos nos encontrar na igreja." },
+      { en: "He arrived at noon.", pt: "Ele chegou ao meio-dia." },
+    ],
+  },
+  {
+    category: "Descrevendo o mundo",
     title: "Comparativo e superlativo",
     explanation:
       'Para adjetivos curtos, acrescente "-er" para o comparativo e "-est" para o superlativo (com "the" antes). Para adjetivos longos, use "more" (comparativo) e "the most" (superlativo) antes do adjetivo, sem mudar a palavra.',
@@ -1926,6 +2120,68 @@ const GRAMMAR_TOPICS = [
       { en: "David was strong, but Samson was stronger.", pt: "Davi era forte, mas Sansão era mais forte." },
       { en: "Solomon was the wisest king.", pt: "Salomão foi o rei mais sábio." },
       { en: "Love is the most important thing.", pt: "O amor é a coisa mais importante." },
+      { en: "Jerusalem was more beautiful than any other city.", pt: "Jerusalém era mais bela que qualquer outra cidade." },
+    ],
+  },
+  {
+    category: "Descrevendo o mundo",
+    title: "Advérbios de frequência",
+    explanation:
+      'Os advérbios de frequência (always, usually, often, sometimes, rarely, never) dizem com que frequência algo acontece. Geralmente ficam antes do verbo principal, mas depois do verbo "to be".',
+    examples: [
+      { en: "She always prays before eating.", pt: "Ela sempre ora antes de comer." },
+      { en: "We often read the Psalms together.", pt: "Nós frequentemente lemos os Salmos juntos." },
+      { en: "He is never late for church.", pt: "Ele nunca está atrasado para a igreja." },
+      { en: "I sometimes doubt, but I never give up.", pt: "Eu às vezes duvido, mas nunca desisto." },
+    ],
+  },
+  {
+    category: "Descrevendo o mundo",
+    title: "Quantificadores: some, any, much, many, a lot of",
+    explanation:
+      '"Some" é usado em frases afirmativas (com substantivos contáveis ou incontáveis); "any" é usado em negativas e perguntas. "Many" é usado com substantivos contáveis, "much" com incontáveis, e "a lot of" funciona bem com os dois tipos.',
+    examples: [
+      { en: "There is some bread on the table.", pt: "Há um pouco de pão na mesa." },
+      { en: "Do you have any questions?", pt: "Você tem alguma pergunta?" },
+      { en: "Many people followed Jesus.", pt: "Muitas pessoas seguiam Jesus." },
+      { en: "There isn't much time left.", pt: "Não sobrou muito tempo." },
+      { en: "She has a lot of patience.", pt: "Ela tem muita paciência." },
+    ],
+  },
+
+  // --- Tópicos um pouco mais avançados ---
+  {
+    category: "Tópicos um pouco mais avançados",
+    title: "Voz passiva (Passive Voice)",
+    explanation:
+      'Na voz passiva, o foco está na ação ou em quem/o que a recebe, não em quem a pratica. É formada com "to be" (no tempo verbal adequado) + particípio passado do verbo principal. Quem pratica a ação pode ser mencionado com "by".',
+    examples: [
+      { en: "The Bible was written by many authors.", pt: "A Bíblia foi escrita por muitos autores." },
+      { en: "The temple was built by Solomon.", pt: "O templo foi construído por Salomão." },
+      { en: "These words are spoken in every language.", pt: "Estas palavras são faladas em todas as línguas." },
+    ],
+  },
+  {
+    category: "Tópicos um pouco mais avançados",
+    title: "Verbo + gerúndio ou infinitivo",
+    explanation:
+      'Alguns verbos são sempre seguidos de outro verbo no gerúndio ("-ing"), como "enjoy" e "finish". Outros são seguidos do infinitivo com "to", como "want" e "decide". Verbos como "like" e "love" aceitam as duas formas.',
+    examples: [
+      { en: "I enjoy reading the Psalms.", pt: "Eu gosto de ler os Salmos." },
+      { en: "She wants to serve God.", pt: "Ela quer servir a Deus." },
+      { en: "They love singing hymns.", pt: "Eles adoram cantar hinos." },
+    ],
+  },
+  {
+    category: "Tópicos um pouco mais avançados",
+    title: "Imperativo (ordens e pedidos)",
+    explanation:
+      'Usado para dar ordens, pedidos ou instruções. É formado com o verbo no infinitivo sem "to" e sem sujeito. Para negar, use "do not" ou "don\'t" antes do verbo.',
+    examples: [
+      { en: "Love your neighbor.", pt: "Ame o seu próximo." },
+      { en: "Do not be afraid.", pt: "Não tenha medo." },
+      { en: "Come and see.", pt: "Vem e vê." },
+      { en: "Please, help us.", pt: "Por favor, nos ajude." },
     ],
   },
 ];
@@ -1933,7 +2189,16 @@ const GRAMMAR_TOPICS = [
 function renderGrammar() {
   grammarListEl.innerHTML = "";
 
+  let lastCategory = null;
   GRAMMAR_TOPICS.forEach((topic) => {
+    if (topic.category !== lastCategory) {
+      lastCategory = topic.category;
+      const sectionLabel = document.createElement("p");
+      sectionLabel.className = "grammar-section-label";
+      sectionLabel.textContent = topic.category;
+      grammarListEl.appendChild(sectionLabel);
+    }
+
     const item = document.createElement("div");
     item.className = "grammar-item";
 
