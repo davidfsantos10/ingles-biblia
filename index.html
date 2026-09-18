@@ -34,20 +34,22 @@
   </header>
 
   <header class="app-header" id="app-header" hidden>
-    <div class="menu-wrap">
-      <button type="button" id="back-to-home-btn" class="back-home-btn" aria-label="Voltar para o Início" title="Voltar para o Início">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.2 12 3l9 7.2V20a1.6 1.6 0 0 1-1.6 1.6H4.6A1.6 1.6 0 0 1 3 20z"/><path d="M9.2 21.6v-7h5.6v7"/></svg>
-      </button>
-      <button type="button" id="menu-toggle" class="menu-toggle" aria-haspopup="true" aria-expanded="false" aria-label="Abrir menu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-      <div id="menu-dropdown" class="menu-dropdown" role="menu" aria-label="Menu" hidden>
-        <button type="button" class="menu-dropdown-item" data-menu-view="grammar" role="menuitem">Gramática</button>
-        <button type="button" class="menu-dropdown-item" data-menu-view="flashcards" role="menuitem">Flashcards</button>
+    <div class="app-header-brand">
+      <div class="menu-wrap">
+        <button type="button" id="back-to-home-btn" class="back-home-btn" aria-label="Voltar para o Início" title="Voltar para o Início">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.2 12 3l9 7.2V20a1.6 1.6 0 0 1-1.6 1.6H4.6A1.6 1.6 0 0 1 3 20z"/><path d="M9.2 21.6v-7h5.6v7"/></svg>
+        </button>
+        <button type="button" id="menu-toggle" class="menu-toggle" aria-haspopup="true" aria-expanded="false" aria-label="Abrir menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div id="menu-dropdown" class="menu-dropdown" role="menu" aria-label="Menu" hidden>
+          <button type="button" class="menu-dropdown-item" data-menu-view="grammar" role="menuitem">Gramática</button>
+          <button type="button" class="menu-dropdown-item" data-menu-view="flashcards" role="menuitem">Flashcards</button>
+        </div>
       </div>
-    </div>
 
-    <h1 class="app-title">Inglês com a Bíblia</h1>
+      <h1 class="app-title">Inglês com a Bíblia</h1>
+    </div>
 
     <nav class="view-tabs" aria-label="Navegação">
       <button type="button" class="view-tab" data-view="reading" aria-pressed="false">Leitura</button>
