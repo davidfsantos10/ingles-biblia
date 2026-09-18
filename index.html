@@ -420,9 +420,17 @@
     <div class="lessons-body">
       <div id="lessons-exercise" class="lesson-exercise">
         <p id="lesson-instruction" class="lesson-instruction"></p>
+        <button type="button" id="lesson-speak-btn" class="lesson-speak-btn" hidden aria-label="Ouvir a frase em inglês">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.2 8.8a5 5 0 0 1 0 6.4"/><path d="M18.8 6.2a8.5 8.5 0 0 1 0 11.6"/></svg>
+        </button>
         <p id="lesson-prompt" class="lesson-prompt"></p>
         <p id="lesson-ref" class="lesson-ref"></p>
         <textarea id="lesson-input" class="lesson-input" rows="3" placeholder="Digite sua resposta…"></textarea>
+
+        <div id="lesson-tap-area" class="lesson-tap-area" hidden>
+          <div id="lesson-tap-answer" class="lesson-tap-answer"></div>
+          <div id="lesson-tap-bank" class="lesson-tap-bank"></div>
+        </div>
 
         <div id="lesson-feedback" class="lesson-feedback" hidden>
           <p id="lesson-feedback-title" class="lesson-feedback-title"></p>

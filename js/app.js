@@ -205,9 +205,13 @@ const lessonsCloseBtnEl = document.getElementById("lessons-close-btn");
 const lessonsProgressFillEl = document.getElementById("lessons-progress-fill");
 const lessonsExerciseEl = document.getElementById("lessons-exercise");
 const lessonInstructionEl = document.getElementById("lesson-instruction");
+const lessonSpeakBtnEl = document.getElementById("lesson-speak-btn");
 const lessonPromptEl = document.getElementById("lesson-prompt");
 const lessonRefEl = document.getElementById("lesson-ref");
 const lessonInputEl = document.getElementById("lesson-input");
+const lessonTapAreaEl = document.getElementById("lesson-tap-area");
+const lessonTapAnswerEl = document.getElementById("lesson-tap-answer");
+const lessonTapBankEl = document.getElementById("lesson-tap-bank");
 const lessonFeedbackEl = document.getElementById("lesson-feedback");
 const lessonFeedbackTitleEl = document.getElementById("lesson-feedback-title");
 const lessonFeedbackAnswerEl = document.getElementById("lesson-feedback-answer");
@@ -2196,6 +2200,7 @@ homeAvatarBtnEl.addEventListener("click", () => {
 
 const LESSON_SENTENCE_COUNT = 6;
 const LESSON_WORD_COUNT = 4;
+const LESSON_TAP_DISTRACTOR_COUNT = 3;
 const LESSONS_PROGRESS_STORAGE_KEY = "ingles-biblia.lessons-progress";
 const LESSON_ARROW_ICON =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
@@ -2322,7 +2327,7 @@ function buildLessonWordPool() {
 
 async function buildTodaysLessonExercises() {
   const rng = mulberry32(getLessonSeed());
-  const exercises = [];
+  const sentenceExercises = [];
 
   const sentenceRefs = seededShuffle(VERSE_OF_THE_DAY_REFS, rng).slice(0, LESSON_SENTENCE_COUNT);
   for (const ref of sentenceRefs) {
@@ -2335,12 +2340,16 @@ async function buildTodaysLessonExercises() {
       if (!verse || !book) continue;
 
       const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
+      const mode = rng() < 0.5 ? "type" : "tap";
       const enText = getEnglishText(verse);
-      exercises.push({
+      const answerText = direction === "en-to-pt" ? verse.pt : enText;
+      sentenceExercises.push({
         type: "sentence",
+        mode,
         direction,
         prompt: direction === "en-to-pt" ? enText : verse.pt,
         acceptedAnswers: direction === "en-to-pt" ? [verse.pt] : [enText],
+        answerTokens: answerText.split(/\s+/).filter(Boolean),
         reference: `${book.pt} ${ref.chapter}:${ref.number}`,
       });
     } catch (err) {
@@ -2348,11 +2357,38 @@ async function buildTodaysLessonExercises() {
     }
   }
 
+  // Monta o banco de palavras dos exercícios "toque" usando as próprias
+  // frases sorteadas hoje como fonte: cada exercício usa palavras de
+  // OUTRAS frases da lição como distratoras, sem depender de lista externa.
+  const allTokens = [];
+  const seenLower = new Set();
+  for (const ex of sentenceExercises) {
+    for (const token of ex.answerTokens) {
+      const key = token.toLowerCase();
+      if (!seenLower.has(key)) {
+        seenLower.add(key);
+        allTokens.push(token);
+      }
+    }
+  }
+
+  for (const ex of sentenceExercises) {
+    if (ex.mode !== "tap") continue;
+    const ownLower = new Set(ex.answerTokens.map((t) => t.toLowerCase()));
+    const distractorPool = allTokens.filter((t) => !ownLower.has(t.toLowerCase()));
+    const distractors = seededShuffle(distractorPool, rng).slice(0, LESSON_TAP_DISTRACTOR_COUNT);
+    const bankTokens = seededShuffle([...ex.answerTokens, ...distractors], rng);
+    ex.bank = bankTokens.map((text, i) => ({ id: i, text }));
+  }
+
+  const exercises = sentenceExercises.slice();
+
   const wordPool = seededShuffle(buildLessonWordPool(), rng).slice(0, LESSON_WORD_COUNT);
   for (const entry of wordPool) {
     const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
     exercises.push({
       type: "word",
+      mode: "type",
       direction,
       prompt: direction === "en-to-pt" ? entry.word : entry.translations[0],
       acceptedAnswers: direction === "en-to-pt" ? entry.translations : [entry.word],
@@ -2410,11 +2446,73 @@ let currentLessonExercises = [];
 let currentLessonIndex = 0;
 let currentLessonProgress = null;
 let lessonAnswered = false;
+let currentTapBank = [];
+let currentTapAnswerTiles = [];
+
+// Redesenha as fichas do exercício "toque": as que ainda não foram usadas
+// no banco embaixo, as já colocadas na área de resposta em cima. Cada
+// ficha guarda o próprio id (não o texto) pra permitir palavras repetidas.
+function renderTapTiles() {
+  const placedIds = new Set(currentTapAnswerTiles.map((tile) => tile.id));
+
+  lessonTapBankEl.innerHTML = "";
+  for (const tile of currentTapBank) {
+    if (placedIds.has(tile.id)) continue;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "lesson-tap-tile";
+    btn.textContent = tile.text;
+    btn.dataset.tileId = String(tile.id);
+    btn.disabled = lessonAnswered;
+    lessonTapBankEl.appendChild(btn);
+  }
+
+  lessonTapAnswerEl.innerHTML = "";
+  for (const tile of currentTapAnswerTiles) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "lesson-tap-tile is-placed";
+    btn.textContent = tile.text;
+    btn.dataset.tileId = String(tile.id);
+    btn.disabled = lessonAnswered;
+    lessonTapAnswerEl.appendChild(btn);
+  }
+
+  if (currentLessonExercises[currentLessonIndex]?.mode === "tap" && !lessonAnswered) {
+    lessonCheckBtnEl.disabled = currentTapAnswerTiles.length === 0;
+  }
+}
+
+lessonTapBankEl.addEventListener("click", (event) => {
+  if (lessonAnswered) return;
+  const btn = event.target.closest(".lesson-tap-tile");
+  if (!btn) return;
+  const tileId = Number(btn.dataset.tileId);
+  const tile = currentTapBank.find((t) => t.id === tileId);
+  if (!tile) return;
+  currentTapAnswerTiles.push(tile);
+  renderTapTiles();
+});
+
+lessonTapAnswerEl.addEventListener("click", (event) => {
+  if (lessonAnswered) return;
+  const btn = event.target.closest(".lesson-tap-tile");
+  if (!btn) return;
+  const tileId = Number(btn.dataset.tileId);
+  currentTapAnswerTiles = currentTapAnswerTiles.filter((tile) => tile.id !== tileId);
+  renderTapTiles();
+});
+
+lessonSpeakBtnEl.addEventListener("click", () => {
+  const exercise = currentLessonExercises[currentLessonIndex];
+  if (exercise) speakText(exercise.prompt, 0.85);
+});
 
 function renderLessonExercise() {
   lessonAnswered = false;
   const exercise = currentLessonExercises[currentLessonIndex];
   const isSentence = exercise.type === "sentence";
+  const isTap = exercise.mode === "tap";
   const targetLang = exercise.direction === "en-to-pt" ? "português" : "inglês";
 
   lessonsProgressFillEl.style.width = `${Math.round((currentLessonIndex / currentLessonExercises.length) * 100)}%`;
@@ -2423,22 +2521,29 @@ function renderLessonExercise() {
     : `Traduza a palavra para o ${targetLang}:`;
   lessonPromptEl.textContent = exercise.prompt;
   lessonRefEl.textContent = exercise.reference;
+  lessonSpeakBtnEl.hidden = exercise.direction !== "en-to-pt";
 
   lessonInputEl.value = "";
   lessonInputEl.disabled = false;
+  lessonInputEl.hidden = isTap;
+
+  lessonTapAreaEl.hidden = !isTap;
+  currentTapBank = isTap ? exercise.bank : [];
+  currentTapAnswerTiles = [];
+  if (isTap) renderTapTiles();
 
   lessonFeedbackEl.hidden = true;
   lessonFeedbackEl.classList.remove("is-correct", "is-incorrect");
 
   lessonCheckBtnEl.hidden = false;
-  lessonCheckBtnEl.disabled = false;
+  lessonCheckBtnEl.disabled = isTap;
   lessonContinueBtnEl.hidden = true;
 
   lessonsExerciseEl.hidden = false;
   lessonsCompleteEl.hidden = true;
   lessonsActionsEl.hidden = false;
 
-  lessonInputEl.focus();
+  if (!isTap) lessonInputEl.focus();
 }
 
 function showLessonsComplete() {
@@ -2452,17 +2557,22 @@ function showLessonsComplete() {
 
 function checkLessonAnswer() {
   if (lessonAnswered) return;
-  const userAnswer = lessonInputEl.value.trim();
+  const exercise = currentLessonExercises[currentLessonIndex];
+  const isTap = exercise.mode === "tap";
+
+  const userAnswer = isTap
+    ? currentTapAnswerTiles.map((tile) => tile.text).join(" ")
+    : lessonInputEl.value.trim();
   if (!userAnswer) {
-    lessonInputEl.focus();
+    if (!isTap) lessonInputEl.focus();
     return;
   }
 
-  const exercise = currentLessonExercises[currentLessonIndex];
   const correct = isLessonAnswerCorrect(userAnswer, exercise.acceptedAnswers, exercise.type === "sentence");
 
   lessonAnswered = true;
   lessonInputEl.disabled = true;
+  if (isTap) renderTapTiles();
   lessonFeedbackEl.hidden = false;
   lessonFeedbackEl.classList.toggle("is-correct", correct);
   lessonFeedbackEl.classList.toggle("is-incorrect", !correct);
