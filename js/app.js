@@ -87,9 +87,9 @@ const EN_VERSION_STORAGE_KEY = "ingles-biblia.en-version";
 function loadEnVersion() {
   try {
     const stored = localStorage.getItem(EN_VERSION_STORAGE_KEY);
-    return stored && EN_VERSIONS[stored] ? stored : "kjv";
+    return stored && EN_VERSIONS[stored] ? stored : "web";
   } catch (err) {
-    return "kjv";
+    return "web";
   }
 }
 
@@ -168,6 +168,7 @@ const menuDropdownEl = document.getElementById("menu-dropdown");
 const menuDropdownItems = document.querySelectorAll(".menu-dropdown-item");
 const grammarViewEl = document.getElementById("grammar-view");
 const flashcardsViewEl = document.getElementById("flashcards-view");
+const instructionsViewEl = document.getElementById("instructions-view");
 const flashcardsEmptyEl = document.getElementById("flashcards-empty");
 const flashcardsPanelEl = document.getElementById("flashcards-panel");
 const flashcardsProgressEl = document.getElementById("flashcards-progress");
@@ -211,6 +212,7 @@ const homeFlashcardsStatusEl = document.getElementById("home-flashcards-status")
 const homeFlashcardsBtnEl = document.getElementById("home-flashcards-btn");
 const homeGrammarStatusEl = document.getElementById("home-grammar-status");
 const homeGrammarBtnEl = document.getElementById("home-grammar-btn");
+const homeInstructionsBtnEl = document.getElementById("home-instructions-btn");
 const lessonsOverlayEl = document.getElementById("lessons-overlay");
 const lessonsCloseBtnEl = document.getElementById("lessons-close-btn");
 const lessonsProgressFillEl = document.getElementById("lessons-progress-fill");
@@ -3012,6 +3014,7 @@ async function openLessonsOverlay() {
 homeLessonsBtnEl.addEventListener("click", openLessonsOverlay);
 homeFlashcardsBtnEl.addEventListener("click", () => setActiveView("flashcards"));
 homeGrammarBtnEl.addEventListener("click", () => setActiveView("grammar"));
+homeInstructionsBtnEl.addEventListener("click", () => setActiveView("instructions"));
 lessonsCloseBtnEl.addEventListener("click", requestCloseLessons);
 lessonsCompleteCloseBtnEl.addEventListener("click", requestCloseLessons);
 lessonCheckBtnEl.addEventListener("click", checkLessonAnswer);
@@ -3075,11 +3078,11 @@ function setActiveView(view) {
   pushHistoryStateForView(view);
 
   homeHeaderEl.hidden = view !== "home";
-  // Gramática e Flashcards têm seu próprio botão "Voltar" e não usam nada do
-  // cabeçalho de leitura (abas, seletor de livro/capítulo, versão do
-  // inglês), então esse cabeçalho fica escondido nessas telas — evita
-  // poluição visual sem função.
-  appHeaderEl.hidden = view === "home" || view === "grammar" || view === "flashcards";
+  // Gramática, Flashcards e Instruções têm seu próprio botão "Voltar" e não
+  // usam nada do cabeçalho de leitura (abas, seletor de livro/capítulo,
+  // versão do inglês), então esse cabeçalho fica escondido nessas telas —
+  // evita poluição visual sem função.
+  appHeaderEl.hidden = view === "home" || view === "grammar" || view === "flashcards" || view === "instructions";
   homeViewEl.hidden = view !== "home";
   readingContainerEl.hidden = view !== "reading";
   vocabularyViewEl.hidden = view !== "vocabulary";
@@ -3087,6 +3090,7 @@ function setActiveView(view) {
   notesViewEl.hidden = view !== "notes";
   grammarViewEl.hidden = view !== "grammar";
   flashcardsViewEl.hidden = view !== "flashcards";
+  instructionsViewEl.hidden = view !== "instructions";
   homeFabAudioEl.hidden = view !== "home";
 
   for (const btn of viewTabButtons) {

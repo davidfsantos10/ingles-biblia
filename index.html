@@ -80,9 +80,9 @@
 
     <div class="en-version-selector" role="group" aria-label="Versão do texto em inglês">
       <span class="en-version-label">Inglês:</span>
-      <button type="button" class="en-version-btn" data-en-version="kjv" aria-pressed="true" title="King James Version — inglês clássico/arcaico (thee, thou, hath…)">KJV</button>
-      <button type="button" class="en-version-btn" data-en-version="web" aria-pressed="false" title="World English Bible — inglês moderno e natural">WEB</button>
       <button type="button" class="en-version-btn" data-en-version="bbe" aria-pressed="false" title="Bible in Basic English — vocabulário simplificado, ideal para iniciantes">BBE</button>
+      <button type="button" class="en-version-btn" data-en-version="web" aria-pressed="true" title="World English Bible — inglês moderno e natural">WEB</button>
+      <button type="button" class="en-version-btn" data-en-version="kjv" aria-pressed="false" title="King James Version — inglês clássico/arcaico (thee, thou, hath…)">KJV</button>
     </div>
   </header>
 
@@ -206,6 +206,26 @@
 
         <button type="button" id="home-grammar-btn" class="home-btn-grammar">
           VER GRAMÁTICA
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+
+      <div class="home-card home-instructions-card">
+        <div class="home-rc-head">
+          <span class="home-rc-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.5" r="0.9" fill="currentColor" stroke="none"/></svg>
+            INSTRUÇÕES
+          </span>
+        </div>
+
+        <div class="home-rc-body home-rc-body--single">
+          <div>
+            <p class="home-rc-sub">Como usar o app e qual versão do inglês escolher</p>
+          </div>
+        </div>
+
+        <button type="button" id="home-instructions-btn" class="home-btn-instructions">
+          VER INSTRUÇÕES
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </button>
       </div>
@@ -370,6 +390,121 @@
           <button type="button" id="flashcards-next" class="flashcards-nav-btn" aria-label="Próximo cartão">›</button>
         </div>
         <button type="button" id="flashcards-shuffle" class="flashcards-shuffle-btn">Embaralhar</button>
+      </div>
+    </section>
+
+    <section id="instructions-view" class="vocabulary-view" hidden aria-label="Instruções de uso">
+      <button type="button" class="view-back-btn" data-back-view>‹ Voltar</button>
+      <p class="grammar-intro">
+        Um guia rápido de como aproveitar melhor o app — e qual versão do inglês combina mais com
+        o seu nível.
+      </p>
+
+      <div class="instructions-list">
+        <div class="instructions-section">
+          <h3 class="instructions-section-title">O que é este app</h3>
+          <p class="instructions-section-text">
+            Uma Bíblia bilíngue: o texto em inglês e em português lado a lado, pensada para você
+            aprender inglês lendo e estudando a Bíblia ao mesmo tempo.
+          </p>
+        </div>
+
+        <div class="instructions-section">
+          <h3 class="instructions-section-title">Leitura lado a lado</h3>
+          <p class="instructions-section-text">
+            Toque em qualquer palavra do texto em inglês para ouvir a pronúncia e ver a tradução.
+            Cada versículo tem ícones para compartilhar, ouvir o versículo inteiro, escrever uma
+            anotação ou favoritá-lo.
+          </p>
+        </div>
+
+        <div class="instructions-section">
+          <h3 class="instructions-section-title">Vocabulário salvo</h3>
+          <p class="instructions-section-text">
+            Ao tocar numa palavra, você pode salvá-la com uma cor (verde, amarelo, vermelho ou
+            azul) para organizar o que já sabe, o que está aprendendo e o que ainda precisa
+            revisar. As palavras salvas ficam na aba Vocabulário.
+          </p>
+        </div>
+
+        <div class="instructions-section">
+          <h3 class="instructions-section-title">Favoritos e Anotações</h3>
+          <p class="instructions-section-text">
+            Toque no coração de um versículo para favoritá-lo, ou no ícone de nota para escrever
+            uma reflexão pessoal sobre ele. Os dois ficam guardados nas abas Favoritos e Anotações.
+          </p>
+        </div>
+
+        <div class="instructions-section">
+          <h3 class="instructions-section-title">Lições</h3>
+          <p class="instructions-section-text">
+            Exercícios de tradução que se renovam todo dia, montados a partir da própria Bíblia do
+            app — frases para traduzir (digitando ou tocando nas palavras) e vocabulário do seu
+            próprio progresso.
+          </p>
+        </div>
+
+        <div class="instructions-section">
+          <h3 class="instructions-section-title">Flashcards</h3>
+          <p class="instructions-section-text">
+            Revise o que você já salvou usando cartões de estudo: vire o cartão para ver a
+            tradução, tanto do seu vocabulário quanto dos versículos favoritados.
+          </p>
+        </div>
+
+        <div class="instructions-section">
+          <h3 class="instructions-section-title">Gramática</h3>
+          <p class="instructions-section-text">
+            Um guia de gramática do inglês, do básico ao intermediário, com explicações em
+            português e vários exemplos por tópico.
+          </p>
+        </div>
+
+        <div class="instructions-section">
+          <h3 class="instructions-section-title">Qual versão do inglês escolher</h3>
+          <p class="instructions-section-text">
+            O texto em inglês está disponível em três versões, de dificuldade diferente. Você pode
+            trocar a qualquer momento no seletor "Inglês" durante a leitura.
+          </p>
+
+          <div class="version-guide">
+            <div class="version-guide-item">
+              <span class="version-guide-badge version-guide-badge--bbe">BBE</span>
+              <div>
+                <p class="version-guide-level">Iniciante</p>
+                <p class="version-guide-desc">
+                  Bible in Basic English — vocabulário simplificado e frases curtas. É a versão
+                  mais fácil, a mais indicada para quem está começando a aprender inglês.
+                </p>
+              </div>
+            </div>
+
+            <div class="version-guide-item">
+              <span class="version-guide-badge version-guide-badge--web">WEB</span>
+              <div>
+                <p class="version-guide-level">Intermediário</p>
+                <p class="version-guide-desc">
+                  World English Bible — inglês moderno e natural, parecido com o que se fala e
+                  escreve hoje. É a versão padrão do app: um bom equilíbrio entre fidelidade ao
+                  texto e facilidade de leitura.
+                </p>
+              </div>
+            </div>
+
+            <div class="version-guide-item">
+              <span class="version-guide-badge version-guide-badge--kjv">KJV</span>
+              <div>
+                <p class="version-guide-level">Avançado</p>
+                <p class="version-guide-desc">
+                  King James Version — inglês clássico e arcaico, com palavras rebuscadas (thee,
+                  thou, hath…) e construções antigas. É a versão mais difícil, indicada para quem
+                  já está mais avançado no inglês ou vai fazer um estudo mais específico da
+                  Bíblia.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
