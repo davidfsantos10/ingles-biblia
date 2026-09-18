@@ -200,6 +200,10 @@ const homeLessonsStatusEl = document.getElementById("home-lessons-status");
 const homeLessonsRingEl = document.getElementById("home-lessons-ring");
 const homeLessonsProgressTextEl = document.getElementById("home-lessons-progress-text");
 const homeLessonsBtnEl = document.getElementById("home-lessons-btn");
+const homeFlashcardsStatusEl = document.getElementById("home-flashcards-status");
+const homeFlashcardsBtnEl = document.getElementById("home-flashcards-btn");
+const homeGrammarStatusEl = document.getElementById("home-grammar-status");
+const homeGrammarBtnEl = document.getElementById("home-grammar-btn");
 const lessonsOverlayEl = document.getElementById("lessons-overlay");
 const lessonsCloseBtnEl = document.getElementById("lessons-close-btn");
 const lessonsProgressFillEl = document.getElementById("lessons-progress-fill");
@@ -1903,8 +1907,11 @@ function renderGrammar() {
   });
 }
 
+// Usa o histórico (em vez de sempre voltar pra "reading") porque agora
+// Gramática e Flashcards também são acessíveis direto da Início: assim o
+// botão volta pra onde o usuário realmente veio, igual ao gesto nativo.
 for (const btn of viewBackButtons) {
-  btn.addEventListener("click", () => setActiveView("reading"));
+  btn.addEventListener("click", () => history.back());
 }
 
 // --- Início: versículo do dia, continuar leitura e sequência de dias ---
@@ -2128,6 +2135,7 @@ function renderHome() {
   renderVerseOfDay();
   renderContinueReadingCard();
   renderLessonsCard();
+  renderFlashcardsAndGrammarCards();
 }
 
 // Retorna para onde "Continuar leitura" (e a primeira visita à aba Leitura)
@@ -2440,6 +2448,15 @@ function renderLessonsCard() {
   }
 }
 
+// Flashcards e Gramática já existiam (acessíveis pelo menu hambúrguer); só
+// mostra na Início quantas palavras/versículos/tópicos dão pra revisar.
+function renderFlashcardsAndGrammarCards() {
+  const vocabCount = loadVocabulary().length;
+  const favoritesCount = Object.keys(loadFavorites()).length;
+  homeFlashcardsStatusEl.textContent = `${vocabCount} palavra${vocabCount === 1 ? "" : "s"} salva${vocabCount === 1 ? "" : "s"} · ${favoritesCount} versículo${favoritesCount === 1 ? "" : "s"} favorito${favoritesCount === 1 ? "" : "s"}`;
+  homeGrammarStatusEl.textContent = `${GRAMMAR_TOPICS.length} tópicos disponíveis`;
+}
+
 // --- Sessão de exercícios (tela cheia) ---
 
 let currentLessonExercises = [];
@@ -2651,6 +2668,8 @@ async function openLessonsOverlay() {
 }
 
 homeLessonsBtnEl.addEventListener("click", openLessonsOverlay);
+homeFlashcardsBtnEl.addEventListener("click", () => setActiveView("flashcards"));
+homeGrammarBtnEl.addEventListener("click", () => setActiveView("grammar"));
 lessonsCloseBtnEl.addEventListener("click", requestCloseLessons);
 lessonsCompleteCloseBtnEl.addEventListener("click", requestCloseLessons);
 lessonCheckBtnEl.addEventListener("click", checkLessonAnswer);
