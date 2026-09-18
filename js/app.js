@@ -99,8 +99,15 @@ function getEnglishText(verse) {
   return verse[EN_VERSIONS[currentEnVersion].field] || verse.en;
 }
 
-const bookSelect = document.getElementById("book-select");
-const chapterSelect = document.getElementById("chapter-select");
+const bookSelectBtnEl = document.getElementById("book-select-btn");
+const bookSelectLabelEl = document.getElementById("book-select-label");
+const chapterSelectBtnEl = document.getElementById("chapter-select-btn");
+const chapterSelectLabelEl = document.getElementById("chapter-select-label");
+const pickerOverlayEl = document.getElementById("picker-overlay");
+const pickerBackdropEl = document.getElementById("picker-backdrop");
+const pickerTitleEl = document.getElementById("picker-title");
+const pickerListEl = document.getElementById("picker-list");
+const pickerCloseBtnEl = document.getElementById("picker-close-btn");
 const titleEnEl = document.getElementById("title-en");
 const titlePtEl = document.getElementById("title-pt");
 const versesEnEl = document.getElementById("verses-en");
@@ -231,29 +238,101 @@ let currentSource = { book: "", chapter: 0 };
 // Uma "palavra" pode incluir hífen/apóstrofo interno (ex.: "ajuntem-se", "don't").
 const WORD_PATTERN = /[A-Za-zÀ-ÖØ-öø-ÿ]+(?:['-][A-Za-zÀ-ÖØ-öø-ÿ]+)*/g;
 
-function populateBookSelect() {
-  for (const book of BOOKS) {
-    const option = document.createElement("option");
-    option.value = book.slug;
-    option.textContent = `${book.pt} (${book.en})`;
-    bookSelect.appendChild(option);
-  }
-  bookSelect.value = DEFAULT_BOOK_SLUG;
-}
+// --- Seletor de livro/capítulo: um painel próprio (em vez do <select>
+// nativo, que no celular aparece como uma lista genérica do sistema, sem
+// as cores do app) que abre por cima da tela mostrando os livros (agrupados
+// por Antigo/Novo Testamento) ou os capítulos do livro atual, num grid.
 
-function populateChapterSelect(book) {
-  chapterSelect.innerHTML = "";
-  for (let i = 1; i <= book.chapters; i++) {
-    const option = document.createElement("option");
-    option.value = String(i);
-    option.textContent = `Cap. ${i}`;
-    chapterSelect.appendChild(option);
-  }
-}
+let selectedBookSlug = DEFAULT_BOOK_SLUG;
+let selectedChapter = DEFAULT_CHAPTER;
+const OLD_TESTAMENT_BOOK_COUNT = 39;
+const PICKER_CHECK_ICON =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
 
 function getSelectedBook() {
-  return BOOKS.find((book) => book.slug === bookSelect.value);
+  return BOOKS.find((book) => book.slug === selectedBookSlug);
 }
+
+function setSelectedBook(bookSlug) {
+  selectedBookSlug = bookSlug;
+  bookSelectLabelEl.textContent = getSelectedBook().pt;
+}
+
+function setSelectedChapter(chapter) {
+  selectedChapter = chapter;
+  chapterSelectLabelEl.textContent = `Cap. ${chapter}`;
+}
+
+function closePicker() {
+  pickerOverlayEl.hidden = true;
+  pickerListEl.innerHTML = "";
+}
+
+function openPicker(title) {
+  pickerTitleEl.textContent = title;
+  pickerOverlayEl.hidden = false;
+  const selectedEl = pickerListEl.querySelector(".is-selected");
+  if (selectedEl) selectedEl.scrollIntoView({ block: "center" });
+}
+
+function openBookPicker() {
+  pickerListEl.className = "picker-list";
+  pickerListEl.innerHTML = "";
+
+  BOOKS.forEach((book, index) => {
+    if (index === 0 || index === OLD_TESTAMENT_BOOK_COUNT) {
+      const label = document.createElement("p");
+      label.className = "picker-section-label";
+      label.textContent = index === 0 ? "Antigo Testamento" : "Novo Testamento";
+      pickerListEl.appendChild(label);
+    }
+
+    const isSelected = book.slug === selectedBookSlug;
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = `picker-item${isSelected ? " is-selected" : ""}`;
+    item.innerHTML = `<span>${book.pt} <span class="picker-item-en">(${book.en})</span></span>${isSelected ? PICKER_CHECK_ICON : ""}`;
+    item.addEventListener("click", () => {
+      setSelectedBook(book.slug);
+      setSelectedChapter(1);
+      loadChapter(book, 1);
+      closePicker();
+    });
+    pickerListEl.appendChild(item);
+  });
+
+  openPicker("Escolher livro");
+}
+
+function openChapterPicker() {
+  const book = getSelectedBook();
+  pickerListEl.className = "picker-list picker-list--grid";
+  pickerListEl.innerHTML = "";
+
+  for (let i = 1; i <= book.chapters; i++) {
+    const isSelected = i === selectedChapter;
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = `picker-chip${isSelected ? " is-selected" : ""}`;
+    chip.textContent = String(i);
+    chip.addEventListener("click", () => {
+      setSelectedChapter(i);
+      loadChapter(book, i);
+      closePicker();
+    });
+    pickerListEl.appendChild(chip);
+  }
+
+  openPicker(`${book.pt} — escolha o capítulo`);
+}
+
+bookSelectBtnEl.addEventListener("click", openBookPicker);
+chapterSelectBtnEl.addEventListener("click", openChapterPicker);
+pickerBackdropEl.addEventListener("click", closePicker);
+pickerCloseBtnEl.addEventListener("click", closePicker);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !pickerOverlayEl.hidden) closePicker();
+});
 
 function renderChapter(book, chapter, data) {
   titleEnEl.textContent = `${book.en} ${chapter}`;
@@ -385,9 +464,8 @@ async function goToVerse(bookSlug, chapter, verseKey) {
   const book = BOOKS.find((b) => b.slug === bookSlug);
   if (!book) return;
 
-  bookSelect.value = bookSlug;
-  populateChapterSelect(book);
-  chapterSelect.value = String(chapter);
+  setSelectedBook(bookSlug);
+  setSelectedChapter(chapter);
   await loadChapter(book, chapter);
   setActiveView("reading");
 
@@ -1042,6 +1120,7 @@ function closeActivePopup() {
   if (!wordPopupEl.hidden) hideWordPopup();
   if (!notePopupEl.hidden) closeNotePopup();
   if (!sharePopupEl.hidden) closeSharePopup();
+  if (!pickerOverlayEl.hidden) closePicker();
 }
 
 // Palavra atualmente mostrada no popup, usada pelo botão "Salvar".
@@ -2151,17 +2230,15 @@ function getContinueReadingTarget() {
 function ensureReadingLoaded() {
   if (currentSource.chapter !== 0) return;
   const { book, chapter } = getContinueReadingTarget();
-  bookSelect.value = book.slug;
-  populateChapterSelect(book);
-  chapterSelect.value = String(chapter);
+  setSelectedBook(book.slug);
+  setSelectedChapter(chapter);
   loadChapter(book, chapter);
 }
 
 async function continueReading() {
   const { book, chapter } = getContinueReadingTarget();
-  bookSelect.value = book.slug;
-  populateChapterSelect(book);
-  chapterSelect.value = String(chapter);
+  setSelectedBook(book.slug);
+  setSelectedChapter(chapter);
   await loadChapter(book, chapter);
   setActiveView("reading");
 }
@@ -2795,24 +2872,10 @@ for (const item of menuDropdownItems) {
 
 vocabularyFilterEl.addEventListener("input", renderVocabularyList);
 
-bookSelect.addEventListener("change", () => {
-  const book = getSelectedBook();
-  populateChapterSelect(book);
-  chapterSelect.value = "1";
-  loadChapter(book, 1);
-});
-
-chapterSelect.addEventListener("change", () => {
-  const book = getSelectedBook();
-  loadChapter(book, Number(chapterSelect.value));
-});
-
 goToSampleBtn.addEventListener("click", () => {
-  bookSelect.value = DEFAULT_BOOK_SLUG;
-  const book = getSelectedBook();
-  populateChapterSelect(book);
-  chapterSelect.value = String(DEFAULT_CHAPTER);
-  loadChapter(book, DEFAULT_CHAPTER);
+  setSelectedBook(DEFAULT_BOOK_SLUG);
+  setSelectedChapter(DEFAULT_CHAPTER);
+  loadChapter(getSelectedBook(), DEFAULT_CHAPTER);
 });
 
 function saveEnVersion(version) {
@@ -2835,7 +2898,7 @@ function setEnVersion(version) {
   currentEnVersion = version;
   saveEnVersion(version);
   applyEnVersionUI();
-  if (currentSource.chapter !== 0) loadChapter(getSelectedBook(), Number(chapterSelect.value));
+  if (currentSource.chapter !== 0) loadChapter(getSelectedBook(), selectedChapter);
   if (!homeViewEl.hidden) renderVerseOfDay();
 }
 
@@ -2844,9 +2907,8 @@ for (const btn of enVersionButtons) {
 }
 
 applyEnVersionUI();
-populateBookSelect();
-populateChapterSelect(getSelectedBook());
-chapterSelect.value = String(DEFAULT_CHAPTER);
+setSelectedBook(DEFAULT_BOOK_SLUG);
+setSelectedChapter(DEFAULT_CHAPTER);
 renderVocabularyBadge();
 renderFavoritesBadge();
 renderNotesBadge();
