@@ -66,8 +66,14 @@
     </nav>
 
     <div class="chapter-selector">
-      <select id="book-select" aria-label="Livro"></select>
-      <select id="chapter-select" aria-label="Capítulo"></select>
+      <button type="button" id="book-select-btn" class="chapter-selector-btn" aria-haspopup="dialog" aria-label="Escolher livro">
+        <span id="book-select-label"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <button type="button" id="chapter-select-btn" class="chapter-selector-btn chapter-selector-btn--chapter" aria-haspopup="dialog" aria-label="Escolher capítulo">
+        <span id="chapter-select-label"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
     </div>
 
     <div class="en-version-selector" role="group" aria-label="Versão do texto em inglês">
@@ -367,6 +373,18 @@
   </main>
 
   <div id="word-popup-backdrop" class="word-popup-backdrop" hidden></div>
+
+  <div id="picker-overlay" class="picker-overlay" hidden>
+    <div id="picker-backdrop" class="picker-backdrop"></div>
+    <div class="picker-sheet" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+      <div class="picker-handle"></div>
+      <div class="picker-header">
+        <h2 id="picker-title" class="picker-title"></h2>
+        <button type="button" id="picker-close-btn" class="picker-close-btn" aria-label="Fechar">×</button>
+      </div>
+      <div id="picker-list" class="picker-list"></div>
+    </div>
+  </div>
 
   <div id="word-popup" class="word-popup" role="dialog" aria-modal="true" aria-label="Palavra selecionada" hidden>
     <button type="button" id="word-popup-close" class="word-popup-close" aria-label="Fechar">×</button>
