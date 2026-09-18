@@ -893,6 +893,55 @@ main {
   height: 15px;
 }
 
+.home-instructions-card {
+  background: linear-gradient(140deg, #2dd4bf 0%, #14b8a6 55%, #0f766e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 16px 30px -14px rgba(20, 184, 166, 0.65);
+  overflow: hidden;
+  color: #fff;
+}
+
+.home-instructions-card::before {
+  content: "";
+  position: absolute;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.25), transparent 65%);
+  top: -85px;
+  right: -45px;
+}
+
+.home-btn-instructions {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 13px;
+  border: none;
+  border-radius: 15px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #063d37;
+  background: linear-gradient(135deg, #fde68a 0%, #fbbf24 50%, #f59e0b 100%);
+  box-shadow: 0 8px 18px -8px rgba(0, 0, 0, 0.55);
+}
+
+.home-btn-instructions:hover {
+  filter: brightness(1.03);
+}
+
+.home-btn-instructions svg {
+  width: 15px;
+  height: 15px;
+}
+
 /* PRO */
 
 .home-pro-card {
@@ -2702,6 +2751,94 @@ main {
   font-family: var(--font-ui);
   font-size: 0.9rem;
   color: var(--color-text-muted);
+}
+
+/* Instruções de uso */
+
+.instructions-list {
+  max-width: 40rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0 1rem 2rem;
+}
+
+.instructions-section {
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-surface);
+  padding: 0.9rem 1.1rem;
+}
+
+.instructions-section-title {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.instructions-section-text {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.version-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.version-guide-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--color-bg);
+  border-radius: 0.5rem;
+}
+
+.version-guide-badge {
+  flex-shrink: 0;
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+}
+
+.version-guide-badge--bbe {
+  background: #1e8f4e;
+}
+
+.version-guide-badge--web {
+  background: var(--color-accent);
+}
+
+.version-guide-badge--kjv {
+  background: #b3261e;
+}
+
+.version-guide-level {
+  margin: 0 0 0.2rem;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.version-guide-desc {
+  margin: 0;
+  color: var(--color-text);
+  line-height: 1.5;
+  font-size: 0.92rem;
 }
 
 /* Empty state */
