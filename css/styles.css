@@ -1714,8 +1714,35 @@ main {
 }
 
 .app-menu-tabs {
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
+}
+
+.app-menu-tabs .view-tab {
+  justify-content: center;
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  border-radius: 0.6rem;
+  padding: 0.65rem 0.5rem;
+}
+
+.app-menu-tabs .view-tab:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.app-menu-tabs .view-tab[aria-pressed="true"] {
+  color: var(--color-surface);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.view-tab[aria-pressed="true"] .vocab-count {
+  background: var(--color-surface);
+  color: var(--color-accent);
 }
 
 .app-menu-links {
