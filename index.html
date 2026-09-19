@@ -39,56 +39,12 @@
         <button type="button" id="back-to-home-btn" class="back-home-btn" aria-label="Voltar para o Início" title="Voltar para o Início">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.2 12 3l9 7.2V20a1.6 1.6 0 0 1-1.6 1.6H4.6A1.6 1.6 0 0 1 3 20z"/><path d="M9.2 21.6v-7h5.6v7"/></svg>
         </button>
-        <button type="button" id="menu-toggle" class="menu-toggle" aria-haspopup="true" aria-expanded="false" aria-label="Abrir menu">
+        <button type="button" id="menu-toggle" class="menu-toggle" aria-haspopup="dialog" aria-expanded="false" aria-label="Abrir menu">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <div id="menu-dropdown" class="menu-dropdown" role="menu" aria-label="Menu" hidden>
-          <button type="button" class="menu-dropdown-item" data-menu-view="grammar" role="menuitem">Gramática</button>
-          <button type="button" class="menu-dropdown-item" data-menu-view="flashcards" role="menuitem">Flashcards</button>
-        </div>
       </div>
 
       <h1 class="app-title">Inglês com a Bíblia</h1>
-    </div>
-
-    <nav class="view-tabs" aria-label="Navegação">
-      <button type="button" class="view-tab" data-view="reading" aria-pressed="false">Leitura</button>
-      <button type="button" class="view-tab" data-view="vocabulary" aria-pressed="false">
-        Vocabulário
-        <span id="vocab-count" class="vocab-count" hidden>0</span>
-      </button>
-      <button type="button" class="view-tab" data-view="favorites" aria-pressed="false">
-        Favoritos
-        <span id="favorites-count" class="vocab-count" hidden>0</span>
-      </button>
-      <button type="button" class="view-tab" data-view="notes" aria-pressed="false">
-        Anotações
-        <span id="notes-count" class="vocab-count" hidden>0</span>
-      </button>
-    </nav>
-
-    <div class="chapter-selector">
-      <button type="button" id="book-select-btn" class="chapter-selector-btn" aria-haspopup="dialog" aria-label="Escolher livro">
-        <span id="book-select-label"></span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-      <button type="button" id="chapter-select-btn" class="chapter-selector-btn chapter-selector-btn--chapter" aria-haspopup="dialog" aria-label="Escolher capítulo">
-        <span id="chapter-select-label"></span>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-      </button>
-    </div>
-
-    <div class="en-version-selector" role="group" aria-label="Versão do texto em inglês">
-      <span class="en-version-label">Inglês:</span>
-      <button type="button" class="en-version-btn" data-en-version="bbe" aria-pressed="false" title="Bible in Basic English — vocabulário simplificado, ideal para iniciantes">BBE</button>
-      <button type="button" class="en-version-btn" data-en-version="web" aria-pressed="true" title="World English Bible — inglês moderno e natural">WEB</button>
-      <button type="button" class="en-version-btn" data-en-version="kjv" aria-pressed="false" title="King James Version — inglês clássico/arcaico (thee, thou, hath…)">KJV</button>
-    </div>
-
-    <div class="layout-selector" role="group" aria-label="Layout de leitura">
-      <span class="en-version-label">Layout:</span>
-      <button type="button" class="layout-btn" data-layout="split" aria-pressed="true" title="Inglês e português em colunas lado a lado">Colunas</button>
-      <button type="button" class="layout-btn" data-layout="stacked" aria-pressed="false" title="Tradução em português logo abaixo de cada versículo em inglês">Traduzido</button>
     </div>
   </header>
 
@@ -516,6 +472,72 @@
   </main>
 
   <div id="word-popup-backdrop" class="word-popup-backdrop" hidden></div>
+
+  <div id="app-menu-overlay" class="picker-overlay" hidden>
+    <div id="app-menu-backdrop" class="picker-backdrop"></div>
+    <div class="picker-sheet" role="dialog" aria-modal="true" aria-labelledby="app-menu-title">
+      <div class="picker-handle"></div>
+      <div class="picker-header">
+        <h2 id="app-menu-title" class="picker-title">Menu</h2>
+        <button type="button" id="app-menu-close-btn" class="picker-close-btn" aria-label="Fechar">×</button>
+      </div>
+      <div class="app-menu-body">
+        <p class="picker-section-label">Navegação</p>
+        <nav class="view-tabs app-menu-tabs" aria-label="Navegação">
+          <button type="button" class="view-tab" data-view="reading" aria-pressed="false">Leitura</button>
+          <button type="button" class="view-tab" data-view="vocabulary" aria-pressed="false">
+            Vocabulário
+            <span id="vocab-count" class="vocab-count" hidden>0</span>
+          </button>
+          <button type="button" class="view-tab" data-view="favorites" aria-pressed="false">
+            Favoritos
+            <span id="favorites-count" class="vocab-count" hidden>0</span>
+          </button>
+          <button type="button" class="view-tab" data-view="notes" aria-pressed="false">
+            Anotações
+            <span id="notes-count" class="vocab-count" hidden>0</span>
+          </button>
+        </nav>
+
+        <p class="picker-section-label">Livro e capítulo</p>
+        <div class="chapter-selector">
+          <button type="button" id="book-select-btn" class="chapter-selector-btn" aria-haspopup="dialog" aria-label="Escolher livro">
+            <span id="book-select-label"></span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <button type="button" id="chapter-select-btn" class="chapter-selector-btn chapter-selector-btn--chapter" aria-haspopup="dialog" aria-label="Escolher capítulo">
+            <span id="chapter-select-label"></span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
+
+        <p class="picker-section-label">Versão do inglês</p>
+        <div class="en-version-selector" role="group" aria-label="Versão do texto em inglês">
+          <button type="button" class="en-version-btn" data-en-version="bbe" aria-pressed="false" title="Bible in Basic English — vocabulário simplificado, ideal para iniciantes">BBE</button>
+          <button type="button" class="en-version-btn" data-en-version="web" aria-pressed="true" title="World English Bible — inglês moderno e natural">WEB</button>
+          <button type="button" class="en-version-btn" data-en-version="kjv" aria-pressed="false" title="King James Version — inglês clássico/arcaico (thee, thou, hath…)">KJV</button>
+        </div>
+
+        <p class="picker-section-label">Layout de leitura</p>
+        <div class="layout-selector" role="group" aria-label="Layout de leitura">
+          <button type="button" class="layout-btn" data-layout="split" aria-pressed="true" title="Inglês e português em colunas lado a lado">Colunas</button>
+          <button type="button" class="layout-btn" data-layout="stacked" aria-pressed="false" title="Tradução em português logo abaixo de cada versículo em inglês">Traduzido</button>
+        </div>
+
+        <p class="picker-section-label">Mais</p>
+        <div class="app-menu-links">
+          <button type="button" class="app-menu-link-btn" data-menu-view="grammar">
+            Gramática
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+          </button>
+          <button type="button" class="app-menu-link-btn" data-menu-view="flashcards">
+            Flashcards
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="picker-overlay" class="picker-overlay" hidden>
     <div id="picker-backdrop" class="picker-backdrop"></div>
