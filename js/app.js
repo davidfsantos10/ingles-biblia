@@ -99,6 +99,22 @@ function getEnglishText(verse) {
   return verse[EN_VERSIONS[currentEnVersion].field] || verse.en;
 }
 
+// Layout de leitura: "split" é o padrão de sempre (colunas lado a lado);
+// "stacked" mostra cada versículo em inglês com a tradução em português
+// logo abaixo, numa coluna só.
+const READING_LAYOUT_STORAGE_KEY = "ingles-biblia.reading-layout";
+
+function loadReadingLayout() {
+  try {
+    const stored = localStorage.getItem(READING_LAYOUT_STORAGE_KEY);
+    return stored === "stacked" ? "stacked" : "split";
+  } catch (err) {
+    return "split";
+  }
+}
+
+let readingLayout = loadReadingLayout();
+
 const bookSelectBtnEl = document.getElementById("book-select-btn");
 const bookSelectLabelEl = document.getElementById("book-select-label");
 const chapterSelectBtnEl = document.getElementById("chapter-select-btn");
@@ -114,6 +130,7 @@ const versesEnEl = document.getElementById("verses-en");
 const versesPtEl = document.getElementById("verses-pt");
 const versionBadgeEnEl = document.getElementById("version-badge-en");
 const enVersionButtons = document.querySelectorAll(".en-version-btn");
+const layoutButtons = document.querySelectorAll(".layout-btn");
 const columnEnEl = document.querySelector(".column-en");
 const columnPtEl = document.querySelector(".column-pt");
 const readingView = document.querySelector(".reading-view");
@@ -344,9 +361,15 @@ function renderChapter(book, chapter, data) {
   versesEnEl.innerHTML = "";
   versesPtEl.innerHTML = "";
 
-  for (const verse of data.verses) {
-    versesEnEl.appendChild(buildVerseEl(verse, "en", book, chapter));
-    versesPtEl.appendChild(buildVerseEl(verse, "pt", book, chapter));
+  if (readingLayout === "stacked") {
+    for (const verse of data.verses) {
+      versesEnEl.appendChild(buildStackedVerseEl(verse, book, chapter));
+    }
+  } else {
+    for (const verse of data.verses) {
+      versesEnEl.appendChild(buildVerseEl(verse, "en", book, chapter));
+      versesPtEl.appendChild(buildVerseEl(verse, "pt", book, chapter));
+    }
   }
 
   applyWordHistoryStyles();
@@ -360,6 +383,25 @@ function buildVerseEl(verse, lang, book, chapter) {
   container.dataset.verseKey = verseKey;
   container.appendChild(buildVerseToolbar(verse, book, chapter, verseKey));
   container.appendChild(buildVerseText(verse, lang));
+
+  return container;
+}
+
+// Layout "Traduzido": um único cartão por versículo, com o texto em inglês
+// e, logo abaixo, a tradução em português dentro de uma caixa destacada.
+function buildStackedVerseEl(verse, book, chapter) {
+  const container = document.createElement("div");
+  container.className = "verse verse--stacked";
+
+  const verseKey = `${book.slug}-${chapter}-${verse.number}`;
+  container.dataset.verseKey = verseKey;
+  container.appendChild(buildVerseToolbar(verse, book, chapter, verseKey));
+  container.appendChild(buildVerseText(verse, "en"));
+
+  const translationBox = document.createElement("div");
+  translationBox.className = "verse-translation";
+  translationBox.appendChild(buildVerseText(verse, "pt"));
+  container.appendChild(translationBox);
 
   return container;
 }
@@ -3179,7 +3221,36 @@ for (const btn of enVersionButtons) {
   btn.addEventListener("click", () => setEnVersion(btn.dataset.enVersion));
 }
 
+function saveReadingLayout(layout) {
+  try {
+    localStorage.setItem(READING_LAYOUT_STORAGE_KEY, layout);
+  } catch (err) {
+    // Preferência não persistida (ex.: armazenamento indisponível): segue mesmo assim.
+  }
+}
+
+function applyReadingLayoutUI() {
+  readingView.classList.toggle("reading-view--stacked", readingLayout === "stacked");
+  for (const btn of layoutButtons) {
+    btn.setAttribute("aria-pressed", String(btn.dataset.layout === readingLayout));
+  }
+}
+
+function setReadingLayout(layout) {
+  if (layout !== "split" && layout !== "stacked") return;
+  if (layout === readingLayout) return;
+  readingLayout = layout;
+  saveReadingLayout(layout);
+  applyReadingLayoutUI();
+  if (currentSource.chapter !== 0) loadChapter(getSelectedBook(), selectedChapter);
+}
+
+for (const btn of layoutButtons) {
+  btn.addEventListener("click", () => setReadingLayout(btn.dataset.layout));
+}
+
 applyEnVersionUI();
+applyReadingLayoutUI();
 setSelectedBook(DEFAULT_BOOK_SLUG);
 setSelectedChapter(DEFAULT_CHAPTER);
 renderVocabularyBadge();
