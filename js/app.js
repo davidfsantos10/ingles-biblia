@@ -184,6 +184,20 @@ const menuToggleEl = document.getElementById("menu-toggle");
 const appMenuOverlayEl = document.getElementById("app-menu-overlay");
 const appMenuBackdropEl = document.getElementById("app-menu-backdrop");
 const appMenuCloseBtnEl = document.getElementById("app-menu-close-btn");
+const selectionBarEl = document.getElementById("selection-bar");
+const selectionBarTextEl = document.getElementById("selection-bar-text");
+const selectionBarUnderstandBtnEl = document.getElementById("selection-bar-understand-btn");
+const selectionBarCloseBtnEl = document.getElementById("selection-bar-close-btn");
+const understandOverlayEl = document.getElementById("understand-overlay");
+const understandBackdropEl = document.getElementById("understand-backdrop");
+const understandCloseBtnEl = document.getElementById("understand-close-btn");
+const understandVersionBadgeEl = document.getElementById("understand-version-badge");
+const understandReferenceEl = document.getElementById("understand-reference");
+const understandSelectedTextEl = document.getElementById("understand-selected-text");
+const understandListenBtnEl = document.getElementById("understand-listen-btn");
+const understandSectionsEl = document.getElementById("understand-sections");
+const understandFallbackEl = document.getElementById("understand-fallback");
+const understandSaveBtnEl = document.getElementById("understand-save-btn");
 const menuDropdownItems = document.querySelectorAll(".app-menu-link-btn");
 const grammarViewEl = document.getElementById("grammar-view");
 const flashcardsViewEl = document.getElementById("flashcards-view");
@@ -255,6 +269,10 @@ const lessonCheckBtnEl = document.getElementById("lesson-check-btn");
 const lessonContinueBtnEl = document.getElementById("lesson-continue-btn");
 
 let currentSource = { book: "", chapter: 0 };
+// Guarda o capítulo cheio carregado por último (livro, número e o array de
+// versículos com as 3 versões em inglês + português), usado pelo painel
+// "Entender trecho" pra montar a análise sem precisar buscar de novo.
+let currentChapterData = null;
 
 // Uma "palavra" pode incluir hífen/apóstrofo interno (ex.: "ajuntem-se", "don't").
 const WORD_PATTERN = /[A-Za-zÀ-ÖØ-öø-ÿ]+(?:['-][A-Za-zÀ-ÖØ-öø-ÿ]+)*/g;
@@ -360,6 +378,7 @@ function renderChapter(book, chapter, data) {
   titleEnEl.textContent = `${book.en} ${chapter}`;
   titlePtEl.textContent = `${book.pt} ${chapter}`;
   currentSource = { book: book.pt, chapter };
+  currentChapterData = { book, chapter, verses: data.verses };
 
   versesEnEl.innerHTML = "";
   versesPtEl.innerHTML = "";
@@ -1169,6 +1188,8 @@ function closeActivePopup() {
   if (!sharePopupEl.hidden) closeSharePopup();
   if (!pickerOverlayEl.hidden) closePicker();
   if (!appMenuOverlayEl.hidden) closeAppMenu();
+  if (!understandOverlayEl.hidden) closeUnderstandPanel();
+  if (!selectionBarEl.hidden) hideSelectionBar();
 }
 
 // Palavra atualmente mostrada no popup, usada pelo botão "Salvar".
@@ -1382,6 +1403,373 @@ const ARCHAIC_EN_PT_GLOSSARY = {
   shekel: "siclo",
 };
 
+// --- "Entender trecho": análise contextual de expressões e frases ---
+//
+// Camada local (sem IA nem backend), pensada para funcionar 100% offline e
+// sem custo. Cobre dois tipos de ajuda que uma tradução palavra-por-palavra
+// não dá:
+//
+// 1) Inglês arcaico -> equivalente em inglês moderno (ARCHAIC_MODERN_EQUIVALENTS),
+//    reaproveitando as mesmas chaves do glossário de arcaísmos acima.
+// 2) Expressões/phrasal verbs/collocations comuns na Bíblia em inglês
+//    (EXPRESSIONS_DICTIONARY), com significado, tradução literal x natural e
+//    um exemplo em inglês do dia a dia.
+//
+// getContextualAnalysis() é a única função que decide o que mostrar no
+// painel; é a costura pensada para, no futuro, poder chamar um backend de IA
+// para os trechos que hoje caem no fallback "sem entrada no dicionário"
+// (ver comentário na própria função).
+
+const ARCHAIC_MODERN_EQUIVALENTS = {
+  thee: "you",
+  thou: "you",
+  thy: "your",
+  thine: "yours",
+  ye: "you (plural / you all)",
+  hath: "has",
+  hast: "have",
+  doth: "does",
+  dost: "do",
+  art: "are",
+  wast: "were",
+  wert: "were",
+  shalt: "will/shall",
+  wilt: "will",
+  couldst: "could",
+  wouldst: "would",
+  shouldst: "should",
+  mayest: "may",
+  mayst: "may",
+  canst: "can",
+  knowest: "know",
+  sayest: "say",
+  seest: "see",
+  goest: "go",
+  givest: "give",
+  lovest: "love",
+  believest: "believe",
+  unto: "to",
+  verily: "truly, indeed",
+  wherefore: "why, therefore",
+  whence: "from where",
+  whither: "to where",
+  hence: "from here, therefore",
+  thence: "from there",
+  begat: "fathered, had (a child)",
+  brethren: "brothers",
+  spake: "spoke",
+  speaketh: "speaks",
+  saith: "says",
+  cometh: "comes",
+  goeth: "goes",
+  giveth: "gives",
+  maketh: "makes",
+  taketh: "takes",
+  knoweth: "knows",
+  loveth: "loves",
+  liveth: "lives",
+  worketh: "works",
+  believeth: "believes",
+  seeketh: "seeks",
+  findeth: "finds",
+  walketh: "walks",
+};
+
+// Palavras/formas que sinalizam que um trecho está em inglês arcaico/bíblico
+// (não necessariamente do glossário de tradução — algumas são só um alerta,
+// como "-eth"/"-est" no fim do verbo).
+const ARCHAIC_MARKER_PATTERN = new RegExp(
+  `\\b(${Object.keys(ARCHAIC_MODERN_EQUIVALENTS).join("|")})\\b`,
+  "gi"
+);
+
+// Dicionário curado de expressões, phrasal verbs, collocations e construções
+// fixas comuns no texto bíblico em inglês. Conteúdo escrito diretamente para
+// este app (mesmo espírito do guia de Gramática): não é um dicionário de
+// mercado, é um recorte pedagógico pensado para quem está lendo a Bíblia em
+// inglês. Cada "pattern" é testado tanto contra o trecho selecionado quanto
+// contra o versículo inteiro (ver findExpressionMatches).
+const EXPRESSIONS_DICTIONARY = [
+  {
+    id: "give-up",
+    pattern: /\bgive[sn]?\s+up\b/i,
+    display: "give up",
+    type: "Phrasal verb",
+    meaning: "Desistir de algo, ou entregar/abandonar algo.",
+    why: '"Give" (dar) sozinho não tem esse sentido — é a combinação com "up" que cria um verbo novo, com significado próprio.',
+    literal: "dar para cima",
+    natural: "desistir / entregar",
+    modernExample: { en: "Don't give up on your dreams.", pt: "Não desista dos seus sonhos." },
+  },
+  {
+    id: "come-to-pass",
+    pattern: /\bcome[sn]?\s+to\s+pass\b/i,
+    display: "come to pass",
+    type: "Expressão fixa (bíblica)",
+    meaning: "Acontecer, vir a se cumprir.",
+    why: 'Construção bem comum na KJV para anunciar que algo vai acontecer ou se cumprir — praticamente não é usada no inglês falado hoje.',
+    literal: "vir a passar",
+    natural: "acontecer, cumprir-se",
+    modernExample: { en: "It happened just as she said.", pt: "Aconteceu exatamente como ela disse." },
+  },
+  {
+    id: "bring-forth",
+    pattern: /\bbring(?:s|eth)?\s+forth\b/i,
+    display: "bring forth",
+    type: "Phrasal verb (arcaico)",
+    meaning: "Produzir, dar à luz, gerar (fruto, filho, resultado).",
+    why: '"Forth" é um advérbio arcaico para "para frente/para fora" — hoje é raro fora de textos antigos ou muito formais.',
+    literal: "trazer para frente",
+    natural: "produzir, gerar, dar à luz",
+    modernExample: { en: "The tree produces good fruit.", pt: "A árvore produz bons frutos." },
+  },
+  {
+    id: "set-apart",
+    pattern: /\bset\s+apart\b/i,
+    display: "set apart",
+    type: "Collocation",
+    meaning: "Separar algo/alguém para um propósito especial; consagrar.",
+    why: '"Set" combina com várias partículas (set apart, set up, set out) formando sentidos diferentes — aqui, "apart" (à parte) dá a ideia de separação com propósito.',
+    literal: "colocar à parte",
+    natural: "separar, consagrar, reservar",
+    modernExample: { en: "This day is set apart for rest.", pt: "Este dia é reservado para descanso." },
+  },
+  {
+    id: "call-upon",
+    pattern: /\bcall(?:s|eth)?\s+upon\b/i,
+    display: "call upon",
+    type: "Phrasal verb (bíblico/formal)",
+    meaning: "Invocar, clamar a, pedir ajuda de.",
+    why: '"Upon" aqui funciona como uma versão mais formal/antiga de "on" — no inglês de hoje se diria simplesmente "call on".',
+    literal: "chamar sobre",
+    natural: "invocar, clamar",
+    modernExample: { en: "Call on God in times of trouble.", pt: "Invoque a Deus em tempos de dificuldade." },
+  },
+  {
+    id: "have-mercy-on",
+    pattern: /\bhave\s+mercy\s+(?:up)?on\b/i,
+    display: "have mercy on",
+    type: "Collocation",
+    meaning: "Ter piedade de, ser misericordioso com.",
+    why: '"Mercy" quase sempre aparece com o verbo "have" e a preposição "on" — é uma combinação fixa, não algo que se monta livremente.',
+    literal: "ter misericórdia sobre",
+    natural: "ter piedade de",
+    modernExample: { en: "Please, have mercy on us.", pt: "Por favor, tenha piedade de nós." },
+  },
+  {
+    id: "make-known",
+    pattern: /\bmake[s]?\s+known\b/i,
+    display: "make known",
+    type: "Collocation",
+    meaning: "Tornar conhecido, revelar, anunciar.",
+    why: '"Make" + adjetivo (make known, make sure, make clear) é um padrão comum do inglês para "tornar [algo]".',
+    literal: "fazer conhecido",
+    natural: "revelar, anunciar",
+    modernExample: { en: "She made her plans known to everyone.", pt: "Ela tornou seus planos conhecidos para todos." },
+  },
+  {
+    id: "take-heed",
+    pattern: /\btake\s+heed\b/i,
+    display: "take heed",
+    type: "Expressão fixa (arcaica)",
+    meaning: "Prestar atenção, tomar cuidado.",
+    why: '"Heed" (atenção/cuidado) quase não é usado sozinho no inglês moderno fora dessa expressão, que hoje soa bem formal ou antiga.',
+    literal: "tomar atenção",
+    natural: "prestar atenção, cuidar-se",
+    modernExample: { en: "Pay attention to what he says.", pt: "Preste atenção ao que ele diz." },
+  },
+  {
+    id: "bear-fruit",
+    pattern: /\bbear(?:s|eth|ing)?\s+fruit\b/i,
+    display: "bear fruit",
+    type: "Idiom",
+    meaning: "Dar resultado, produzir bons frutos/resultados (literal ou figurado).",
+    why: 'Fora da agricultura, "bear fruit" é usado no inglês moderno em sentido figurado para "dar resultado" — um bom exemplo de expressão bíblica que sobreviveu no inglês atual.',
+    literal: "carregar fruto",
+    natural: "dar resultado, frutificar",
+    modernExample: { en: "Their hard work finally bore fruit.", pt: "O trabalho duro deles finalmente deu resultado." },
+  },
+  {
+    id: "so-be-it",
+    pattern: /\bso\s+be\s+it\b/i,
+    display: "so be it",
+    type: "Expressão fixa",
+    meaning: "Que assim seja (aceitação, concordância).",
+    why: 'Ordem de palavras invertida ("so be it" em vez de "let it be so") típica do inglês mais formal/antigo — ainda existe hoje, mas soa solene.',
+    literal: "assim seja isso",
+    natural: "que assim seja",
+    modernExample: { en: "If that's what you want, so be it.", pt: "Se é isso que você quer, que assim seja." },
+  },
+  {
+    id: "put-off",
+    pattern: /\bput[s]?\s+off\b/i,
+    display: "put off",
+    type: "Phrasal verb",
+    meaning: "Adiar algo, ou (sentido bíblico) despir-se/deixar de lado (um hábito, uma roupa velha).",
+    why: '"Put off" no inglês moderno normalmente significa "adiar" — mas na Bíblia aparece muito no sentido de "despojar-se de", por isso o contexto do versículo importa tanto.',
+    literal: "colocar fora",
+    natural: "adiar / despir-se de, deixar de lado",
+    modernExample: { en: "Don't put off until tomorrow what you can do today.", pt: "Não adie para amanhã o que você pode fazer hoje." },
+  },
+  {
+    id: "put-on",
+    pattern: /\bput[s]?\s+on\b/i,
+    display: "put on",
+    type: "Phrasal verb",
+    meaning: "Vestir, colocar (roupa); no sentido bíblico, também \"revestir-se de\" uma qualidade.",
+    why: 'Phrasal verb comum e ainda muito usado hoje ("put on your coat") — na Bíblia ganha um sentido figurado extra, de "revestir-se" de uma virtude.',
+    literal: "colocar sobre",
+    natural: "vestir / revestir-se de",
+    modernExample: { en: "Put on your jacket, it's cold.", pt: "Vista seu casaco, está frio." },
+  },
+  {
+    id: "look-upon",
+    pattern: /\blook(?:s|eth)?\s+upon\b/i,
+    display: "look upon",
+    type: "Phrasal verb (formal/arcaico)",
+    meaning: "Olhar para, considerar, encarar.",
+    why: 'Versão mais formal/antiga de "look at" ou "regard" — no inglês falado hoje soa bem solene.',
+    literal: "olhar sobre",
+    natural: "olhar para, considerar",
+    modernExample: { en: "She looked at him with kindness.", pt: "Ela olhou para ele com bondade." },
+  },
+  {
+    id: "in-the-name-of",
+    pattern: /\bin\s+the\s+name\s+of\b/i,
+    display: "in the name of",
+    type: "Collocation",
+    meaning: "Em nome de (autoridade, representação).",
+    why: 'Preposição fixa: sempre "in the name of", nunca "on/at the name of" — é uma combinação que precisa ser memorizada como bloco.',
+    literal: "no nome de",
+    natural: "em nome de",
+    modernExample: { en: "I welcome you in the name of our company.", pt: "Eu os recebo em nome da nossa empresa." },
+  },
+  {
+    id: "cry-out",
+    pattern: /\bcr(?:y|ies|ied)\s+out\b/i,
+    display: "cry out",
+    type: "Phrasal verb",
+    meaning: "Clamar, gritar (de dor, socorro ou emoção forte).",
+    why: '"Out" aqui intensifica o verbo "cry" (chorar/gritar), dando a ideia de um som que sai com força — ainda muito usado no inglês de hoje.',
+    literal: "chorar para fora",
+    natural: "clamar, gritar",
+    modernExample: { en: "She cried out in pain.", pt: "Ela gritou de dor." },
+  },
+  {
+    id: "walk-in",
+    pattern: /\bwalk(?:s|eth)?\s+in\b/i,
+    display: "walk in",
+    type: "Collocation (figurada)",
+    meaning: "Viver de acordo com, seguir (um caminho, uma verdade, um mandamento).",
+    why: 'No sentido literal é só "entrar andando", mas na Bíblia "walk in" (truth/light/the way) é uma metáfora comum para "viver segundo" algo.',
+    literal: "andar em",
+    natural: "viver segundo, seguir",
+    modernExample: { en: "He tries to walk in honesty every day.", pt: "Ele tenta viver com honestidade todos os dias." },
+  },
+  {
+    id: "draw-near",
+    pattern: /\bdraw(?:s|eth)?\s+near\b/i,
+    display: "draw near",
+    type: "Expressão fixa (formal)",
+    meaning: "Aproximar-se, chegar perto.",
+    why: 'Versão mais formal/literária de "come close" ou "get closer" — ainda compreensível hoje, mas soa elevado para uma conversa comum.',
+    literal: "puxar para perto",
+    natural: "aproximar-se",
+    modernExample: { en: "The holidays are drawing near.", pt: "As festas estão se aproximando." },
+  },
+  {
+    id: "for-ever-and-ever",
+    pattern: /\bfor\s*ever\s+and\s+ever\b/i,
+    display: "for ever and ever",
+    type: "Expressão fixa (bíblica)",
+    meaning: "Para todo o sempre, eternamente.",
+    why: 'Repetição enfática ("ever and ever") para reforçar a ideia de "sempre" — um recurso comum em textos religiosos e poéticos.',
+    literal: "para sempre e sempre",
+    natural: "para todo o sempre, eternamente",
+    modernExample: { en: "I will love you forever.", pt: "Eu vou te amar para sempre." },
+  },
+  {
+    id: "give-thanks",
+    pattern: /\bgive[s]?\s+thanks\b/i,
+    display: "give thanks",
+    type: "Collocation",
+    meaning: "Agradecer, dar graças.",
+    why: '"Thanks" quase sempre aparece com o verbo "give" nessa expressão — dizer "make thanks" ou "do thanks" soaria errado para um falante nativo.',
+    literal: "dar agradecimentos",
+    natural: "agradecer",
+    modernExample: { en: "Let's give thanks for this meal.", pt: "Vamos agradecer por esta refeição." },
+  },
+];
+
+// Normaliza um trecho para comparação: minúsculas, sem pontuação nas
+// bordas, espaços colapsados.
+function normalizePhrase(text) {
+  return text
+    .trim()
+    .replace(/^[^A-Za-zÀ-ÖØ-öø-ÿ]+|[^A-Za-zÀ-ÖØ-öø-ÿ]+$/g, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+// Procura, no dicionário de expressões, entradas cujo padrão bate com o
+// trecho selecionado OU aparece no versículo inteiro sobrepondo a seleção
+// (o usuário raramente arrasta a seleção pegando exatamente as palavras da
+// expressão, nem um pouco a mais nem a menos).
+function findExpressionMatches(selectedText, verseEnglishText) {
+  const normalizedSelection = normalizePhrase(selectedText);
+  if (!normalizedSelection) return [];
+
+  const matches = [];
+  for (const entry of EXPRESSIONS_DICTIONARY) {
+    entry.pattern.lastIndex = 0;
+    const matchesSelection = entry.pattern.test(normalizedSelection);
+    entry.pattern.lastIndex = 0;
+    const foundInVerse = entry.pattern.exec(verseEnglishText || "");
+    entry.pattern.lastIndex = 0;
+
+    if (matchesSelection) {
+      matches.push(entry);
+    } else if (foundInVerse) {
+      const matchedPhrase = foundInVerse[0].toLowerCase();
+      const overlaps =
+        matchedPhrase.includes(normalizedSelection) || normalizedSelection.includes(matchedPhrase.split(" ")[0]);
+      if (overlaps) matches.push(entry);
+    }
+  }
+  return matches.slice(0, 3);
+}
+
+// Palavras arcaicas presentes no trecho selecionado, cada uma com seu
+// equivalente em inglês moderno (quando existir no mapa).
+function findArchaicWords(selectedText) {
+  ARCHAIC_MARKER_PATTERN.lastIndex = 0;
+  const found = new Set();
+  let match;
+  while ((match = ARCHAIC_MARKER_PATTERN.exec(selectedText)) !== null) {
+    found.add(match[0].toLowerCase());
+  }
+  return Array.from(found).map((word) => ({
+    word,
+    modern: ARCHAIC_MODERN_EQUIVALENTS[word] || null,
+  }));
+}
+
+// Ponto único de decisão da análise contextual mostrada no painel "Entender
+// trecho". Hoje só consulta os dicionários locais acima (sem IA, sem rede);
+// é a costura pensada para, no futuro, poder complementar o fallback
+// "sem entrada no dicionário" com uma chamada a um backend de IA, sem mexer
+// em mais nada do restante do recurso.
+function getContextualAnalysis(context) {
+  const { selectedText, verse } = context;
+  const verseEnglishText = verse ? getEnglishText(verse) : "";
+
+  return {
+    expressions: findExpressionMatches(selectedText, verseEnglishText),
+    archaicWords: findArchaicWords(selectedText),
+    isSingleWord: !/\s/.test(normalizePhrase(selectedText)),
+  };
+}
+
 // Detecta respostas inúteis que ainda assim "parecem" uma tradução válida,
 // como o aviso de limite diário do MyMemory — sem isso, esse texto acabava
 // sendo salvo no cache como se fosse a tradução real da palavra.
@@ -1528,6 +1916,344 @@ wordPopupBackdropEl.addEventListener("click", closeActivePopup);
 wordPopupCloseEl.addEventListener("click", hideWordPopup);
 wordPopupSaveEl.addEventListener("click", handleSaveWordClick);
 
+// --- "Entender trecho": segunda camada de interação além do toque em
+// palavra — seleção de um trecho (palavra, expressão ou parte da frase) no
+// texto em inglês, que abre um painel de análise contextual. Não interfere
+// no toque simples (que continua indo por "click" em handleVersesClick):
+// uma seleção de texto dispara "selectionchange", nunca "click". ---
+
+let pendingSelectionContext = null;
+let currentUnderstandContext = null;
+
+// Só reconhece uma seleção válida quando: não está vazia, começa e termina
+// dentro do mesmo versículo, esse versículo está na coluna em inglês, e (no
+// layout "Traduzido", onde a tradução em português fica dentro do mesmo
+// card que o inglês) fora da caixa de tradução.
+function getSelectionContext() {
+  if (!currentChapterData) return null;
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
+
+  const selectedText = selection.toString();
+  if (!normalizePhrase(selectedText)) return null;
+
+  const toElement = (node) => (node && node.nodeType === Node.TEXT_NODE ? node.parentElement : node);
+  const anchorEl = toElement(selection.anchorNode);
+  const focusEl = toElement(selection.focusNode);
+  if (!anchorEl || !focusEl) return null;
+
+  const anchorVerseEl = anchorEl.closest(".verse");
+  const focusVerseEl = focusEl.closest(".verse");
+  if (!anchorVerseEl || anchorVerseEl !== focusVerseEl) return null;
+  if (!versesEnEl.contains(anchorVerseEl)) return null;
+  if (anchorEl.closest(".verse-translation") || focusEl.closest(".verse-translation")) return null;
+
+  const verseKey = anchorVerseEl.dataset.verseKey || "";
+  const verseNumber = Number(verseKey.slice(verseKey.lastIndexOf("-") + 1));
+  const verse = currentChapterData.verses.find((v) => v.number === verseNumber);
+  if (!verse) return null;
+
+  return {
+    selectedText: selectedText.trim(),
+    book: currentChapterData.book,
+    chapter: currentChapterData.chapter,
+    verseNumber,
+    verse,
+  };
+}
+
+function hideSelectionBar() {
+  selectionBarEl.hidden = true;
+  pendingSelectionContext = null;
+}
+
+function handleSelectionChange() {
+  if (readingContainerEl.hidden || !understandOverlayEl.hidden) return;
+
+  const context = getSelectionContext();
+  if (!context) {
+    hideSelectionBar();
+    return;
+  }
+
+  pendingSelectionContext = context;
+  selectionBarTextEl.textContent = `"${context.selectedText}"`;
+  selectionBarEl.hidden = false;
+}
+
+document.addEventListener("selectionchange", handleSelectionChange);
+selectionBarCloseBtnEl.addEventListener("click", () => {
+  window.getSelection().removeAllRanges();
+  hideSelectionBar();
+});
+
+// --- Painel "Entender trecho": monta a análise a partir dos dicionários
+// locais (ver getContextualAnalysis) em seções expansíveis, seguindo a
+// hierarquia pedida: primeiro o significado, depois como a expressão
+// funciona, depois o contraste com o inglês moderno, depois comparar
+// versões. Sem IA/rede: tudo roda na hora, offline.
+
+function buildUnderstandItem(title, bodyBuilder, isOpen) {
+  const item = document.createElement("div");
+  item.className = "understand-item" + (isOpen ? " is-open" : "");
+
+  const header = document.createElement("button");
+  header.type = "button";
+  header.className = "understand-item-header";
+  header.setAttribute("aria-expanded", String(!!isOpen));
+
+  const titleSpan = document.createElement("span");
+  titleSpan.textContent = title;
+  const chevron = document.createElement("span");
+  chevron.className = "understand-item-chevron";
+  chevron.setAttribute("aria-hidden", "true");
+  chevron.textContent = "▾";
+  header.append(titleSpan, chevron);
+
+  const body = document.createElement("div");
+  body.className = "understand-item-body";
+  body.hidden = !isOpen;
+  bodyBuilder(body);
+
+  header.addEventListener("click", () => {
+    const willOpen = body.hidden;
+    body.hidden = !willOpen;
+    header.setAttribute("aria-expanded", String(willOpen));
+    item.classList.toggle("is-open", willOpen);
+  });
+
+  item.append(header, body);
+  return item;
+}
+
+function buildUnderstandExampleEl(example) {
+  const box = document.createElement("div");
+  box.className = "understand-example";
+  const enP = document.createElement("p");
+  enP.className = "understand-example-en";
+  enP.textContent = example.en;
+  const ptP = document.createElement("p");
+  ptP.className = "understand-example-pt";
+  ptP.textContent = example.pt;
+  box.append(enP, ptP);
+  return box;
+}
+
+function buildListenButton(text) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "understand-listen-btn";
+  btn.innerHTML = ICON_LISTEN + " Ouvir";
+  btn.addEventListener("click", () => speakText(text));
+  return btn;
+}
+
+function renderUnderstandSections(context, analysis) {
+  understandSectionsEl.innerHTML = "";
+  const primaryExpression = analysis.expressions[0] || null;
+  let hasAnySection = false;
+
+  // 1) O que isso significa?
+  if (primaryExpression) {
+    hasAnySection = true;
+    understandSectionsEl.appendChild(
+      buildUnderstandItem(
+        "O que isso significa?",
+        (body) => {
+          const p = document.createElement("p");
+          p.textContent = primaryExpression.meaning;
+          body.appendChild(p);
+
+          const literalP = document.createElement("p");
+          literalP.innerHTML = `<strong>Literal:</strong> ${primaryExpression.literal}`;
+          const naturalP = document.createElement("p");
+          naturalP.innerHTML = `<strong>Natural:</strong> ${primaryExpression.natural}`;
+          body.append(literalP, naturalP);
+        },
+        true
+      )
+    );
+  } else if (analysis.isSingleWord) {
+    hasAnySection = true;
+    const loadingId = `understand-word-${Date.now()}`;
+    const item = buildUnderstandItem(
+      "O que isso significa?",
+      (body) => {
+        const p = document.createElement("p");
+        p.id = loadingId;
+        p.textContent = "traduzindo…";
+        body.appendChild(p);
+
+        const note = document.createElement("p");
+        note.innerHTML = "<strong>Atenção:</strong> tradução da palavra isolada, sem levar o resto da frase em conta.";
+        body.appendChild(note);
+      },
+      true
+    );
+    understandSectionsEl.appendChild(item);
+
+    translateWord(context.selectedText.toLowerCase(), "en", "pt")
+      .then((translation) => {
+        const el = document.getElementById(loadingId);
+        if (el) el.textContent = translation;
+      })
+      .catch(() => {
+        const el = document.getElementById(loadingId);
+        if (el) el.textContent = "tradução não encontrada";
+      });
+  }
+
+  // 2) Como essa expressão funciona?
+  if (primaryExpression) {
+    hasAnySection = true;
+    understandSectionsEl.appendChild(
+      buildUnderstandItem(`Como essa expressão funciona? (${primaryExpression.type})`, (body) => {
+        const p = document.createElement("p");
+        p.textContent = primaryExpression.why;
+        body.appendChild(p);
+      })
+    );
+  }
+
+  // 3) Por que o inglês foi escrito assim? (inglês bíblico x moderno)
+  if (analysis.archaicWords.length > 0) {
+    hasAnySection = true;
+    understandSectionsEl.appendChild(
+      buildUnderstandItem("Por que o inglês foi escrito assim?", (body) => {
+        const intro = document.createElement("p");
+        intro.innerHTML = "<strong>Inglês bíblico/arcaico</strong> — não é assim que se fala hoje.";
+        body.appendChild(intro);
+
+        for (const { word, modern } of analysis.archaicWords) {
+          const row = document.createElement("p");
+          row.innerHTML = modern
+            ? `<strong>${word}</strong> → em inglês moderno: <strong>${modern}</strong>`
+            : `<strong>${word}</strong> — forma arcaica`;
+          body.appendChild(row);
+        }
+      })
+    );
+  }
+
+  // 4) Como eu diria isso hoje? (exemplo moderno)
+  if (primaryExpression && primaryExpression.modernExample) {
+    hasAnySection = true;
+    understandSectionsEl.appendChild(
+      buildUnderstandItem("Como eu diria isso hoje?", (body) => {
+        const label = document.createElement("p");
+        label.innerHTML = `<strong>Expressão encontrada:</strong> ${primaryExpression.display}`;
+        body.appendChild(label);
+        body.appendChild(buildUnderstandExampleEl(primaryExpression.modernExample));
+        body.appendChild(buildListenButton(primaryExpression.modernExample.en));
+      })
+    );
+  }
+
+  // 5) Comparar versões (sempre disponível: os dados das 3 versões já vêm
+  // juntos no capítulo carregado).
+  understandSectionsEl.appendChild(
+    buildUnderstandItem("Comparar versões (BBE · WEB · KJV)", (body) => {
+      const list = document.createElement("div");
+      list.className = "understand-versions-list";
+      for (const key of ["bbe", "web", "kjv"]) {
+        const row = document.createElement("div");
+        row.className = "understand-version-row";
+        const badge = document.createElement("span");
+        badge.className = `version-guide-badge version-guide-badge--${key}`;
+        badge.textContent = EN_VERSIONS[key].label;
+        const text = document.createElement("p");
+        text.className = "understand-version-text";
+        text.textContent = context.verse[EN_VERSIONS[key].field] || context.verse.en;
+        row.append(badge, text);
+        list.appendChild(row);
+      }
+      body.appendChild(list);
+    })
+  );
+
+  understandFallbackEl.hidden = hasAnySection;
+}
+
+function openUnderstandPanel() {
+  if (!pendingSelectionContext) return;
+  const context = pendingSelectionContext;
+  currentUnderstandContext = context;
+
+  const version = EN_VERSIONS[currentEnVersion];
+  understandVersionBadgeEl.textContent = version.label;
+  understandVersionBadgeEl.className = `version-guide-badge version-guide-badge--${currentEnVersion}`;
+  understandReferenceEl.textContent = `${context.book.pt} ${context.chapter}:${context.verseNumber}`;
+  understandSelectedTextEl.textContent = context.selectedText;
+
+  const analysis = getContextualAnalysis(context);
+  currentUnderstandContext.analysis = analysis;
+  renderUnderstandSections(context, analysis);
+
+  window.getSelection().removeAllRanges();
+  hideSelectionBar();
+  understandOverlayEl.hidden = false;
+}
+
+function closeUnderstandPanel() {
+  understandOverlayEl.hidden = true;
+  understandSectionsEl.innerHTML = "";
+  currentUnderstandContext = null;
+}
+
+selectionBarUnderstandBtnEl.addEventListener("click", openUnderstandPanel);
+understandBackdropEl.addEventListener("click", closeUnderstandPanel);
+understandCloseBtnEl.addEventListener("click", closeUnderstandPanel);
+understandListenBtnEl.addEventListener("click", () => {
+  if (currentUnderstandContext) speakText(currentUnderstandContext.selectedText);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !understandOverlayEl.hidden) closeUnderstandPanel();
+});
+
+// Salva a expressão no mesmo armazenamento do vocabulário de palavras
+// (VOCABULARY_STORAGE_KEY), com "type:phrase" pra diferenciar na exibição.
+// Entradas antigas (sem esse campo) continuam sendo tratadas como palavra
+// normalmente — não precisou mudar loadVocabulary/saveVocabulary.
+function recordPhraseSave(context, analysis) {
+  const primaryExpression = analysis.expressions[0] || null;
+  const list = loadVocabulary();
+  const existing = list.find((entry) => entry.type === "phrase" && entry.word === context.selectedText);
+
+  const translation = primaryExpression ? primaryExpression.natural : null;
+  const reference = `${context.book.pt} ${context.chapter}:${context.verseNumber}`;
+
+  if (existing) {
+    existing.timesClicked = (existing.timesClicked || 1) + 1;
+    if (translation) existing.translation = translation;
+  } else {
+    list.unshift({
+      word: context.selectedText,
+      translation,
+      type: "phrase",
+      reference,
+      version: currentEnVersion,
+      verseText: getEnglishText(context.verse),
+      modernExample: primaryExpression ? primaryExpression.modernExample : null,
+      book: context.book.pt,
+      chapter: context.chapter,
+      savedAt: Date.now(),
+      timesClicked: 1,
+      color: "blue",
+    });
+  }
+
+  saveVocabulary(list);
+  renderVocabularyBadge();
+  if (!vocabularyViewEl.hidden) renderVocabularyList();
+  showToast("Expressão salva no vocabulário");
+}
+
+understandSaveBtnEl.addEventListener("click", () => {
+  if (!currentUnderstandContext) return;
+  recordPhraseSave(currentUnderstandContext, currentUnderstandContext.analysis);
+});
+
 notePopupCloseEl.addEventListener("click", closeNotePopup);
 notePopupSaveEl.addEventListener("click", handleNoteSave);
 notePopupDeleteEl.addEventListener("click", handleNoteDelete);
@@ -1550,6 +2276,7 @@ document.addEventListener("keydown", (event) => {
 
 for (const column of document.querySelectorAll(".column")) {
   column.addEventListener("scroll", hideWordPopup, { passive: true });
+  column.addEventListener("scroll", hideSelectionBar, { passive: true });
 }
 
 // No layout empilhado (retrato), cada coluna rola de forma independente;
@@ -1649,8 +2376,15 @@ function updateVocabularyTranslation(word, translation) {
   }
 }
 
-function removeFromVocabulary(word) {
-  const list = loadVocabulary().filter((entry) => entry.word !== word);
+// "type" é opcional pra não quebrar quem já chamava só com a palavra; ao
+// remover uma expressão salva, passamos "phrase" pra não arriscar apagar
+// por engano uma palavra solta que coincida com o mesmo texto.
+function removeFromVocabulary(word, type) {
+  const list = loadVocabulary().filter((entry) => {
+    if (entry.word !== word) return true;
+    if (type === undefined) return false;
+    return (entry.type || "word") !== type;
+  });
   saveVocabulary(list);
   renderVocabularyBadge();
   renderVocabularyList();
@@ -1698,17 +2432,20 @@ function renderVocabularyList() {
   vocabularyNoMatchEl.hidden = list.length === 0 || filteredList.length > 0;
 
   for (const entry of filteredList) {
+    const isPhrase = entry.type === "phrase";
     const li = document.createElement("li");
-    li.className = "vocabulary-item";
+    li.className = isPhrase ? "vocabulary-item vocabulary-item--phrase" : "vocabulary-item";
 
     const wordEl = document.createElement("span");
-    wordEl.className = `vocabulary-word word--saved-${entry.color || "blue"}`;
+    wordEl.className = isPhrase ? "vocabulary-word" : `vocabulary-word word--saved-${entry.color || "blue"}`;
     wordEl.textContent = entry.word;
 
     const translationEl = document.createElement("span");
     translationEl.className = "vocabulary-translation";
     if (entry.translation) {
       translationEl.textContent = entry.translation;
+    } else if (isPhrase) {
+      translationEl.textContent = "tradução não encontrada";
     } else {
       translationEl.textContent = "traduzindo…";
       backfillTranslation(
@@ -1722,14 +2459,14 @@ function renderVocabularyList() {
 
     const sourceEl = document.createElement("span");
     sourceEl.className = "vocabulary-source";
-    sourceEl.textContent = entry.book ? `${entry.book} ${entry.chapter}` : "";
+    sourceEl.textContent = isPhrase ? entry.reference || "" : entry.book ? `${entry.book} ${entry.chapter}` : "";
 
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";
     removeBtn.className = "vocabulary-remove";
     removeBtn.setAttribute("aria-label", `Remover "${entry.word}" do vocabulário`);
     removeBtn.textContent = "×";
-    removeBtn.addEventListener("click", () => removeFromVocabulary(entry.word));
+    removeBtn.addEventListener("click", () => removeFromVocabulary(entry.word, isPhrase ? "phrase" : "word"));
 
     li.append(wordEl, translationEl, sourceEl, removeBtn);
     vocabularyListEl.appendChild(li);
