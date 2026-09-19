@@ -181,8 +181,10 @@ const shareTelegramBtnEl = document.getElementById("share-telegram-btn");
 const toastEl = document.getElementById("toast");
 const backToHomeBtnEl = document.getElementById("back-to-home-btn");
 const menuToggleEl = document.getElementById("menu-toggle");
-const menuDropdownEl = document.getElementById("menu-dropdown");
-const menuDropdownItems = document.querySelectorAll(".menu-dropdown-item");
+const appMenuOverlayEl = document.getElementById("app-menu-overlay");
+const appMenuBackdropEl = document.getElementById("app-menu-backdrop");
+const appMenuCloseBtnEl = document.getElementById("app-menu-close-btn");
+const menuDropdownItems = document.querySelectorAll(".app-menu-link-btn");
 const grammarViewEl = document.getElementById("grammar-view");
 const flashcardsViewEl = document.getElementById("flashcards-view");
 const instructionsViewEl = document.getElementById("instructions-view");
@@ -288,6 +290,7 @@ function closePicker() {
 }
 
 function openPicker(title) {
+  closeAppMenu();
   pickerTitleEl.textContent = title;
   pickerOverlayEl.hidden = false;
   const selectedEl = pickerListEl.querySelector(".is-selected");
@@ -1165,6 +1168,7 @@ function closeActivePopup() {
   if (!notePopupEl.hidden) closeNotePopup();
   if (!sharePopupEl.hidden) closeSharePopup();
   if (!pickerOverlayEl.hidden) closePicker();
+  if (!appMenuOverlayEl.hidden) closeAppMenu();
 }
 
 // Palavra atualmente mostrada no popup, usada pelo botão "Salvar".
@@ -3155,32 +3159,34 @@ for (const btn of viewTabButtons) {
   btn.addEventListener("click", () => setActiveView(btn.dataset.view));
 }
 
-// --- Menu "hambúrguer" (Gramática / Flashcards) ---
+// --- Menu "hambúrguer": guarda tudo que antes ficava fixo no cabeçalho da
+// leitura (navegação, livro/capítulo, versão do inglês, layout, Gramática,
+// Flashcards) num painel-gaveta só, pra deixar mais espaço de tela livre
+// pro texto. Reaproveita o mesmo visual do seletor de livro/capítulo. ---
 
-function toggleMenu(forceOpen) {
-  const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : menuDropdownEl.hidden;
-  menuDropdownEl.hidden = !shouldOpen;
-  menuToggleEl.setAttribute("aria-expanded", String(shouldOpen));
+function openAppMenu() {
+  appMenuOverlayEl.hidden = false;
+  menuToggleEl.setAttribute("aria-expanded", "true");
 }
 
-menuToggleEl.addEventListener("click", (event) => {
-  event.stopPropagation();
-  toggleMenu();
+function closeAppMenu() {
+  appMenuOverlayEl.hidden = true;
+  menuToggleEl.setAttribute("aria-expanded", "false");
+}
+
+menuToggleEl.addEventListener("click", openAppMenu);
+appMenuBackdropEl.addEventListener("click", closeAppMenu);
+appMenuCloseBtnEl.addEventListener("click", closeAppMenu);
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !appMenuOverlayEl.hidden) closeAppMenu();
 });
 
 backToHomeBtnEl.addEventListener("click", () => setActiveView("home"));
 
-document.addEventListener("click", (event) => {
-  if (!menuDropdownEl.hidden && !event.target.closest(".menu-wrap")) toggleMenu(false);
-});
-
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !menuDropdownEl.hidden) toggleMenu(false);
-});
-
 for (const item of menuDropdownItems) {
   item.addEventListener("click", () => {
-    toggleMenu(false);
+    closeAppMenu();
     setActiveView(item.dataset.menuView);
   });
 }

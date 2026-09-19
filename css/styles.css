@@ -283,47 +283,6 @@ body {
   height: 1.3rem;
 }
 
-.menu-dropdown {
-  position: absolute;
-  top: calc(100% + 0.4rem);
-  left: 0;
-  display: flex;
-  flex-direction: column;
-  min-width: 9.5rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  overflow: hidden;
-  z-index: 20;
-}
-
-.menu-dropdown[hidden] {
-  display: none;
-}
-
-.menu-dropdown-item {
-  font-family: var(--font-ui);
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--color-text);
-  background: none;
-  border: none;
-  text-align: left;
-  padding: 0.65rem 0.9rem;
-  cursor: pointer;
-}
-
-.menu-dropdown-item:hover {
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-}
-
-.menu-dropdown-item[aria-pressed="true"] {
-  color: var(--color-accent);
-  background: var(--color-accent-soft);
-}
-
 .view-tabs {
   display: flex;
   gap: 0.4rem;
@@ -1742,6 +1701,57 @@ main {
   color: var(--color-surface);
 }
 
+/* Menu hambúrguer: mesmo painel-gaveta do seletor de livro/capítulo, para
+   guardar tudo que antes vivia espalhado pelo cabeçalho (navegação, livro/
+   capítulo, versão do inglês, layout) e deixar a tela de leitura mais livre. */
+
+.app-menu-body {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem 1.5rem;
+}
+
+.app-menu-tabs {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.app-menu-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.app-menu-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  border-radius: 0.6rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+}
+
+.app-menu-link-btn:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.app-menu-link-btn svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
 /* Reading view */
 
 .reading-view {
@@ -2916,42 +2926,15 @@ main {
     gap: 0.6rem;
   }
 
-  .app-header-brand {
-    flex: 1 1 100%;
-    gap: 0.3rem;
-  }
-
   .back-home-btn,
   .menu-toggle {
     width: 2rem;
     height: 2rem;
   }
 
-  .view-tabs {
-    flex: 1 1 100%;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    margin: 0 -0.9rem;
-    padding: 0 0.9rem;
-  }
-
-  .view-tabs::-webkit-scrollbar {
-    display: none;
-  }
-
   .view-tab {
-    flex-shrink: 0;
-    white-space: nowrap;
     font-size: 0.82rem;
     padding: 0.35rem 0.6rem;
-  }
-
-  .chapter-selector {
-    flex: 1 1 100%;
-    min-width: 0;
-    width: 100%;
   }
 
   .chapter-selector-btn {
@@ -2960,19 +2943,9 @@ main {
     max-width: 100%;
   }
 
-  .en-version-selector {
-    flex: 1 1 100%;
-    width: 100%;
-  }
-
   .en-version-btn {
     flex: 1;
     padding: 0.35rem 0.5rem;
-  }
-
-  .layout-selector {
-    flex: 1 1 100%;
-    width: 100%;
   }
 
   .layout-btn {
