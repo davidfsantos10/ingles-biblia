@@ -563,6 +563,54 @@
     </div>
   </div>
 
+  <!-- Barra flutuante que aparece ao selecionar um trecho do texto em
+       inglês (compreensão contextual). Fica fixa no rodapé em vez de
+       flutuar junto à seleção, para não competir com o menu nativo de
+       seleção do Android/iOS. -->
+  <div id="selection-bar" class="selection-bar" hidden>
+    <p id="selection-bar-text" class="selection-bar-text"></p>
+    <div class="selection-bar-actions">
+      <button type="button" id="selection-bar-understand-btn" class="selection-bar-understand-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
+        Entender trecho
+      </button>
+      <button type="button" id="selection-bar-close-btn" class="selection-bar-close-btn" aria-label="Fechar seleção">×</button>
+    </div>
+  </div>
+
+  <div id="understand-overlay" class="picker-overlay" hidden>
+    <div id="understand-backdrop" class="picker-backdrop"></div>
+    <div class="picker-sheet" role="dialog" aria-modal="true" aria-labelledby="understand-title">
+      <div class="picker-handle"></div>
+      <div class="picker-header">
+        <h2 id="understand-title" class="picker-title">Entender trecho</h2>
+        <button type="button" id="understand-close-btn" class="picker-close-btn" aria-label="Fechar">×</button>
+      </div>
+      <div class="understand-body">
+        <div class="understand-context">
+          <span id="understand-version-badge" class="version-guide-badge"></span>
+          <span id="understand-reference" class="understand-reference"></span>
+        </div>
+        <p id="understand-selected-text" class="understand-selected-text"></p>
+        <button type="button" id="understand-listen-btn" class="understand-listen-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.2 8.8a5 5 0 0 1 0 6.4"/><path d="M18.8 6.2a8.5 8.5 0 0 1 0 11.6"/></svg>
+          Ouvir trecho
+        </button>
+
+        <div id="understand-sections" class="understand-sections"></div>
+
+        <p id="understand-fallback" class="understand-fallback" hidden>
+          Ainda não tenho uma explicação detalhada pronta para este trecho específico — mas você pode ouvir e
+          salvar mesmo assim.
+        </p>
+
+        <div class="understand-save-row">
+          <button type="button" id="understand-save-btn" class="word-popup-save">Salvar expressão no vocabulário</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="word-popup" class="word-popup" role="dialog" aria-modal="true" aria-label="Palavra selecionada" hidden>
     <button type="button" id="word-popup-close" class="word-popup-close" aria-label="Fechar">×</button>
 

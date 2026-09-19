@@ -2426,6 +2426,15 @@ main {
   font-size: 1.1rem;
 }
 
+.vocabulary-item--phrase {
+  border-left: 3px solid var(--color-accent);
+}
+
+.vocabulary-item--phrase .vocabulary-word {
+  font-size: 1rem;
+  font-style: italic;
+}
+
 .vocabulary-translation {
   color: var(--color-text-muted);
   flex: 1;
@@ -3079,6 +3088,272 @@ main {
 
   .verse {
     margin: 0 0 0.9rem;
+  }
+}
+
+/* --- "Entender trecho": seleção de texto em inglês (compreensão
+   contextual de expressões/frases), além do toque em palavra já existente. */
+
+.selection-bar {
+  position: fixed;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 170;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+}
+
+.selection-bar[hidden] {
+  display: none;
+}
+
+.selection-bar-text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-reading);
+  font-size: 0.92rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selection-bar-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.selection-bar-understand-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-ui);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-surface);
+  background: var(--color-accent);
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.selection-bar-understand-btn svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+}
+
+.selection-bar-close-btn {
+  width: 2.2rem;
+  height: 2.2rem;
+  flex-shrink: 0;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.understand-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 0.5rem 1rem 1.5rem;
+  overflow-y: auto;
+}
+
+.understand-context {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.understand-reference {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.understand-selected-text {
+  margin: 0;
+  font-family: var(--font-reading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.4;
+  padding: 0.75rem 0.9rem;
+  background: var(--color-accent-soft);
+  border-radius: 0.6rem;
+}
+
+.understand-listen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  font-family: var(--font-ui);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.9rem;
+  cursor: pointer;
+}
+
+.understand-listen-btn:hover {
+  border-color: var(--color-accent);
+}
+
+.understand-listen-btn svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+
+.understand-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.understand-fallback {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.understand-save-row {
+  margin-top: 0.4rem;
+}
+
+/* Cada seção da análise (Significado, Expressão, Gramática, Inglês bíblico
+   x moderno, Comparar versões) usa o mesmo visual de accordion do guia de
+   Gramática, mas com classes próprias — são conteúdos diferentes, só o
+   padrão visual é compartilhado. */
+
+.understand-item {
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.understand-item-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.understand-item-header:hover {
+  color: var(--color-accent);
+}
+
+.understand-item-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.15s ease;
+}
+
+.understand-item.is-open .understand-item-chevron {
+  transform: rotate(180deg);
+}
+
+.understand-item-body {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.understand-item-body[hidden] {
+  display: none;
+}
+
+.understand-item-body p {
+  margin: 0.7rem 0;
+}
+
+.understand-item-body strong {
+  color: var(--color-accent);
+}
+
+.understand-example {
+  margin: 0.6rem 0 0;
+  padding: 0.7rem 0.85rem;
+  background: var(--color-bg);
+  border-radius: 0.5rem;
+}
+
+.understand-example-en {
+  display: block;
+  font-family: var(--font-reading);
+  color: var(--color-text);
+}
+
+.understand-example-pt {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+}
+
+.understand-versions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.understand-version-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  background: var(--color-bg);
+  border-radius: 0.5rem;
+}
+
+.understand-version-text {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-reading);
+}
+
+@media (max-width: 480px) {
+  .selection-bar-text {
+    display: none;
   }
 }
 
