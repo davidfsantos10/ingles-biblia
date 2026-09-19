@@ -405,6 +405,35 @@ body {
   border-color: var(--color-accent);
 }
 
+.layout-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.layout-btn {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+}
+
+.layout-btn:hover {
+  color: var(--color-text);
+}
+
+.layout-btn[aria-pressed="true"] {
+  color: var(--color-surface);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
 .chapter-selector-btn {
   display: flex;
   align-items: center;
@@ -2940,6 +2969,16 @@ main {
     flex: 1;
     padding: 0.35rem 0.5rem;
   }
+
+  .layout-selector {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .layout-btn {
+    flex: 1;
+    padding: 0.35rem 0.5rem;
+  }
 }
 
 @media (max-width: 520px) {
@@ -3041,4 +3080,46 @@ main {
   .verse {
     margin: 0 0 0.9rem;
   }
+}
+
+/* Layout "Traduzido": cada versículo em inglês vem com a tradução em
+   português logo abaixo, numa única coluna, em vez das duas colunas lado a
+   lado. Estas regras ficam por último de propósito, sem media query, para
+   ganhar de qualquer regra anterior de .reading-view/.column em qualquer
+   largura de tela (inclusive o split forçado do celular em retrato acima). */
+
+.reading-view--stacked {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.reading-view--stacked .column-pt {
+  display: none;
+}
+
+.reading-view--stacked .column-en {
+  max-width: 42rem;
+  margin: 0 auto;
+  width: 100%;
+  background: var(--color-bg);
+}
+
+.verse--stacked {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.verse-translation {
+  margin: 0.65rem 0 0;
+  padding: 0.85rem 1rem;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+}
+
+.verse-translation .verse-text {
+  color: var(--color-text);
 }
