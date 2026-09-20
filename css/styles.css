@@ -3118,6 +3118,21 @@ main {
   display: none;
 }
 
+/* Longe do dedo: quando a seleção está na metade de baixo da tela o popup
+   sobe, e quando está na metade de cima ele desce -- sempre numa área de
+   destaque, nunca colado na borda (não é uma barra de rodapé). */
+.selection-bar--top {
+  top: 15%;
+  bottom: auto;
+  transform: translateX(-50%);
+}
+
+.selection-bar--bottom {
+  top: auto;
+  bottom: 15%;
+  transform: translateX(-50%);
+}
+
 .selection-bar-text {
   margin: 0;
   font-family: var(--font-reading);
