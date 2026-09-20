@@ -214,15 +214,22 @@ body {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
 }
 
-.app-title {
-  font-size: 1.15rem;
-  font-weight: 600;
-  margin: 0;
-  color: var(--color-accent);
-  white-space: nowrap;
+/* Livro/capítulo no lugar do título do app: sempre cabe numa linha só,
+   os dois botões dividem o espaço que sobra ao lado do menu e encolhem
+   com reticências em vez de quebrar linha ou estourar a largura. */
+.app-header-chapter-selector {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-header-chapter-selector .chapter-selector-btn {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
 }
 
 /* Menu "hambúrguer" (Gramática / Flashcards) */
@@ -2951,10 +2958,6 @@ main {
 
   .verses {
     font-size: 1.05rem;
-  }
-
-  .app-title {
-    font-size: 1rem;
   }
 
   .app-header {
