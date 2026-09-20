@@ -2559,13 +2559,18 @@ const ICON_SEARCH =
 
 // Quando a análise local não tem um "significado" direto pro trecho, em
 // vez de só avisar que não achamos nada, oferece um link pra pesquisa do
-// Google (que já mostra uma "Visão geral por IA" para a maioria das
-// buscas) -- o usuário decide se quer consultar por conta própria. É só
-// um link comum, aberto numa aba nova pelo navegador: o app não chama
-// nenhuma IA/API por trás disso.
+// Google -- o usuário decide se quer consultar por conta própria. É só um
+// link comum, aberto numa aba nova pelo navegador: o app não chama nenhuma
+// IA/API por trás disso.
+//
+// A busca sem aspas ao redor do trecho (igual ao "Pesquisa na Web" nativo
+// do celular) é o que faz o Google mostrar a "Visão geral por IA" e a
+// caixinha de tradução automática com mais frequência -- colocar aspas
+// força busca por correspondência exata e tende a esconder esses recursos.
+// As palavras extras (meaning/grammar/translation) pedem pro Google cobrir
+// mais ângulos na visão geral, sem estreitar demais a busca.
 function buildExternalSearchLink(context) {
-  const reference = context.book ? `${context.book.en} ${context.chapter}:${context.verseNumber}` : "";
-  const query = `"${context.selectedText}" ${reference} meaning`.trim();
+  const query = `${context.selectedText} meaning grammar translation`;
   const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 
   const link = document.createElement("a");
@@ -2573,7 +2578,7 @@ function buildExternalSearchLink(context) {
   link.href = url;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
-  link.innerHTML = `${ICON_SEARCH} Pesquisar este trecho na internet`;
+  link.innerHTML = `${ICON_SEARCH} Pesquisar tradução, gramática e mais`;
   return link;
 }
 
