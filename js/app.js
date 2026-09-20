@@ -2973,6 +2973,28 @@ function updateVocabularyTranslation(word, translation) {
   }
 }
 
+// Igual a updateVocabularyTranslation, mas filtrando por type:"phrase" --
+// evita atualizar por engano uma palavra salva que coincida com o mesmo
+// texto de uma expressão (mesmo cuidado já tomado em removeFromVocabulary).
+function updatePhraseTranslation(word, translation) {
+  if (!translation) return;
+  const list = loadVocabulary();
+  const entry = list.find((e) => e.type === "phrase" && e.word === word);
+  if (!entry || entry.translation === translation) return;
+
+  entry.translation = translation;
+  saveVocabulary(list);
+  if (!vocabularyViewEl.hidden) renderVocabularyList();
+
+  if (flashcardsMode === "vocabulary") {
+    const deckEntry = flashcardsDeck.find((e) => e.type === "phrase" && e.word === word);
+    if (deckEntry) deckEntry.translation = translation;
+    if (!flashcardsViewEl.hidden && flashcardsDeck[flashcardsIndex] === deckEntry) {
+      flashcardBackTextEl.textContent = translation;
+    }
+  }
+}
+
 // "type" é opcional pra não quebrar quem já chamava só com a palavra; ao
 // remover uma expressão salva, passamos "phrase" pra não arriscar apagar
 // por engano uma palavra solta que coincida com o mesmo texto.
@@ -3042,7 +3064,14 @@ function renderVocabularyList() {
     if (entry.translation) {
       translationEl.textContent = entry.translation;
     } else if (isPhrase) {
-      translationEl.textContent = "tradução não encontrada";
+      translationEl.textContent = "traduzindo…";
+      backfillTranslation(
+        entry.word,
+        (translation) => updatePhraseTranslation(entry.word, translation),
+        () => {
+          translationEl.textContent = "tradução não encontrada";
+        }
+      );
     } else {
       translationEl.textContent = "traduzindo…";
       backfillTranslation(
