@@ -3351,6 +3351,54 @@ main {
   font-family: var(--font-reading);
 }
 
+.understand-keywords-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+}
+
+.understand-keyword-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  background: var(--color-bg);
+  border-radius: 0.5rem;
+}
+
+.understand-keyword-listen {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.4rem;
+  background: none;
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.understand-keyword-listen svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.understand-keyword-word {
+  flex-shrink: 0;
+  font-family: var(--font-reading);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.understand-keyword-translation {
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
 /* Layout "Traduzido": cada versículo em inglês vem com a tradução em
    português logo abaixo, numa única coluna, em vez das duas colunas lado a
    lado. Estas regras ficam por último de propósito, sem media query, para

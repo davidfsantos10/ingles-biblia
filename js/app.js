@@ -1699,7 +1699,386 @@ const EXPRESSIONS_DICTIONARY = [
     natural: "agradecer",
     modernExample: { en: "Let's give thanks for this meal.", pt: "Vamos agradecer por esta refeição." },
   },
+  {
+    id: "lift-up",
+    pattern: /\blift(?:s|eth)?\s+up\b/i,
+    display: "lift up",
+    type: "Phrasal verb",
+    meaning: "Erguer, levantar (os olhos, a voz, as mãos).",
+    why: '"Up" reforça a direção do movimento — "lift" sozinho já significa levantar, mas "lift up" é a forma mais usada em textos bíblicos e solenes.',
+    literal: "levantar para cima",
+    natural: "erguer, levantar",
+    modernExample: { en: "She lifted up her eyes and smiled.", pt: "Ela ergueu os olhos e sorriu." },
+  },
+  {
+    id: "pour-out",
+    pattern: /\bpour(?:s|eth)?\s+out\b/i,
+    display: "pour out",
+    type: "Phrasal verb",
+    meaning: "Derramar, extravasar (líquido, sentimentos, espírito).",
+    why: '"Out" indica que algo sai de dentro para fora com intensidade — usado tanto para líquidos quanto em sentido figurado (derramar o coração).',
+    literal: "verter para fora",
+    natural: "derramar",
+    modernExample: { en: "He poured out his heart to her.", pt: "Ele derramou seu coração para ela." },
+  },
+  {
+    id: "cast-out",
+    pattern: /\bcast(?:s|eth)?\s+out\b/i,
+    display: "cast out",
+    type: "Phrasal verb (arcaico)",
+    meaning: "Expulsar, lançar fora.",
+    why: '"Cast" (lançar) é um verbo hoje raro fora de expressões fixas — "cast out" praticamente não aparece no inglês falado atual, que prefere "throw out" ou "kick out".',
+    literal: "lançar para fora",
+    natural: "expulsar",
+    modernExample: { en: "They threw the troublemaker out of the room.", pt: "Eles expulsaram o encrenqueiro da sala." },
+  },
+  {
+    id: "bear-witness",
+    pattern: /\bbear(?:s|eth|ing)?\s+witness\b/i,
+    display: "bear witness",
+    type: "Collocation (formal)",
+    meaning: "Testemunhar, dar testemunho de algo.",
+    why: '"Bear" aqui significa "carregar/sustentar", não o animal — "bear witness" é uma collocation formal para "testemunhar", ainda usada em contextos jurídicos e solenes hoje.',
+    literal: "carregar testemunho",
+    natural: "testemunhar",
+    modernExample: { en: "Several people can bear witness to what happened.", pt: "Várias pessoas podem testemunhar o que aconteceu." },
+  },
+  {
+    id: "give-ear",
+    pattern: /\bgive[s]?\s+ear\b/i,
+    display: "give ear",
+    type: "Expressão fixa (arcaica)",
+    meaning: "Prestar atenção, escutar com atenção.",
+    why: '"Ear" (ouvido) usado assim, sem artigo, é uma construção puramente bíblica/poética — no inglês de hoje se diria apenas "listen".',
+    literal: "dar ouvido",
+    natural: "escutar, prestar atenção",
+    modernExample: { en: "Please listen carefully to what I'm about to say.", pt: "Por favor, escute com atenção o que vou dizer." },
+  },
+  {
+    id: "go-forth",
+    pattern: /\bgo(?:es|eth)?\s+forth\b/i,
+    display: "go forth",
+    type: "Phrasal verb (arcaico)",
+    meaning: "Sair, partir, ir adiante.",
+    why: '"Forth" (adiante/para fora) quase só sobrevive em expressões fixas antigas como esta — hoje se diria simplesmente "go out" ou "set out".',
+    literal: "ir adiante",
+    natural: "sair, partir",
+    modernExample: { en: "They set out early in the morning.", pt: "Eles partiram cedo pela manhã." },
+  },
+  {
+    id: "stand-fast",
+    pattern: /\bstand(?:s|eth)?\s+fast\b/i,
+    display: "stand fast",
+    type: "Collocation (formal)",
+    meaning: "Manter-se firme, não ceder.",
+    why: '"Fast" aqui não é "rápido", e sim o sentido antigo de "firme, fixo" (como em "hold fast") — um uso que confunde quem só conhece "fast" como "rápido".',
+    literal: "ficar firme",
+    natural: "manter-se firme",
+    modernExample: { en: "Stand firm in what you believe.", pt: "Mantenha-se firme no que você acredita." },
+  },
+  {
+    id: "find-favor",
+    pattern: /\bfind[s]?\s+(?:grace|favou?r)\s+in\s+the\s+(?:eyes|sight)\s+of\b/i,
+    display: "find favor in the eyes of",
+    type: "Expressão fixa (bíblica)",
+    meaning: "Ser bem visto por alguém, ganhar a simpatia/aprovação de alguém.",
+    why: 'Construção tipicamente bíblica, montada em torno de "eyes"/"sight" (olhos/vista) para dizer que alguém é bem-visto — no inglês comum hoje se diria apenas "be liked by" ou "impress".',
+    literal: "achar graça nos olhos de",
+    natural: "ser bem visto por, agradar a",
+    modernExample: { en: "She really impressed her new boss.", pt: "Ela realmente impressionou seu novo chefe." },
+  },
+  {
+    id: "generation-to-generation",
+    pattern: /\bfrom\s+generation\s+to\s+generation\b/i,
+    display: "from generation to generation",
+    type: "Expressão fixa",
+    meaning: "De geração em geração, continuamente ao longo do tempo.",
+    why: 'Repetição da mesma palavra ("generation... generation") para dar ideia de continuidade — um recurso comum em textos bíblicos e formais, ainda compreensível e usado hoje.',
+    literal: "de geração para geração",
+    natural: "de geração em geração",
+    modernExample: { en: "This tradition has been passed down from generation to generation.", pt: "Essa tradição foi passada de geração em geração." },
+  },
+  {
+    id: "an-eye-for-an-eye",
+    pattern: /\ban\s+eye\s+for\s+an\s+eye\b/i,
+    display: "an eye for an eye",
+    type: "Idiom",
+    meaning: "Retaliação equivalente ao dano sofrido; justiça na mesma medida.",
+    why: 'Uma das expressões bíblicas mais conhecidas do inglês moderno — sobreviveu quase sem mudanças e é usada até hoje fora de contexto religioso, para falar de vingança/retaliação proporcional.',
+    literal: "um olho por um olho",
+    natural: "olho por olho (retaliação na mesma medida)",
+    modernExample: { en: "He believes in an eye for an eye.", pt: "Ele acredita em olho por olho." },
+  },
+  {
+    id: "god-forbid",
+    pattern: /\bgod\s+forbid\b/i,
+    display: "God forbid",
+    type: "Expressão fixa",
+    meaning: "Que Deus não permita; usada para expressar que se espera que algo ruim não aconteça.",
+    why: 'Forma antiga de subjuntivo ("forbid" sem "-s" após "God") preservada só nessa expressão fixa — ainda muito usada no inglês falado hoje, inclusive fora de contexto religioso.',
+    literal: "Deus proíba",
+    natural: "Deus me livre, tomara que não",
+    modernExample: { en: "God forbid anything should happen to her.", pt: "Deus me livre de algo acontecer com ela." },
+  },
+  {
+    id: "far-be-it",
+    pattern: /\bfar\s+be\s+it\s+from\b/i,
+    display: "far be it from",
+    type: "Expressão fixa (formal)",
+    meaning: "Longe de mim (fazer algo); usada para negar firmemente uma intenção.",
+    why: 'Ordem de palavras invertida (o verbo "be" antes do sujeito "it") típica do inglês mais antigo/formal — ainda aparece hoje em contextos bem formais.',
+    literal: "longe esteja isso de",
+    natural: "longe de mim, eu jamais",
+    modernExample: { en: "Far be it from me to tell you what to do.", pt: "Longe de mim querer dizer o que você deve fazer." },
+  },
+  {
+    id: "make-mention-of",
+    pattern: /\bmake[s]?\s+mention\s+of\b/i,
+    display: "make mention of",
+    type: "Collocation (formal)",
+    meaning: "Mencionar, citar, fazer referência a.",
+    why: '"Make mention of" é uma forma mais longa e formal de dizer "mention" — comum em textos antigos e ainda hoje em contextos bem formais ou jurídicos.',
+    literal: "fazer menção de",
+    natural: "mencionar, citar",
+    modernExample: { en: "The report makes mention of several problems.", pt: "O relatório menciona vários problemas." },
+  },
+  {
+    id: "take-up",
+    pattern: /\btake(?:s|th)?\s+up\b/i,
+    display: "take up",
+    type: "Phrasal verb",
+    meaning: "Pegar, carregar, assumir (uma tarefa, uma cruz, uma causa).",
+    why: '"Take up" ainda é muito usado hoje (take up a hobby, take up space) — na Bíblia ganha o sentido figurado de assumir um compromisso ou fardo.',
+    literal: "tomar para cima",
+    natural: "pegar, assumir, carregar",
+    modernExample: { en: "She decided to take up painting this year.", pt: "Ela decidiu começar a pintar este ano." },
+  },
+  {
+    id: "break-forth",
+    pattern: /\bbreak(?:s|eth)?\s+forth\b/i,
+    display: "break forth",
+    type: "Phrasal verb (arcaico)",
+    meaning: "Irromper, explodir subitamente (em som, luz, alegria).",
+    why: '"Forth" (para fora/adiante) só sobrevive em expressões fixas antigas — hoje se diria "burst out" ou "break out" para essa ideia de irromper de repente.',
+    literal: "quebrar para fora",
+    natural: "irromper, explodir (de repente)",
+    modernExample: { en: "The crowd burst out cheering.", pt: "A multidão explodiu em festa." },
+  },
+  {
+    id: "keep-watch",
+    pattern: /\bkeep[s]?\s+watch\b/i,
+    display: "keep watch",
+    type: "Collocation",
+    meaning: "Vigiar, ficar de guarda, observar atentamente.",
+    why: '"Watch" como substantivo (vigília) combina especificamente com "keep" — dizer "do watch" ou "make watch" soaria errado para um falante nativo.',
+    literal: "manter vigília",
+    natural: "vigiar, ficar de guarda",
+    modernExample: { en: "The soldiers kept watch all night.", pt: "Os soldados ficaram de guarda a noite toda." },
+  },
+  {
+    id: "fear-of-the-lord",
+    pattern: /\bfear\s+of\s+the\s+lord\b/i,
+    display: "the fear of the LORD",
+    type: "Expressão fixa (bíblica)",
+    meaning: "Reverência e temor reverente a Deus (não medo comum).",
+    why: '"Fear" aqui não é o medo do dia a dia, e sim um sentido bíblico específico de reverência profunda — um bom exemplo de como uma palavra comum ganha um sentido técnico dentro de um contexto religioso.',
+    literal: "o temor do Senhor",
+    natural: "reverência a Deus",
+    modernExample: { en: "She has a deep respect for what is sacred.", pt: "Ela tem um profundo respeito pelo que é sagrado." },
+  },
 ];
+
+// --- Palavras-função: ignoradas na lista "Palavras importantes" (artigos,
+// pronomes, preposições, conjunções, auxiliares) para não poluir a
+// interface com o óbvio. Arcaísmos (thou/thee/hath/...) também ficam de
+// fora daqui porque já ganham tratamento próprio na seção de inglês
+// arcaico — mostrá-los nos dois lugares seria redundante.
+const STOPWORDS_EN = new Set([
+  "the", "a", "an", "and", "or", "but", "so", "nor", "yet", "if", "because", "while", "although", "though",
+  "is", "are", "was", "were", "am", "be", "been", "being",
+  "do", "does", "did", "have", "has", "had",
+  "will", "shall", "can", "could", "may", "might", "must", "should", "would",
+  "i", "you", "he", "she", "it", "we", "they", "me", "him", "her", "us", "them",
+  "my", "your", "his", "its", "our", "their", "mine", "yours", "hers", "ours", "theirs",
+  "myself", "yourself", "himself", "herself", "itself", "ourselves", "themselves",
+  "who", "whom", "whose", "which", "what", "this", "that", "these", "those", "there", "here",
+  "of", "in", "on", "at", "to", "by", "with", "from", "as", "into", "over", "under",
+  "between", "through", "about", "against", "among", "before", "after", "during", "without", "within",
+  "for", "off", "out", "up", "down", "above", "below", "near", "than",
+  "not", "no", "yes", "then", "thus", "also", "too", "very", "just", "only", "even", "still", "again",
+  ...Object.keys(ARCHAIC_MODERN_EQUIVALENTS),
+]);
+
+// --- Base gramatical local: padrões que dá para reconhecer com regras
+// simples, sem NLP/IA, cada um com uma explicação curta e cuidadosa em
+// português (evitando afirmar uma função gramatical que a regra não
+// consegue garantir — ver função detectGrammarNotes). Prioridade menor =
+// mais relevante pedagogicamente = aparece primeiro.
+
+// Depois de "to", palavras que normalmente são preposição/objeto (não
+// verbo) — usadas pra evitar marcar "to the day" como infinitivo.
+const INFINITIVE_FOLLOWUP_STOPWORDS = new Set([
+  "the", "a", "an", "this", "that", "these", "those", "him", "her", "them", "it", "us", "me",
+  "you", "thee", "thou", "ye", "god", "lord", "heaven", "heavens", "earth", "israel",
+  "which", "whom", "whose", "my", "your", "his", "its", "our", "their",
+]);
+
+// Comparativo/superlativo: lista curada (em vez de casar qualquer palavra
+// terminada em -er/-est) pra evitar falsos positivos como "water", "master",
+// "forest" ou "honest", que terminam do mesmo jeito mas não são graus de
+// comparação.
+const COMPARATIVE_WORDS = new Set([
+  "greater", "lesser", "higher", "lower", "stronger", "weaker", "wiser", "better", "worse",
+  "elder", "younger", "older", "bigger", "smaller", "larger", "fewer", "holier", "mightier",
+  "richer", "poorer", "kinder", "harder", "softer", "faster", "slower", "longer", "shorter",
+  "deeper", "nearer", "farther", "further", "gladder", "purer", "brighter", "darker",
+]);
+const SUPERLATIVE_WORDS = new Set([
+  "greatest", "highest", "holiest", "strongest", "wisest", "best", "worst", "eldest", "youngest",
+  "nearest", "farthest", "furthest", "biggest", "smallest", "largest", "fewest", "mightiest",
+  "richest", "poorest", "kindest", "hardest", "softest", "fastest", "slowest", "longest",
+  "shortest", "deepest", "least", "purest", "brightest", "darkest",
+]);
+
+const MODAL_VERBS_PATTERN =
+  /\b(can|could|may|might|must|should|would|will|shall|canst|couldst|mayest|mayst|shalt|wilt|shouldst|wouldst)\s+([a-z]+)\b/i;
+const PERFECT_PATTERN = /\b(have|has|had|hast|hath)\s+((?:[a-z]+ed|[a-z]+en))\b/i;
+const CONTINUOUS_PATTERN = /\b(am|is|are|was|were|being|been|art|wast|wert)\s+([a-z]+ing)\b/i;
+const PASSIVE_PATTERN = /\b(am|is|are|was|were|being|been|art|wast|wert)\s+((?:[a-z]+ed|[a-z]+en))\b/i;
+const MORE_COMPARISON_PATTERN = /\bmore\s+([a-z]+)\b/i;
+const THAN_COMPARISON_PATTERN = /\bthan\b/i;
+
+// Detecta o infinitivo "to + verbo" com uma checagem simples de que a
+// palavra seguinte não é uma das que normalmente vem depois de "to" como
+// preposição (to the day, to him...). Não afirma "finalidade" com certeza
+// -- só sinaliza a possibilidade, como pedido.
+function detectInfinitive(normalizedText) {
+  const match = /\bto\s+([a-z]+)\b/.exec(normalizedText);
+  if (!match) return null;
+  const nextWord = match[1];
+  if (INFINITIVE_FOLLOWUP_STOPWORDS.has(nextWord)) return null;
+  return nextWord;
+}
+
+// Lista (por ordem de prioridade pedagógica) de regras gramaticais locais.
+// Cada regra devolve null quando não encontra nada, ou {label, explanation}
+// quando encontra -- sempre com linguagem cautelosa, nunca afirmando uma
+// função gramatical que a regra não tem como garantir.
+const LOCAL_GRAMMAR_RULES = [
+  {
+    id: "infinitive",
+    test(text) {
+      const verb = detectInfinitive(text);
+      if (!verb) return null;
+      return {
+        label: `"to ${verb}" (infinitivo)`,
+        explanation: `Aqui temos o infinitivo em inglês ("to ${verb}"). Dependendo da frase, ele pode indicar finalidade -- algo como "para ${verb}" -- mas também pode ter outros usos. Vale olhar o restante do versículo para ter certeza.`,
+      };
+    },
+  },
+  {
+    id: "comparative",
+    test(text) {
+      const word = text.split(" ").find((w) => COMPARATIVE_WORDS.has(w));
+      if (!word) return null;
+      return {
+        label: `"${word}" (comparativo)`,
+        explanation: `"${word}" é a forma comparativa de um adjetivo em inglês (terminação "-er" ou forma irregular) -- compara duas coisas, algo como "mais ___ (do que)" em português.`,
+      };
+    },
+  },
+  {
+    id: "superlative",
+    test(text) {
+      const word = text.split(" ").find((w) => SUPERLATIVE_WORDS.has(w));
+      if (!word) return null;
+      return {
+        label: `"${word}" (superlativo)`,
+        explanation: `"${word}" é a forma superlativa de um adjetivo em inglês (terminação "-est" ou forma irregular) -- indica o grau máximo, algo como "o mais ___ de todos" em português.`,
+      };
+    },
+  },
+  {
+    id: "modal",
+    test(text) {
+      const match = MODAL_VERBS_PATTERN.exec(text);
+      if (!match) return null;
+      return {
+        label: `"${match[1]} ${match[2]}" (verbo modal)`,
+        explanation: `"${match[1]}" é um verbo modal seguido do verbo principal no infinitivo sem "to" -- dependendo do modal, indica possibilidade, permissão, obrigação ou futuro.`,
+      };
+    },
+  },
+  {
+    id: "perfect",
+    test(text) {
+      const match = PERFECT_PATTERN.exec(text);
+      if (!match) return null;
+      return {
+        label: `"${match[1]} ${match[2]}" (possível tempo perfeito)`,
+        explanation: `"${match[1]}" + um particípio (terminado em "-ed"/"-en") costuma formar um tempo perfeito em inglês, ligando uma ação passada ao presente -- quando a regra consegue identificar o particípio com segurança.`,
+      };
+    },
+  },
+  {
+    id: "continuous",
+    test(text) {
+      const match = CONTINUOUS_PATTERN.exec(text);
+      if (!match) return null;
+      return {
+        label: `"${match[1]} ${match[2]}" (possível tempo contínuo)`,
+        explanation: `"${match[1]}" + um verbo terminado em "-ing" costuma indicar uma ação em andamento (presente ou passado contínuo), parecido com "estar ___ndo" em português.`,
+      };
+    },
+  },
+  {
+    id: "passive",
+    test(text) {
+      const match = PASSIVE_PATTERN.exec(text);
+      if (!match) return null;
+      return {
+        label: `"${match[1]} ${match[2]}" (possível voz passiva)`,
+        explanation: `"${match[1]}" + um particípio pode ser voz passiva (algo "é feito" por alguém) -- mas também pode ser só um adjetivo descrevendo o sujeito. Sem mais contexto, a regra local não consegue garantir qual dos dois é.`,
+      };
+    },
+  },
+  {
+    id: "more-comparison",
+    test(text) {
+      const match = MORE_COMPARISON_PATTERN.exec(text);
+      if (!match) return null;
+      return {
+        label: `"more ${match[1]}" (comparativo com "more")`,
+        explanation: `Em vez de mudar a terminação da palavra, o inglês às vezes forma o comparativo colocando "more" (mais) antes do adjetivo -- comum em adjetivos mais longos.`,
+      };
+    },
+  },
+  {
+    id: "than",
+    test(text) {
+      if (!THAN_COMPARISON_PATTERN.test(text)) return null;
+      return {
+        label: '"than" (comparação)',
+        explanation: '"Than" é usado para comparar duas coisas, equivalente a "do que" em português (ex.: "bigger than" = "maior do que").',
+      };
+    },
+  },
+];
+
+// Roda as regras gramaticais locais contra o trecho normalizado e devolve
+// só as mais relevantes (no máximo 3), pra não virar uma parede de texto.
+function detectGrammarNotes(selectedText) {
+  const normalized = normalizePhrase(selectedText);
+  if (!normalized) return [];
+
+  const notes = [];
+  for (const rule of LOCAL_GRAMMAR_RULES) {
+    const result = rule.test(normalized);
+    if (result) notes.push({ id: rule.id, ...result });
+    if (notes.length >= 3) break;
+  }
+  return notes;
+}
 
 // Normaliza um trecho para comparação: minúsculas, sem pontuação nas
 // bordas, espaços colapsados.
@@ -1741,32 +2120,139 @@ function findExpressionMatches(selectedText, verseEnglishText) {
 
 // Palavras arcaicas presentes no trecho selecionado, cada uma com seu
 // equivalente em inglês moderno (quando existir no mapa).
+// Palavras que terminam em "-eth" mas não são um verbo arcaico de
+// terceira pessoa (ex.: "beneath", "fortieth") -- usadas para a detecção
+// genérica de terminação abaixo não gerar falsos positivos.
+const ARCHAIC_ETH_SUFFIX_EXCEPTIONS = new Set([
+  "beneath", "underneath", "wreath", "teeth",
+  "twentieth", "thirtieth", "fortieth", "fiftieth", "sixtieth", "seventieth", "eightieth", "ninetieth",
+]);
+const ARCHAIC_ETH_GENERIC_PATTERN = /\b([a-z]{5,}eth)\b/gi;
+
 function findArchaicWords(selectedText) {
   ARCHAIC_MARKER_PATTERN.lastIndex = 0;
-  const found = new Set();
+  const found = new Map();
   let match;
   while ((match = ARCHAIC_MARKER_PATTERN.exec(selectedText)) !== null) {
-    found.add(match[0].toLowerCase());
+    const word = match[0].toLowerCase();
+    found.set(word, ARCHAIC_MODERN_EQUIVALENTS[word] || null);
   }
-  return Array.from(found).map((word) => ({
+
+  // Terminação "-eth" genérica (ex.: "abideth", "confesseth") que não está
+  // no mapa fixo: sinaliza como provável forma arcaica, sem inventar qual
+  // seria o verbo moderno equivalente (ver item "não inventar conhecimento").
+  ARCHAIC_ETH_GENERIC_PATTERN.lastIndex = 0;
+  while ((match = ARCHAIC_ETH_GENERIC_PATTERN.exec(selectedText)) !== null) {
+    const word = match[1].toLowerCase();
+    if (!found.has(word) && !ARCHAIC_ETH_SUFFIX_EXCEPTIONS.has(word)) {
+      found.set(word, null);
+    }
+  }
+
+  return Array.from(found.entries()).map(([word, modern]) => ({ word, modern }));
+}
+
+// --- Palavras-chave do trecho: tokeniza (reaproveitando o mesmo padrão de
+// palavra usado para renderizar o texto), remove pontuação/duplicatas,
+// filtra palavras-função e arcaísmos (que já ganham seção própria) e
+// prioriza o que for mais interessante pedagogicamente -- sem virar uma
+// lista gigantesca de palavras óbvias.
+function extractKeyWords(selectedText) {
+  WORD_PATTERN.lastIndex = 0;
+  const seen = new Set();
+  const candidates = [];
+  let match;
+  while ((match = WORD_PATTERN.exec(selectedText)) !== null) {
+    const word = match[0].toLowerCase();
+    if (word.length < 3) continue;
+    if (STOPWORDS_EN.has(word)) continue;
+    if (seen.has(word)) continue;
+    seen.add(word);
+    candidates.push(word);
+  }
+
+  const scored = candidates.map((word, index) => ({
     word,
-    modern: ARCHAIC_MODERN_EQUIVALENTS[word] || null,
+    index,
+    score: (ARCHAIC_EN_PT_GLOSSARY[word] ? 2 : 0) + (word.length >= 6 ? 1 : 0),
   }));
+  scored.sort((a, b) => b.score - a.score || a.index - b.index);
+
+  return scored.slice(0, 8).map((entry) => entry.word);
+}
+
+// Busca uma tradução SEM rede: cache de traduções já buscadas antes,
+// glossário de arcaísmos/vocabulário bíblico, ou o próprio vocabulário
+// salvo pelo usuário (todos já existentes, 100% locais). Devolve null
+// quando não há nada local -- quem chamar decide se busca na rede
+// (translateWord, como já acontece no popup de palavra).
+function lookupLocalTranslation(word) {
+  const cacheKey = `en|pt:${word}`;
+  if (translationCache[cacheKey]) return translationCache[cacheKey];
+  if (ARCHAIC_EN_PT_GLOSSARY[word]) return ARCHAIC_EN_PT_GLOSSARY[word];
+
+  const savedEntry = loadVocabulary().find((entry) => entry.word === word && entry.translation);
+  if (savedEntry) return savedEntry.translation;
+
+  return null;
+}
+
+// --- Comparação entre versões, usada pedagogicamente: quando o trecho
+// selecionado tem uma palavra arcaica, confere se a versão WEB do MESMO
+// versículo realmente usa a forma moderna equivalente -- uma observação
+// derivada dos próprios textos (não inventada) que só aparece quando os
+// dois dados estão disponíveis.
+function deriveVersionComparisonNotes(context, archaicWords) {
+  if (!context.verse || archaicWords.length === 0) return [];
+  const webText = (context.verse.en_web || "").toLowerCase();
+  if (!webText) return [];
+
+  const notes = [];
+  for (const { word, modern } of archaicWords) {
+    if (!modern) continue;
+    const modernFirstWord = modern.split(/[\s/(]/)[0];
+    const foundInWeb = new RegExp(`\\b${modernFirstWord}\\b`, "i").test(webText);
+    if (foundInWeb) {
+      notes.push(`A versão WEB deste versículo usa "${modernFirstWord}" onde esta versão usa "${word}".`);
+    }
+  }
+  return notes.slice(0, 3);
 }
 
 // Ponto único de decisão da análise contextual mostrada no painel "Entender
-// trecho". Hoje só consulta os dicionários locais acima (sem IA, sem rede);
-// é a costura pensada para, no futuro, poder complementar o fallback
-// "sem entrada no dicionário" com uma chamada a um backend de IA, sem mexer
-// em mais nada do restante do recurso.
+// trecho". Camada em camadas, 100% local (sem IA, sem rede obrigatória):
+// vocabulário conhecido -> expressões -> arcaísmos -> gramática detectável
+// -> comparação entre versões. Não encontrar uma expressão no
+// EXPRESSIONS_DICTIONARY não significa mais "nada para mostrar" -- é só
+// uma das camadas.
+//
+// A estrutura devolvida usa nomes de campo pensados para, no futuro, dar
+// para combinar com uma análise remota de IA (localAnalysis +
+// remoteAIAnalysis) sem precisar reescrever o painel -- mas por enquanto
+// só localAnalysis existe.
 function getContextualAnalysis(context) {
   const { selectedText, verse } = context;
   const verseEnglishText = verse ? getEnglishText(verse) : "";
+  const isSingleWord = !/\s/.test(normalizePhrase(selectedText));
+
+  const expressions = findExpressionMatches(selectedText, verseEnglishText);
+  const archaicWords = findArchaicWords(selectedText);
+  const primaryExpression = expressions[0] || null;
 
   return {
-    expressions: findExpressionMatches(selectedText, verseEnglishText),
-    archaicWords: findArchaicWords(selectedText),
-    isSingleWord: !/\s/.test(normalizePhrase(selectedText)),
+    selectedText,
+    isSingleWord,
+    expressionMatch: primaryExpression,
+    expressions,
+    keyVocabulary: isSingleWord ? [] : extractKeyWords(selectedText),
+    grammar: detectGrammarNotes(selectedText),
+    isArchaic: archaicWords.length > 0,
+    archaicWords,
+    versionComparisonNotes: deriveVersionComparisonNotes(context, archaicWords),
+    meaningInContext: primaryExpression ? primaryExpression.meaning : null,
+    naturalTranslationPtBr: primaryExpression ? primaryExpression.natural : null,
+    literalTranslationPtBr: primaryExpression ? primaryExpression.literal : null,
+    modernExample: primaryExpression ? primaryExpression.modernExample : null,
   };
 }
 
@@ -2049,14 +2535,81 @@ function buildListenButton(text) {
   return btn;
 }
 
+// Uma palavra de cada vez, com tradução: primeiro tenta os recursos 100%
+// locais (cache já buscado antes, glossário de arcaísmos, vocabulário
+// salvo pelo usuário); só recorre à rede (translateWord, como o popup de
+// palavra já faz) quando nenhum deles tem a resposta. Cada palavra também
+// ganha seu próprio botão de ouvir, reaproveitando speakText().
+function buildKeyVocabularySection(keyVocabulary) {
+  return buildUnderstandItem("Palavras importantes", (body) => {
+    const list = document.createElement("div");
+    list.className = "understand-keywords-list";
+
+    for (const word of keyVocabulary) {
+      const row = document.createElement("div");
+      row.className = "understand-keyword-row";
+
+      const listenBtn = document.createElement("button");
+      listenBtn.type = "button";
+      listenBtn.className = "understand-keyword-listen";
+      listenBtn.setAttribute("aria-label", `Ouvir "${word}"`);
+      listenBtn.innerHTML = ICON_LISTEN;
+      listenBtn.addEventListener("click", () => speakText(word));
+
+      const wordSpan = document.createElement("span");
+      wordSpan.className = "understand-keyword-word";
+      wordSpan.textContent = word;
+
+      const translationSpan = document.createElement("span");
+      translationSpan.className = "understand-keyword-translation";
+
+      const localTranslation = lookupLocalTranslation(word);
+      if (localTranslation) {
+        translationSpan.textContent = localTranslation;
+      } else {
+        translationSpan.textContent = "traduzindo…";
+        translateWord(word, "en", "pt")
+          .then((translation) => {
+            translationSpan.textContent = translation;
+          })
+          .catch(() => {
+            translationSpan.textContent = "tradução não encontrada";
+          });
+      }
+
+      row.append(listenBtn, wordSpan, translationSpan);
+      list.appendChild(row);
+    }
+
+    body.appendChild(list);
+  });
+}
+
+function buildGrammarSection(grammarNotes) {
+  return buildUnderstandItem("Como o trecho é construído", (body) => {
+    for (const note of grammarNotes) {
+      const label = document.createElement("p");
+      label.innerHTML = `<strong>${note.label}</strong>`;
+      const explanation = document.createElement("p");
+      explanation.textContent = note.explanation;
+      body.append(label, explanation);
+    }
+  });
+}
+
+// Monta o painel em camadas: cada seção só aparece quando há informação
+// confiável pra mostrar (ver getContextualAnalysis). Não encontrar uma
+// expressão cadastrada não significa mais "nada para explicar" -- ainda
+// sobra vocabulário, gramática detectável, arcaísmos e comparação de
+// versões na grande maioria dos trechos.
 function renderUnderstandSections(context, analysis) {
   understandSectionsEl.innerHTML = "";
-  const primaryExpression = analysis.expressions[0] || null;
-  let hasAnySection = false;
+  const primaryExpression = analysis.expressionMatch;
+  let hasDirectMeaning = false;
 
-  // 1) O que isso significa?
+  // 1) Significado / tradução.
   if (primaryExpression) {
-    hasAnySection = true;
+    hasDirectMeaning = true;
     understandSectionsEl.appendChild(
       buildUnderstandItem(
         "O que isso significa?",
@@ -2075,7 +2628,7 @@ function renderUnderstandSections(context, analysis) {
       )
     );
   } else if (analysis.isSingleWord) {
-    hasAnySection = true;
+    hasDirectMeaning = true;
     const loadingId = `understand-word-${Date.now()}`;
     const item = buildUnderstandItem(
       "O que isso significa?",
@@ -2093,20 +2646,36 @@ function renderUnderstandSections(context, analysis) {
     );
     understandSectionsEl.appendChild(item);
 
-    translateWord(context.selectedText.toLowerCase(), "en", "pt")
-      .then((translation) => {
-        const el = document.getElementById(loadingId);
-        if (el) el.textContent = translation;
-      })
-      .catch(() => {
-        const el = document.getElementById(loadingId);
-        if (el) el.textContent = "tradução não encontrada";
-      });
+    const localTranslation = lookupLocalTranslation(context.selectedText.toLowerCase());
+    if (localTranslation) {
+      const el = document.getElementById(loadingId);
+      if (el) el.textContent = localTranslation;
+    } else {
+      translateWord(context.selectedText.toLowerCase(), "en", "pt")
+        .then((translation) => {
+          const el = document.getElementById(loadingId);
+          if (el) el.textContent = translation;
+        })
+        .catch(() => {
+          const el = document.getElementById(loadingId);
+          if (el) el.textContent = "tradução não encontrada";
+        });
+    }
   }
 
-  // 2) Como essa expressão funciona?
+  // 2) Palavras importantes (análise palavra por palavra) -- não repetida
+  // para uma seleção de uma palavra só, já coberta pela seção acima.
+  if (analysis.keyVocabulary.length > 0) {
+    understandSectionsEl.appendChild(buildKeyVocabularySection(analysis.keyVocabulary));
+  }
+
+  // 3) Como o trecho é construído (gramática detectável com segurança).
+  if (analysis.grammar.length > 0) {
+    understandSectionsEl.appendChild(buildGrammarSection(analysis.grammar));
+  }
+
+  // 4) Como essa expressão funciona?
   if (primaryExpression) {
-    hasAnySection = true;
     understandSectionsEl.appendChild(
       buildUnderstandItem(`Como essa expressão funciona? (${primaryExpression.type})`, (body) => {
         const p = document.createElement("p");
@@ -2116,9 +2685,8 @@ function renderUnderstandSections(context, analysis) {
     );
   }
 
-  // 3) Por que o inglês foi escrito assim? (inglês bíblico x moderno)
+  // 5) Por que o inglês foi escrito assim? (inglês bíblico x moderno)
   if (analysis.archaicWords.length > 0) {
-    hasAnySection = true;
     understandSectionsEl.appendChild(
       buildUnderstandItem("Por que o inglês foi escrito assim?", (body) => {
         const intro = document.createElement("p");
@@ -2129,16 +2697,15 @@ function renderUnderstandSections(context, analysis) {
           const row = document.createElement("p");
           row.innerHTML = modern
             ? `<strong>${word}</strong> → em inglês moderno: <strong>${modern}</strong>`
-            : `<strong>${word}</strong> — forma arcaica`;
+            : `<strong>${word}</strong> — provável forma arcaica`;
           body.appendChild(row);
         }
       })
     );
   }
 
-  // 4) Como eu diria isso hoje? (exemplo moderno)
+  // 6) Como eu diria isso hoje? (exemplo moderno)
   if (primaryExpression && primaryExpression.modernExample) {
-    hasAnySection = true;
     understandSectionsEl.appendChild(
       buildUnderstandItem("Como eu diria isso hoje?", (body) => {
         const label = document.createElement("p");
@@ -2150,8 +2717,9 @@ function renderUnderstandSections(context, analysis) {
     );
   }
 
-  // 5) Comparar versões (sempre disponível: os dados das 3 versões já vêm
-  // juntos no capítulo carregado).
+  // 7) Comparar versões (sempre disponível: os dados das 3 versões já vêm
+  // juntos no capítulo carregado) -- com as diferenças de vocabulário
+  // encontradas entre elas, quando houver.
   understandSectionsEl.appendChild(
     buildUnderstandItem("Comparar versões (BBE · WEB · KJV)", (body) => {
       const list = document.createElement("div");
@@ -2169,10 +2737,38 @@ function renderUnderstandSections(context, analysis) {
         list.appendChild(row);
       }
       body.appendChild(list);
+
+      if (analysis.versionComparisonNotes.length > 0) {
+        for (const note of analysis.versionComparisonNotes) {
+          const p = document.createElement("p");
+          p.textContent = note;
+          body.appendChild(p);
+        }
+      }
     })
   );
 
-  understandFallbackEl.hidden = hasAnySection;
+  // A comparação de versões está sempre disponível, então "não temos nada"
+  // só acontece se nem isso funcionou (verso não carregado). O aviso mais
+  // comum agora é o intermediário: sem um significado direto, mas com
+  // informações locais úteis abaixo -- nunca escondendo essas informações.
+  const hasAnyLocalInsight =
+    hasDirectMeaning || analysis.keyVocabulary.length > 0 || analysis.grammar.length > 0 || analysis.archaicWords.length > 0;
+
+  if (!context.verse) {
+    understandFallbackEl.hidden = false;
+    understandFallbackEl.textContent =
+      "Ainda não tenho uma explicação detalhada pronta para este trecho específico — mas você pode ouvir e salvar mesmo assim.";
+  } else if (!hasAnyLocalInsight) {
+    understandFallbackEl.hidden = false;
+    understandFallbackEl.textContent = "Veja abaixo as informações disponíveis para este trecho.";
+  } else if (!hasDirectMeaning) {
+    understandFallbackEl.hidden = false;
+    understandFallbackEl.textContent =
+      "Não encontrei uma expressão cadastrada para este trecho específico, mas veja as informações disponíveis abaixo.";
+  } else {
+    understandFallbackEl.hidden = true;
+  }
 }
 
 function openUnderstandPanel() {
