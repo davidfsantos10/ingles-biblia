@@ -3236,10 +3236,35 @@ main {
 
 .understand-fallback {
   margin: 0;
-  color: var(--color-text-muted);
+}
+
+.understand-search-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  font-family: var(--font-ui);
   font-size: 0.9rem;
-  line-height: 1.5;
-  font-style: italic;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  border-radius: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.understand-search-link:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.understand-search-link svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
 }
 
 .understand-save-row {

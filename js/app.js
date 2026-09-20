@@ -2535,6 +2535,29 @@ function buildListenButton(text) {
   return btn;
 }
 
+const ICON_SEARCH =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>';
+
+// Quando a análise local não tem um "significado" direto pro trecho, em
+// vez de só avisar que não achamos nada, oferece um link pra pesquisa do
+// Google (que já mostra uma "Visão geral por IA" para a maioria das
+// buscas) -- o usuário decide se quer consultar por conta própria. É só
+// um link comum, aberto numa aba nova pelo navegador: o app não chama
+// nenhuma IA/API por trás disso.
+function buildExternalSearchLink(context) {
+  const reference = context.book ? `${context.book.en} ${context.chapter}:${context.verseNumber}` : "";
+  const query = `"${context.selectedText}" ${reference} meaning`.trim();
+  const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+
+  const link = document.createElement("a");
+  link.className = "understand-search-link";
+  link.href = url;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.innerHTML = `${ICON_SEARCH} Pesquisar este trecho na internet`;
+  return link;
+}
+
 // Uma palavra de cada vez, com tradução: primeiro tenta os recursos 100%
 // locais (cache já buscado antes, glossário de arcaísmos, vocabulário
 // salvo pelo usuário); só recorre à rede (translateWord, como o popup de
@@ -2748,26 +2771,17 @@ function renderUnderstandSections(context, analysis) {
     })
   );
 
-  // A comparação de versões está sempre disponível, então "não temos nada"
-  // só acontece se nem isso funcionou (verso não carregado). O aviso mais
-  // comum agora é o intermediário: sem um significado direto, mas com
-  // informações locais úteis abaixo -- nunca escondendo essas informações.
-  const hasAnyLocalInsight =
-    hasDirectMeaning || analysis.keyVocabulary.length > 0 || analysis.grammar.length > 0 || analysis.archaicWords.length > 0;
-
-  if (!context.verse) {
-    understandFallbackEl.hidden = false;
-    understandFallbackEl.textContent =
-      "Ainda não tenho uma explicação detalhada pronta para este trecho específico — mas você pode ouvir e salvar mesmo assim.";
-  } else if (!hasAnyLocalInsight) {
-    understandFallbackEl.hidden = false;
-    understandFallbackEl.textContent = "Veja abaixo as informações disponíveis para este trecho.";
-  } else if (!hasDirectMeaning) {
-    understandFallbackEl.hidden = false;
-    understandFallbackEl.textContent =
-      "Não encontrei uma expressão cadastrada para este trecho específico, mas veja as informações disponíveis abaixo.";
-  } else {
+  // Sem um "significado" direto pro trecho (nem expressão cadastrada, nem
+  // palavra única), em vez de só avisar que a análise local não achou
+  // nada, oferece um link pra pesquisar o trecho na internet -- nunca
+  // escondendo as informações locais que já apareceram acima (palavras
+  // importantes, gramática, arcaísmos, comparação de versões).
+  understandFallbackEl.innerHTML = "";
+  if (hasDirectMeaning) {
     understandFallbackEl.hidden = true;
+  } else {
+    understandFallbackEl.hidden = false;
+    understandFallbackEl.appendChild(buildExternalSearchLink(context));
   }
 }
 
@@ -2973,6 +2987,28 @@ function updateVocabularyTranslation(word, translation) {
   }
 }
 
+// Igual a updateVocabularyTranslation, mas filtrando por type:"phrase" --
+// evita atualizar por engano uma palavra salva que coincida com o mesmo
+// texto de uma expressão (mesmo cuidado já tomado em removeFromVocabulary).
+function updatePhraseTranslation(word, translation) {
+  if (!translation) return;
+  const list = loadVocabulary();
+  const entry = list.find((e) => e.type === "phrase" && e.word === word);
+  if (!entry || entry.translation === translation) return;
+
+  entry.translation = translation;
+  saveVocabulary(list);
+  if (!vocabularyViewEl.hidden) renderVocabularyList();
+
+  if (flashcardsMode === "vocabulary") {
+    const deckEntry = flashcardsDeck.find((e) => e.type === "phrase" && e.word === word);
+    if (deckEntry) deckEntry.translation = translation;
+    if (!flashcardsViewEl.hidden && flashcardsDeck[flashcardsIndex] === deckEntry) {
+      flashcardBackTextEl.textContent = translation;
+    }
+  }
+}
+
 // "type" é opcional pra não quebrar quem já chamava só com a palavra; ao
 // remover uma expressão salva, passamos "phrase" pra não arriscar apagar
 // por engano uma palavra solta que coincida com o mesmo texto.
@@ -3042,7 +3078,14 @@ function renderVocabularyList() {
     if (entry.translation) {
       translationEl.textContent = entry.translation;
     } else if (isPhrase) {
-      translationEl.textContent = "tradução não encontrada";
+      translationEl.textContent = "traduzindo…";
+      backfillTranslation(
+        entry.word,
+        (translation) => updatePhraseTranslation(entry.word, translation),
+        () => {
+          translationEl.textContent = "tradução não encontrada";
+        }
+      );
     } else {
       translationEl.textContent = "traduzindo…";
       backfillTranslation(
