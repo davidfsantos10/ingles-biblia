@@ -44,7 +44,16 @@
         </button>
       </div>
 
-      <h1 class="app-title">Inglês com a Bíblia</h1>
+      <div class="chapter-selector app-header-chapter-selector">
+        <button type="button" id="book-select-btn" class="chapter-selector-btn" aria-haspopup="dialog" aria-label="Escolher livro">
+          <span id="book-select-label"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <button type="button" id="chapter-select-btn" class="chapter-selector-btn chapter-selector-btn--chapter" aria-haspopup="dialog" aria-label="Escolher capítulo">
+          <span id="chapter-select-label"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -510,18 +519,6 @@
             <span id="notes-count" class="vocab-count" hidden>0</span>
           </button>
         </nav>
-
-        <p class="picker-section-label">Livro e capítulo</p>
-        <div class="chapter-selector">
-          <button type="button" id="book-select-btn" class="chapter-selector-btn" aria-haspopup="dialog" aria-label="Escolher livro">
-            <span id="book-select-label"></span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-          <button type="button" id="chapter-select-btn" class="chapter-selector-btn chapter-selector-btn--chapter" aria-haspopup="dialog" aria-label="Escolher capítulo">
-            <span id="chapter-select-label"></span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-          </button>
-        </div>
 
         <p class="picker-section-label">Versão do inglês</p>
         <div class="en-version-selector" role="group" aria-label="Versão do texto em inglês">
