@@ -2454,6 +2454,24 @@ function hideSelectionBar() {
   pendingSelectionContext = null;
 }
 
+// Mostra o popup longe do dedo (que está em cima da seleção, geralmente no
+// meio da tela) em vez de sempre no centro: se a seleção está na metade de
+// cima da tela, o popup aparece embaixo, e vice-versa -- nunca colado na
+// borda inferior (não é uma barra de rodapé), sempre numa área de destaque
+// bem visível.
+function positionSelectionBarAwayFromTouch() {
+  selectionBarEl.classList.remove("selection-bar--top", "selection-bar--bottom");
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  const rect = selection.getRangeAt(0).getBoundingClientRect();
+  if (!rect || (rect.top === 0 && rect.bottom === 0)) return;
+
+  const selectionMiddle = (rect.top + rect.bottom) / 2;
+  const viewportMiddle = window.innerHeight / 2;
+  selectionBarEl.classList.add(selectionMiddle < viewportMiddle ? "selection-bar--bottom" : "selection-bar--top");
+}
+
 function handleSelectionChange() {
   if (readingContainerEl.hidden || !understandOverlayEl.hidden) return;
 
@@ -2465,6 +2483,7 @@ function handleSelectionChange() {
 
   pendingSelectionContext = context;
   selectionBarTextEl.textContent = `"${context.selectedText}"`;
+  positionSelectionBarAwayFromTouch();
   selectionBarEl.hidden = false;
 }
 
