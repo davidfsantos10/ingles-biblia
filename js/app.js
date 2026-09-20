@@ -1868,6 +1868,7 @@ function backfillTranslation(word, onResolve, onReject) {
 let activeWordRequestId = 0;
 
 async function handleWordActivate(span) {
+  if (!selectionBarEl.hidden) hideSelectionBar();
   document.querySelectorAll(".word--active").forEach((el) => el.classList.remove("word--active"));
   span.classList.add("word--active");
 

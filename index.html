@@ -560,19 +560,18 @@
     </div>
   </div>
 
-  <!-- Barra flutuante que aparece ao selecionar um trecho do texto em
-       inglês (compreensão contextual). Fica fixa no rodapé em vez de
-       flutuar junto à seleção, para não competir com o menu nativo de
-       seleção do Android/iOS. -->
-  <div id="selection-bar" class="selection-bar" hidden>
+  <!-- Popup centralizado que aparece ao selecionar um trecho do texto em
+       inglês (compreensão contextual). Fica no meio da tela em vez de
+       grudado no rodapé, pra não ficar escondido atrás do menu nativo de
+       seleção (copiar/compartilhar) do Android/iOS, que também disputa
+       espaço perto da seleção e do rodapé. -->
+  <div id="selection-bar" class="selection-bar" hidden role="dialog" aria-label="Trecho selecionado">
+    <button type="button" id="selection-bar-close-btn" class="selection-bar-close-btn" aria-label="Fechar seleção">×</button>
     <p id="selection-bar-text" class="selection-bar-text"></p>
-    <div class="selection-bar-actions">
-      <button type="button" id="selection-bar-understand-btn" class="selection-bar-understand-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
-        Entender trecho
-      </button>
-      <button type="button" id="selection-bar-close-btn" class="selection-bar-close-btn" aria-label="Fechar seleção">×</button>
-    </div>
+    <button type="button" id="selection-bar-understand-btn" class="selection-bar-understand-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.6" y2="16.6"/></svg>
+      Entender trecho
+    </button>
   </div>
 
   <div id="understand-overlay" class="picker-overlay" hidden>

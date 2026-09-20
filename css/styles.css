@@ -3099,18 +3099,19 @@ main {
 
 .selection-bar {
   position: fixed;
-  left: 0.75rem;
-  right: 0.75rem;
-  bottom: 0.75rem;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: 170;
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.65rem 0.75rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.85rem;
+  width: min(90vw, 22rem);
+  padding: 1.5rem 1.25rem 1.25rem;
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  border-radius: 0.9rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
 }
 
 .selection-bar[hidden] {
@@ -3118,57 +3119,53 @@ main {
 }
 
 .selection-bar-text {
-  flex: 1;
-  min-width: 0;
   margin: 0;
   font-family: var(--font-reading);
-  font-size: 0.92rem;
-  color: var(--color-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.selection-bar-actions {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .selection-bar-understand-btn {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: center;
+  gap: 0.45rem;
   font-family: var(--font-ui);
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--color-surface);
   background: var(--color-accent);
   border: none;
-  border-radius: 0.5rem;
-  padding: 0.55rem 0.85rem;
+  border-radius: 0.6rem;
+  padding: 0.7rem 1rem;
   cursor: pointer;
-  white-space: nowrap;
 }
 
 .selection-bar-understand-btn svg {
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 1.1rem;
+  height: 1.1rem;
   flex-shrink: 0;
 }
 
 .selection-bar-close-btn {
-  width: 2.2rem;
-  height: 2.2rem;
-  flex-shrink: 0;
-  border-radius: 0.5rem;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  color: var(--color-text-muted);
-  font-size: 1.2rem;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.65rem;
+  font-family: var(--font-ui);
+  font-size: 1.4rem;
   line-height: 1;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
   cursor: pointer;
+  padding: 0.25rem;
+}
+
+.selection-bar-close-btn:hover {
+  color: var(--color-text);
 }
 
 .understand-body {
@@ -3352,12 +3349,6 @@ main {
   margin: 0;
   color: var(--color-text);
   font-family: var(--font-reading);
-}
-
-@media (max-width: 480px) {
-  .selection-bar-text {
-    display: none;
-  }
 }
 
 /* Layout "Traduzido": cada versículo em inglês vem com a tradução em
