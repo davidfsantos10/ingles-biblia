@@ -76,7 +76,9 @@ const DEFAULT_CHAPTER = 1;
 // Três versões do texto em inglês para escolher, guardadas lado a lado no
 // mesmo arquivo de capítulo (campos "en", "en_web", "en_bbe"): do inglês
 // clássico/arcaico da KJV até o vocabulário bem simples da BBE, feita para
-// quem está aprendendo o idioma. Todas de domínio público.
+// quem está aprendendo o idioma. WEB e BBE são de domínio público sem
+// ressalvas; a KJV é de domínio público fora do Reino Unido, mas está sob
+// Crown Copyright perpétuo dentro dele (ver BIBLE_SOURCES.md).
 const EN_VERSIONS = {
   kjv: { field: "en", label: "KJV", fullName: "King James Version" },
   web: { field: "en_web", label: "WEB", fullName: "World English Bible" },
@@ -568,6 +570,53 @@ async function goToVerse(bookSlug, chapter, verseKey) {
   if (verseEl) verseEl.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
+// --- Cache de capítulo para atualizar o texto de Favoritos/Anotações ---
+//
+// Favoritos e anotações guardam uma cópia do texto no momento em que são
+// salvos (bookSlug/chapter/number continuam sendo a referência principal).
+// Isso é necessário como fallback (ex.: sem conexão), mas significa que um
+// registro salvo antes de uma migração de texto -- como a troca do
+// português para a Bíblia Livre -- ficaria mostrando a cópia antiga para
+// sempre. As funções abaixo buscam o texto ATUAL pela referência (com
+// cache por capítulo, pra não repetir requisição à toa quando vários
+// favoritos/anotações caem no mesmo capítulo) para atualizar a exibição.
+const chapterDataCache = new Map();
+
+function fetchChapterDataCached(bookSlug, chapter) {
+  const key = `${bookSlug}-${chapter}`;
+  if (!chapterDataCache.has(key)) {
+    chapterDataCache.set(
+      key,
+      fetch(`data/${key}.json`)
+        .then((response) => (response.ok ? response.json() : null))
+        .catch(() => null)
+    );
+  }
+  return chapterDataCache.get(key);
+}
+
+async function fetchCurrentVerseText(bookSlug, chapter, number) {
+  const data = await fetchChapterDataCached(bookSlug, chapter);
+  if (!data) return null;
+  const verse = data.verses.find((v) => v.number === number);
+  if (!verse) return null;
+  return { en: getEnglishText(verse), pt: verse.pt };
+}
+
+// Atualiza o texto de um item já renderizado (favorito ou anotação) assim
+// que o texto atual da referência terminar de carregar. O texto salvo
+// continua servindo de estado inicial/fallback: se a referência não puder
+// ser carregada (ex.: sem conexão) ou o item já não estiver mais na tela
+// (lista re-renderizada, item removido), simplesmente não faz nada.
+function refreshSavedVerseText(bookSlug, chapter, number, enEl, ptEl) {
+  if (!bookSlug || !chapter || !number) return;
+  fetchCurrentVerseText(bookSlug, chapter, number).then((current) => {
+    if (!current) return;
+    if (enEl && enEl.isConnected) enEl.textContent = current.en;
+    if (ptEl && ptEl.isConnected) ptEl.textContent = current.pt || PT_UNAVAILABLE_MESSAGE;
+  });
+}
+
 // --- Favoritos (localStorage) ---
 
 const FAVORITES_STORAGE_KEY = "ingles-biblia.favorites";
@@ -675,6 +724,8 @@ function renderFavoritesList() {
     li.appendChild(ptText);
 
     favoritesListEl.appendChild(li);
+
+    refreshSavedVerseText(entry.bookSlug, entry.chapter, entry.number, enText, ptText);
   }
 }
 
@@ -785,6 +836,11 @@ function renderNotesList() {
     li.appendChild(verseText);
 
     notesListEl.appendChild(li);
+
+    // A lista de anotações só exibe o texto em inglês (não o português) --
+    // atualiza esse texto com a versão em inglês atualmente selecionada,
+    // sem alterar o que é exibido.
+    refreshSavedVerseText(entry.bookSlug, entry.chapter, entry.number, verseText, null);
   }
 }
 
@@ -969,14 +1025,21 @@ function wrapCanvasText(ctx, text, maxWidth) {
 }
 
 function measureShareLayout(ctx, maxWidth, fontSize) {
+  // Versículo sem tradução nesta edição da Bíblia Livre (verse.pt nulo):
+  // compartilha só o inglês, sem desenhar o aviso de indisponibilidade
+  // como se fosse o texto bíblico em português (ver PT_UNAVAILABLE_MESSAGE).
+  const hasPt = Boolean(currentShareVerse.pt);
   const ptFontSize = Math.round(fontSize * 0.72);
   const refFontSize = Math.max(24, Math.round(fontSize * 0.5));
 
   ctx.font = `700 ${fontSize}px Georgia, 'Iowan Old Style', serif`;
   const enLines = wrapCanvasText(ctx, getEnglishText(currentShareVerse), maxWidth);
 
-  ctx.font = `${ptFontSize}px Georgia, serif`;
-  const ptLines = wrapCanvasText(ctx, getPortugueseDisplayText(currentShareVerse), maxWidth);
+  let ptLines = [];
+  if (hasPt) {
+    ctx.font = `${ptFontSize}px Georgia, serif`;
+    ptLines = wrapCanvasText(ctx, currentShareVerse.pt, maxWidth);
+  }
 
   const enLineHeight = fontSize * 1.35;
   const ptLineHeight = ptFontSize * 1.4;
@@ -984,9 +1047,12 @@ function measureShareLayout(ctx, maxWidth, fontSize) {
   const refHeight = refFontSize * 1.8;
 
   const totalHeight =
-    enLines.length * enLineHeight + gapBetween + ptLines.length * ptLineHeight + gapBetween + refHeight;
+    enLines.length * enLineHeight +
+    gapBetween +
+    (hasPt ? ptLines.length * ptLineHeight + gapBetween : 0) +
+    refHeight;
 
-  return { fontSize, ptFontSize, refFontSize, enLines, ptLines, enLineHeight, ptLineHeight, gapBetween, totalHeight };
+  return { fontSize, ptFontSize, refFontSize, enLines, ptLines, enLineHeight, ptLineHeight, gapBetween, totalHeight, hasPt };
 }
 
 function drawShareCard() {
@@ -1023,16 +1089,20 @@ function drawShareCard() {
     y += layout.enLineHeight;
   }
 
-  y += layout.gapBetween - layout.enLineHeight * 0.35;
+  let lastLineHeight = layout.enLineHeight;
 
-  ctx.font = `${layout.ptFontSize}px Georgia, serif`;
-  ctx.fillStyle = bg.subTextColor;
-  for (const line of layout.ptLines) {
-    ctx.fillText(line, w / 2, y);
-    y += layout.ptLineHeight;
+  if (layout.hasPt) {
+    y += layout.gapBetween - layout.enLineHeight * 0.35;
+    ctx.font = `${layout.ptFontSize}px Georgia, serif`;
+    ctx.fillStyle = bg.subTextColor;
+    for (const line of layout.ptLines) {
+      ctx.fillText(line, w / 2, y);
+      y += layout.ptLineHeight;
+    }
+    lastLineHeight = layout.ptLineHeight;
   }
 
-  y += layout.gapBetween - layout.ptLineHeight * 0.35;
+  y += layout.gapBetween - lastLineHeight * 0.35;
 
   ctx.font = `700 ${layout.refFontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
   ctx.fillStyle = bg.textColor;
@@ -1050,7 +1120,13 @@ function drawShareCard() {
 
 function buildShareText() {
   const enLabel = EN_VERSIONS[currentEnVersion].label;
-  return `"${getEnglishText(currentShareVerse)}"\n"${getPortugueseDisplayText(currentShareVerse)}"\n— ${currentShareReference} (${enLabel} / BLIVRE)`;
+  // Sem tradução nesta edição da Bíblia Livre: compartilha só o inglês, sem
+  // citar "BLIVRE" (não existe tradução portuguesa desse versículo aqui) e
+  // sem colocar o aviso de indisponibilidade como se fosse o texto bíblico.
+  if (!currentShareVerse.pt) {
+    return `"${getEnglishText(currentShareVerse)}"\n— ${currentShareReference} (${enLabel})`;
+  }
+  return `"${getEnglishText(currentShareVerse)}"\n"${currentShareVerse.pt}"\n— ${currentShareReference} (${enLabel} / BLIVRE)`;
 }
 
 function openSharePopup(verse, book, chapter) {
