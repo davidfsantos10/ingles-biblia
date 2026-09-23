@@ -1915,6 +1915,11 @@ main {
   margin: 0;
 }
 
+.verse-text--unavailable {
+  font-style: italic;
+  opacity: 0.7;
+}
+
 /* Clickable words */
 
 .word {
