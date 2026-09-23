@@ -1217,7 +1217,10 @@ main {
 .lessons-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  /* Abaixo do popup de palavra (151), da barra de seleção (170) e do
+     picker-overlay/Entender trecho (180): esses precisam aparecer por cima
+     quando abertos a partir de um exercício de Lições. */
+  z-index: 90;
   display: flex;
   flex-direction: column;
   background: var(--color-bg);

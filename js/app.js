@@ -439,6 +439,34 @@ function buildStackedVerseEl(verse, book, chapter) {
   return container;
 }
 
+// Preenche `container` com `text` quebrado em palavras tocáveis (spans
+// ".word" com data-word/data-lang, iguais às da leitura), preservando os
+// espaços/pontuação entre elas como texto simples. Reaproveitado tanto pela
+// coluna de leitura quanto pelo enunciado dos exercícios de Lições, para que
+// tocar numa palavra abra a mesma tradução/pronúncia nos dois lugares.
+function appendTappableWords(container, text, lang) {
+  let lastIndex = 0;
+  WORD_PATTERN.lastIndex = 0;
+  let match;
+  while ((match = WORD_PATTERN.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      container.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+    }
+    const span = document.createElement("span");
+    span.className = "word";
+    span.textContent = match[0];
+    span.dataset.word = match[0].toLowerCase();
+    span.dataset.lang = lang;
+    span.tabIndex = 0;
+    span.setAttribute("role", "button");
+    container.appendChild(span);
+    lastIndex = WORD_PATTERN.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    container.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+}
+
 function buildVerseText(verse, lang) {
   const p = document.createElement("p");
   p.className = "verse-text";
@@ -453,26 +481,7 @@ function buildVerseText(verse, lang) {
   }
 
   const text = lang === "en" ? getEnglishText(verse) : verse.pt;
-  let lastIndex = 0;
-  WORD_PATTERN.lastIndex = 0;
-  let match;
-  while ((match = WORD_PATTERN.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      p.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
-    }
-    const span = document.createElement("span");
-    span.className = "word";
-    span.textContent = match[0];
-    span.dataset.word = match[0].toLowerCase();
-    span.dataset.lang = lang;
-    span.tabIndex = 0;
-    span.setAttribute("role", "button");
-    p.appendChild(span);
-    lastIndex = WORD_PATTERN.lastIndex;
-  }
-  if (lastIndex < text.length) {
-    p.appendChild(document.createTextNode(text.slice(lastIndex)));
-  }
+  appendTappableWords(p, text, lang);
   return p;
 }
 
@@ -2414,7 +2423,7 @@ function handleVersesKeydown(event) {
   handleWordActivate(span);
 }
 
-for (const versesEl of [versesEnEl, versesPtEl]) {
+for (const versesEl of [versesEnEl, versesPtEl, lessonPromptEl]) {
   versesEl.addEventListener("click", handleVersesClick);
   versesEl.addEventListener("keydown", handleVersesKeydown);
 }
@@ -2436,8 +2445,25 @@ let currentUnderstandContext = null;
 // dentro do mesmo versículo, esse versículo está na coluna em inglês, e (no
 // layout "Traduzido", onde a tradução em português fica dentro do mesmo
 // card que o inglês) fora da caixa de tradução.
+// Seleção dentro do enunciado de um exercício de frase (Lições), só quando
+// o enunciado está em inglês -- é o mesmo texto/versículo já usado pra
+// montar a pergunta, então dá pra reaproveitar a análise de "Entender
+// trecho" sem nenhuma consulta nova.
+function getLessonSelectionContext(selectedText) {
+  const exercise = currentLessonExercises[currentLessonIndex];
+  if (!exercise || exercise.type !== "sentence" || exercise.promptLang !== "en") return null;
+  if (!exercise.verse || !exercise.book) return null;
+
+  return {
+    selectedText: selectedText.trim(),
+    book: exercise.book,
+    chapter: exercise.chapter,
+    verseNumber: exercise.verseNumber,
+    verse: exercise.verse,
+  };
+}
+
 function getSelectionContext() {
-  if (!currentChapterData) return null;
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
 
@@ -2448,6 +2474,12 @@ function getSelectionContext() {
   const anchorEl = toElement(selection.anchorNode);
   const focusEl = toElement(selection.focusNode);
   if (!anchorEl || !focusEl) return null;
+
+  if (lessonPromptEl.contains(anchorEl) && lessonPromptEl.contains(focusEl)) {
+    return getLessonSelectionContext(selectedText);
+  }
+
+  if (!currentChapterData) return null;
 
   const anchorVerseEl = anchorEl.closest(".verse");
   const focusVerseEl = focusEl.closest(".verse");
@@ -2493,7 +2525,9 @@ function positionSelectionBarAwayFromTouch() {
 }
 
 function handleSelectionChange() {
-  if (readingContainerEl.hidden || !understandOverlayEl.hidden) return;
+  const readingVisible = !readingContainerEl.hidden;
+  const lessonExerciseVisible = !lessonsOverlayEl.hidden && !lessonsExerciseEl.hidden;
+  if ((!readingVisible && !lessonExerciseVisible) || !understandOverlayEl.hidden) return;
 
   const context = getSelectionContext();
   if (!context) {
@@ -4175,9 +4209,17 @@ async function buildTodaysLessonExercises() {
         mode,
         direction,
         prompt: direction === "en-to-pt" ? enText : verse.pt,
+        promptLang: direction === "en-to-pt" ? "en" : "pt",
         acceptedAnswers: direction === "en-to-pt" ? [verse.pt] : [enText],
         answerTokens: answerText.split(/\s+/).filter(Boolean),
         reference: `${book.pt} ${ref.chapter}:${ref.number}`,
+        // Guardados para permitir tocar em palavras e selecionar trecho do
+        // enunciado (ver renderLessonExercise/getSelectionContext) -- o
+        // mesmo versículo/livro já buscados acima, sem nova requisição.
+        verse,
+        book,
+        chapter: ref.chapter,
+        verseNumber: ref.number,
       });
     } catch (err) {
       // Essa referência falhou (ex.: sem conexão); segue com as demais.
@@ -4218,6 +4260,7 @@ async function buildTodaysLessonExercises() {
       mode: "type",
       direction,
       prompt: direction === "en-to-pt" ? entry.word : entry.translations[0],
+      promptLang: direction === "en-to-pt" ? "en" : "pt",
       acceptedAnswers: direction === "en-to-pt" ? entry.translations : [entry.word],
       reference: "",
     });
@@ -4355,7 +4398,12 @@ function renderLessonExercise() {
   lessonInstructionEl.textContent = isSentence
     ? `Traduza a frase para o ${targetLang}:`
     : `Traduza a palavra para o ${targetLang}:`;
-  lessonPromptEl.textContent = exercise.prompt;
+  // Enunciado tocável: como na leitura, cada palavra vira um span que abre
+  // a mesma tradução/pronúncia ao tocar (ver handleVersesClick reaproveitado
+  // abaixo), e o texto continua selecionável para abrir "Entender trecho"
+  // nas frases em inglês (ver getSelectionContext).
+  lessonPromptEl.textContent = "";
+  appendTappableWords(lessonPromptEl, exercise.prompt, exercise.promptLang || "en");
   lessonRefEl.textContent = exercise.reference;
   lessonSpeakBtnEl.hidden = exercise.direction !== "en-to-pt";
 
