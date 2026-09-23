@@ -99,6 +99,17 @@ function getEnglishText(verse) {
   return verse[EN_VERSIONS[currentEnVersion].field] || verse.en;
 }
 
+// Alguns poucos versículos (divergência de versificação entre a Bíblia
+// Livre e a numeração usada pelo app) não têm texto em português nesta
+// edição -- verse.pt fica `null` nesses casos. Esta função é só para
+// EXIBIÇÃO (não deve alimentar vocabulário, flashcards, exercícios, TTS
+// ou pesquisa como se fosse texto bíblico real).
+const PT_UNAVAILABLE_MESSAGE = "Este trecho não consta nesta edição da Bíblia Livre.";
+
+function getPortugueseDisplayText(verse) {
+  return verse.pt || PT_UNAVAILABLE_MESSAGE;
+}
+
 // Layout de leitura: "split" é o padrão de sempre (colunas lado a lado);
 // "stacked" mostra cada versículo em inglês com a tradução em português
 // logo abaixo, numa coluna só.
@@ -429,10 +440,19 @@ function buildStackedVerseEl(verse, book, chapter) {
 }
 
 function buildVerseText(verse, lang) {
-  const text = lang === "en" ? getEnglishText(verse) : verse.pt;
   const p = document.createElement("p");
   p.className = "verse-text";
 
+  if (lang !== "en" && !verse.pt) {
+    // Sem tradução nesta edição da Bíblia Livre: mostra o aviso como texto
+    // simples, sem transformar as palavras em spans tocáveis (não é texto
+    // bíblico, não deve virar vocabulário/tradução de palavra).
+    p.classList.add("verse-text--unavailable");
+    p.textContent = PT_UNAVAILABLE_MESSAGE;
+    return p;
+  }
+
+  const text = lang === "en" ? getEnglishText(verse) : verse.pt;
   let lastIndex = 0;
   WORD_PATTERN.lastIndex = 0;
   let match;
@@ -642,7 +662,7 @@ function renderFavoritesList() {
 
     const ptText = document.createElement("p");
     ptText.className = "favorite-text-pt";
-    ptText.textContent = entry.pt;
+    ptText.textContent = entry.pt || PT_UNAVAILABLE_MESSAGE;
     li.appendChild(ptText);
 
     favoritesListEl.appendChild(li);
@@ -947,7 +967,7 @@ function measureShareLayout(ctx, maxWidth, fontSize) {
   const enLines = wrapCanvasText(ctx, getEnglishText(currentShareVerse), maxWidth);
 
   ctx.font = `${ptFontSize}px Georgia, serif`;
-  const ptLines = wrapCanvasText(ctx, currentShareVerse.pt, maxWidth);
+  const ptLines = wrapCanvasText(ctx, getPortugueseDisplayText(currentShareVerse), maxWidth);
 
   const enLineHeight = fontSize * 1.35;
   const ptLineHeight = ptFontSize * 1.4;
@@ -1021,7 +1041,7 @@ function drawShareCard() {
 
 function buildShareText() {
   const enLabel = EN_VERSIONS[currentEnVersion].label;
-  return `"${getEnglishText(currentShareVerse)}"\n"${currentShareVerse.pt}"\n— ${currentShareReference} (${enLabel} / ARC)`;
+  return `"${getEnglishText(currentShareVerse)}"\n"${getPortugueseDisplayText(currentShareVerse)}"\n— ${currentShareReference} (${enLabel} / BLIVRE)`;
 }
 
 function openSharePopup(verse, book, chapter) {
@@ -3220,7 +3240,12 @@ function shuffleFlashcards() {
 function renderFlashcards() {
   flashcardsDeck =
     flashcardsMode === "favorites"
-      ? Object.values(loadFavorites()).sort((a, b) => b.savedAt - a.savedAt)
+      ? Object.values(loadFavorites())
+          // Versículos sem tradução nesta edição da Bíblia Livre (verse.pt
+          // nulo) ficam fora do baralho: o aviso de "não disponível" não
+          // deve virar cartão de flashcard como se fosse a tradução.
+          .filter((entry) => entry.pt)
+          .sort((a, b) => b.savedAt - a.savedAt)
       : loadVocabulary();
 
   const hasCards = flashcardsDeck.length > 0;
@@ -3896,7 +3921,7 @@ async function renderVerseOfDay() {
     currentVerseOfDay = { verse, book, chapter: ref.chapter };
     homeVerseEnEl.textContent = `"${getEnglishText(verse)}"`;
     homeVerseRefEl.textContent = `${book.en} ${ref.chapter}:${ref.number} · ${EN_VERSIONS[currentEnVersion].label}`;
-    homeVersePtEl.textContent = `"${verse.pt}"`;
+    homeVersePtEl.textContent = `"${getPortugueseDisplayText(verse)}"`;
   } catch (err) {
     currentVerseOfDay = null;
     homeVerseEnEl.textContent = "Não foi possível carregar o versículo agora.";
@@ -4136,7 +4161,10 @@ async function buildTodaysLessonExercises() {
       const data = await response.json();
       const verse = data.verses.find((v) => v.number === ref.number);
       const book = BOOKS.find((b) => b.slug === ref.slug);
-      if (!verse || !book) continue;
+      // Sem tradução nesta edição da Bíblia Livre (verse.pt nulo): pula essa
+      // referência, sem inventar texto nem usar o aviso de indisponibilidade
+      // como se fosse a resposta do exercício.
+      if (!verse || !book || !verse.pt) continue;
 
       const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
       const mode = rng() < 0.5 ? "type" : "tap";
