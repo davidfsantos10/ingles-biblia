@@ -2694,14 +2694,22 @@ const ICON_SEARCH =
 // IA/API por trás disso.
 //
 // A busca sem aspas ao redor do trecho (igual ao "Pesquisa na Web" nativo
-// do celular) é o que faz o Google mostrar a "Visão geral por IA" e a
-// caixinha de tradução automática com mais frequência -- colocar aspas
-// força busca por correspondência exata e tende a esconder esses recursos.
-// As palavras extras (meaning/grammar/translation) pedem pro Google cobrir
-// mais ângulos na visão geral, sem estreitar demais a busca.
+// do celular) é o que faz o Google mostrar respostas mais ricas com mais
+// frequência -- colocar aspas força busca por correspondência exata e
+// tende a esconder esses recursos. As palavras extras (meaning/grammar/
+// translation/Bible context) pedem pro Google cobrir mais ângulos.
+//
+// "udm=50" abre direto na aba "Modo IA" do Google (o mesmo modo que a
+// pessoa escolheria manualmente na busca) em vez da aba "Tudo": nos testes,
+// a aba "Tudo" falhava em gerar a "Visão geral por IA" com frequência
+// ("Não é possível gerar... Tente de novo mais tarde"), enquanto o Modo IA
+// respondia de forma confiável, com uma resposta estruturada (significado,
+// gramática, tradução). Esse parâmetro não é documentado oficialmente pelo
+// Google e pode mudar sem aviso -- se um dia parar de funcionar, o pior
+// caso é cair de volta numa busca comum (não quebra a página).
 function buildExternalSearchLink(context) {
-  const query = `${context.selectedText} meaning grammar translation`;
-  const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+  const query = `${context.selectedText} meaning grammar Portuguese translation Bible context`;
+  const url = `https://www.google.com/search?q=${encodeURIComponent(query)}&udm=50`;
 
   const link = document.createElement("a");
   link.className = "understand-search-link";
