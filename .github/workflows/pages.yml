@@ -29,10 +29,15 @@ jobs:
         with:
           enablement: true
 
+      - name: Prepare site (só os arquivos da versão web)
+        run: |
+          mkdir -p _site
+          cp -r index.html css js data .nojekyll _site/
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment
