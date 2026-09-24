@@ -1287,14 +1287,18 @@ function speakWord(word) {
 }
 
 // Fecha qualquer popup/modal aberto no momento (palavra ou anotação).
+// Retorna se algo estava aberto e foi fechado -- usado pelo botão "voltar"
+// do Android (Capacitor) para decidir se deve só fechar o popup ou navegar.
 function closeActivePopup() {
-  if (!wordPopupEl.hidden) hideWordPopup();
-  if (!notePopupEl.hidden) closeNotePopup();
-  if (!sharePopupEl.hidden) closeSharePopup();
-  if (!pickerOverlayEl.hidden) closePicker();
-  if (!appMenuOverlayEl.hidden) closeAppMenu();
-  if (!understandOverlayEl.hidden) closeUnderstandPanel();
-  if (!selectionBarEl.hidden) hideSelectionBar();
+  let closedSomething = false;
+  if (!wordPopupEl.hidden) { hideWordPopup(); closedSomething = true; }
+  if (!notePopupEl.hidden) { closeNotePopup(); closedSomething = true; }
+  if (!sharePopupEl.hidden) { closeSharePopup(); closedSomething = true; }
+  if (!pickerOverlayEl.hidden) { closePicker(); closedSomething = true; }
+  if (!appMenuOverlayEl.hidden) { closeAppMenu(); closedSomething = true; }
+  if (!understandOverlayEl.hidden) { closeUnderstandPanel(); closedSomething = true; }
+  if (!selectionBarEl.hidden) { hideSelectionBar(); closedSomething = true; }
+  return closedSomething;
 }
 
 // Palavra atualmente mostrada no popup, usada pelo botão "Salvar".
@@ -4680,6 +4684,33 @@ window.addEventListener("popstate", () => {
   }
   suppressHistoryPush = false;
 });
+
+// Botão/gesto "voltar" do Android dentro do app empacotado com Capacitor.
+//
+// O WebView nativo não tem nenhum comportamento padrão pra isso -- sem
+// tratar, o toque em "voltar" fecharia o aplicativo inteiro instantaneamente
+// em qualquer tela, mesmo com um popup aberto. Só ativa quando existe a
+// ponte nativa do Capacitor (a versão web/GitHub Pages não carrega o plugin
+// e não entra aqui, então o comportamento dela não muda em nada). Reaproveita
+// closeActivePopup() e o mesmo histórico de "view" acima -- sem lógica nova
+// de navegação:
+//   1. popup/menu/seleção aberto -> fecha só ele;
+//   2. senão, tela interna (ou Lições) -> history.back() (cai no popstate
+//      acima, que já sabe voltar pro Início ou fechar as Lições);
+//   3. senão (já no Início, nada pra fechar) -> sai do app.
+if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+  const CapacitorApp = window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+  if (CapacitorApp) {
+    CapacitorApp.addListener("backButton", () => {
+      if (closeActivePopup()) return;
+      if (history.state && history.state.view && history.state.view !== "home") {
+        history.back();
+      } else {
+        CapacitorApp.exitApp();
+      }
+    });
+  }
+}
 
 function setActiveView(view) {
   pushHistoryStateForView(view);

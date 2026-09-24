@@ -1,0 +1,11 @@
+# Dependências Node instaladas localmente -- reproduzíveis via `npm install`.
+node_modules/
+
+# Diretório web gerado por `npm run build:www` a partir de index.html/css/js/
+# data/ (fonte de verdade continua na raiz). Não é versionado -- regenere com
+# `npm run build:www` ou `npm run cap:sync` sempre que precisar.
+/www/
+
+# Logs e arquivos de sistema operacional.
+npm-debug.log*
+.DS_Store
