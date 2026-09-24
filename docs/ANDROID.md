@@ -7,78 +7,155 @@ continua sendo `index.html` + `css/` + `js/` + `data/` na raiz do repositório
 Nenhuma lógica foi reescrita; veja "O que o Capacitor mudou" no fim deste
 documento para a lista exata de ajustes feitos.
 
+Se você nunca usou o terminal do Linux Mint para programação, comece pela
+seção **"Passo a passo no Linux Mint"** abaixo — ela tem todos os comandos,
+na ordem certa, prontos para copiar e colar.
+
 ## Requisitos
 
 - **Node.js 22+** e **npm** (os pacotes `@capacitor/*` exigem Node ≥ 22).
 - **JDK 21** (o mesmo que o Android Gradle Plugin 8.13 usa).
-- **Android Studio** atual (traz o Android SDK, o emulador e o `adb`). Ao
-  abrir o projeto pela primeira vez, deixe o Android Studio instalar/aceitar:
+- **Android Studio** atual, baixado do
+  [site oficial](https://developer.android.com/studio) — é o jeito mais
+  simples de obter o Android SDK e o `adb` (não instale nada disso por
+  script; use o instalador oficial do Android Studio e deixe ele mesmo
+  te guiar). Ao abrir o projeto pela primeira vez, deixe o Android Studio
+  instalar/aceitar:
   - Android SDK Platform **36** (compileSdk/targetSdk)
   - Android SDK Build-Tools compatível com AGP 8.13.0
   - Um emulador, ou um aparelho físico com Depuração USB ativada.
 - minSdk = **24** (Android 7.0), ou seja, o app roda a partir daí.
 
-## Instalação
+## Passo a passo no Linux Mint
+
+Sequência completa de comandos, do zero até um APK de debug instalado no
+celular. Rode cada bloco no terminal, um de cada vez, e confira a saída antes
+de seguir para o próximo.
+
+**1. Clonar o repositório**
+
+```bash
+git clone https://github.com/davidfsantos10/ingles-biblia.git
+```
+
+**2. Entrar na pasta do projeto**
+
+```bash
+cd ingles-biblia
+```
+
+**3. Verificar se o Node está instalado (precisa ser 22 ou mais novo)**
+
+```bash
+node --version
+```
+
+Se aparecer `command not found` ou uma versão menor que `v22`, instale/
+atualize o Node antes de continuar (pelo site oficial nodejs.org ou pelo
+gerenciador de versões de sua preferência) — este documento não faz essa
+instalação por você.
+
+**4. Verificar se o Java 21 está instalado**
+
+```bash
+java -version
+javac -version
+```
+
+A saída deve mostrar algo como `21.x.x`. Se não tiver Java 21, instale-o
+(pelo site oficial do OpenJDK ou pelo Gerenciador de Programas do Linux
+Mint) antes de continuar.
+
+**5. Instalar as dependências do projeto (Capacitor)**
 
 ```bash
 npm install
 ```
 
-Isso instala `@capacitor/core`, `@capacitor/cli`, `@capacitor/android` e
-`@capacitor/app` (usado só para o botão "voltar" nativo — veja abaixo).
+Isso baixa `@capacitor/core`, `@capacitor/cli`, `@capacitor/android` e
+`@capacitor/app` (usado só para o botão "voltar" nativo — veja "O que o
+Capacitor mudou" no fim deste documento) dentro de `node_modules/` (não vai
+para o Git).
 
-## Preparar o conteúdo web e sincronizar com o Android
-
-O diretório `www/` (o que o Capacitor empacota dentro do app) é **gerado**,
-não é versionado no Git. Ele é uma cópia de `index.html`, `css/`, `js/` e
-`data/` da raiz, mais dois arquivos pequenos do Capacitor necessários só para
-o botão "voltar" (veja a última seção). Sempre que qualquer um desses
-arquivos mudar, rode de novo:
+**6. Preparar o conteúdo web (`www/`)**
 
 ```bash
-npm run cap:sync
+npm run build:www
 ```
 
-(equivalente a `npm run build:www && npx cap sync android` — o primeiro
-prepara `www/`, o segundo copia `www/` para dentro do projeto Android em
-`android/app/src/main/assets/public` e atualiza a lista de plugins nativos).
+Isso copia `index.html`, `css/`, `js/` e `data/` da raiz para dentro de
+`www/` (uma pasta gerada, que também não vai para o Git). Rode este comando
+de novo sempre que qualquer um desses arquivos mudar.
 
-## Abrir no Android Studio
+**7. Sincronizar com o projeto Android**
 
 ```bash
-npm run android:open
+npx cap sync android
 ```
 
-Isso roda `cap:sync` e depois abre `android/` no Android Studio
-(equivalente a `npx cap open android`). De lá, use o botão Run ▶ com um
-emulador ou um aparelho conectado.
+Copia `www/` para dentro de `android/app/src/main/assets/public` e atualiza
+a lista de plugins nativos que o Android vai usar.
 
-## Rodar num aparelho físico (ex.: Galaxy A56)
+**8. Conectar o Galaxy A56 e conferir se o computador o reconhece**
 
-1. Ative "Opções do desenvolvedor" e "Depuração USB" no aparelho.
-2. Conecte por USB e autorize o computador quando o Android pedir.
-3. Confirme que o aparelho aparece:
-   ```bash
-   adb devices
-   ```
-4. Rode pelo Android Studio (Run ▶) ou via CLI:
-   ```bash
-   npx cap run android
-   ```
+No celular: Ajustes → Sobre o telefone → toque 7 vezes em "Número da versão"
+para ativar as "Opções do desenvolvedor"; depois Ajustes → Opções do
+desenvolvedor → ative "Depuração USB". Conecte o cabo USB e, quando aparecer
+um aviso na tela do celular perguntando se autoriza este computador, toque em
+"Permitir".
 
-## Gerar um APK de debug (sem Android Studio)
+```bash
+adb devices
+```
+
+O Galaxy A56 deve aparecer na lista, com `device` na frente do número de
+série (não `unauthorized` nem `offline` — se aparecer isso, olhe de novo a
+tela do celular e autorize).
+
+**9. Compilar o APK de debug**
 
 ```bash
 cd android
 ./gradlew assembleDebug
 ```
 
-O APK fica em `android/app/build/outputs/apk/debug/app-debug.apk`. Instale
-com `adb install -r android/app/build/outputs/apk/debug/app-debug.apk`.
+A primeira vez demora mais (baixa dependências do Gradle/Android). Espere
+terminar com `BUILD SUCCESSFUL`.
 
-Isso é só para **teste** — um APK de debug não é assinado para a Play
-Store. Publicação usa um AAB assinado com uma chave de produção própria,
-gerada à parte (fora deste repositório) numa etapa futura.
+**10. Caminho exato do APK gerado**
+
+```
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+**11. Instalar o APK no Galaxy A56 (com o aparelho já conectado e autorizado)**
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+(rode este comando ainda dentro da pasta `android/`; se você já saiu dela,
+use o caminho completo `android/app/build/outputs/apk/debug/app-debug.apk`
+a partir da raiz do projeto).
+
+## Alternativa: usar o Android Studio em vez da linha de comando
+
+Depois dos passos 1 a 7 acima, você também pode abrir o projeto no Android
+Studio em vez de usar `gradlew`/`adb` direto no terminal:
+
+```bash
+npm run android:open
+```
+
+Isso roda `cap:sync` de novo e abre `android/` no Android Studio
+(equivalente a `npx cap open android`). De lá, use o botão Run ▶ com o
+Galaxy A56 conectado (ou um emulador).
+
+## Gerar um APK de debug — o que ele é (e o que não é)
+
+O APK gerado pelo passo 9 é só para **teste** — um APK de debug não é
+assinado para a Play Store. Publicação usa um AAB assinado com uma chave de
+produção própria, gerada à parte (fora deste repositório) numa etapa futura.
 
 ## O que o Capacitor mudou
 
