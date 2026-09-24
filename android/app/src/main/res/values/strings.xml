@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Inglês com a Bíblia</string>
+    <string name="title_activity_main">Inglês com a Bíblia</string>
+    <string name="package_name">com.davidfsantos.inglesbiblia</string>
+    <string name="custom_url_scheme">com.davidfsantos.inglesbiblia</string>
+</resources>

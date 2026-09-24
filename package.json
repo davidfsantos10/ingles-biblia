@@ -1,0 +1,19 @@
+{
+  "name": "ingles-biblia",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Inglês com a Bíblia — app web (mantido em index.html/css/js/data) com um shell Android via Capacitor.",
+  "scripts": {
+    "build:www": "node scripts/build-www.mjs",
+    "cap:sync": "npm run build:www && npx cap sync android",
+    "android:open": "npm run cap:sync && npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2"
+  }
+}
