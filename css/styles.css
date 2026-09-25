@@ -16,6 +16,95 @@
   --font-reading: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
 }
 
+/* Modo noturno: sobrescreve só as variáveis de cor acima -- como quase todo
+   o CSS já é construído em cima delas (leitura, popups, menus, Lições),
+   isso propaga para o app inteiro sem precisar duplicar regras. O atributo
+   data-theme é escrito no <html> por um script inline no <head> do
+   index.html, antes do CSS carregar, pra não piscar o tema errado; o botão
+   de modo noturno (js/app.js) só alterna esse atributo e salva a escolha. */
+:root[data-theme="dark"] {
+  --color-bg: #17140f;
+  --color-surface: #221e18;
+  --color-border: #3a342a;
+  --color-text: #f1ece1;
+  --color-text-muted: #b6ac98;
+  --color-accent: #e0b984;
+  --color-accent-soft: #3a2f20;
+  --color-history-new: #6badf0;
+  --color-history-repeated: #f08a80;
+  --color-word-blue: #6badf0;
+  --color-word-red: #f08a80;
+  --color-word-yellow: #e3c05a;
+  --color-word-green: #5ecb8f;
+}
+
+/* Alguns cartões do Início usam cor de fundo/texto fixa (não a variável),
+   porque são blocos decorativos com gradiente próprio (versículo do dia,
+   card PRO, planos, botão social) -- eles ficam ilegíveis no escuro se só
+   o :root acima mudar, então recebem um ajuste específico aqui. O resto do
+   app (leitura, popups, menus, Lições) já usa as variáveis e não precisa
+   de nada disso. */
+:root[data-theme="dark"] .home-card {
+  background: rgba(34, 30, 24, 0.86);
+  border-color: rgba(58, 52, 42, 0.95);
+}
+
+:root[data-theme="dark"] .home-verse-card {
+  background:
+    radial-gradient(120% 100% at 100% 0%, rgba(224, 185, 132, 0.18) 0%, rgba(224, 185, 132, 0) 55%),
+    linear-gradient(150deg, #241f18 0%, #201b14 100%);
+  border-color: rgba(224, 185, 132, 0.3);
+}
+
+:root[data-theme="dark"] .home-verse-en {
+  color: var(--color-text);
+}
+
+:root[data-theme="dark"] .home-verse-pt {
+  color: var(--color-text-muted);
+}
+
+:root[data-theme="dark"] .home-pro-inner {
+  background: linear-gradient(160deg, #241f18 0%, #201b14 100%);
+}
+
+:root[data-theme="dark"] .home-pro-title {
+  color: var(--color-text);
+}
+
+:root[data-theme="dark"] .home-pro-sub {
+  color: var(--color-text-muted);
+}
+
+:root[data-theme="dark"] .home-plan {
+  background: #241f1a;
+  border-color: #3a342a;
+}
+
+:root[data-theme="dark"] .home-plan--featured {
+  background: linear-gradient(160deg, #332a18, #3a2f1a);
+  border-color: #8a6a2a;
+}
+
+:root[data-theme="dark"] .home-plan-name,
+:root[data-theme="dark"] .home-plan-price span {
+  color: var(--color-text-muted);
+}
+
+:root[data-theme="dark"] .home-plan--featured .home-plan-name {
+  color: #e0b984;
+}
+
+:root[data-theme="dark"] .home-plan-price {
+  color: var(--color-text);
+}
+
+:root[data-theme="dark"] .home-btn-social {
+  background: #241f18;
+  color: var(--color-text);
+  border-color: #3a342a;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -2361,6 +2450,32 @@ main {
 
 .toast[hidden] {
   display: none;
+}
+
+/* Variante com botão de ação (ex.: "Instalar voz em inglês") -- vira um
+   retângulo em vez do formato de pílula, pra caber texto + botão numa
+   linha só sem apertar demais. */
+.toast--action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  max-width: min(92vw, 26rem);
+  border-radius: 14px;
+  text-align: left;
+}
+
+.toast-action-btn {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 /* Vocabulary */

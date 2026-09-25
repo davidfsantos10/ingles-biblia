@@ -6,10 +6,11 @@
 //
 // Além de copiar os arquivos, injeta na CÓPIA de index.html (nunca no
 // index.html da raiz, que continua servindo o site no GitHub Pages sem
-// nenhuma alteração) duas tags <script> com a ponte JS do Capacitor e do
-// plugin @capacitor/app -- usadas só pelo tratamento do botão "voltar"
-// nativo do Android (ver js/app.js). Isso mantém a versão web exatamente
-// como estava: ela nunca carrega esses arquivos.
+// nenhuma alteração) tags <script> com a ponte JS do Capacitor e dos
+// plugins @capacitor/app (botão "voltar" nativo) e
+// @capacitor-community/text-to-speech (áudio nativo no Android) -- ver
+// js/app.js. Isso mantém a versão web exatamente como estava: ela nunca
+// carrega esses arquivos.
 import { cpSync, rmSync, mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -27,6 +28,10 @@ const CAPACITOR_VENDOR_FILES = [
   {
     src: path.join(root, "node_modules/@capacitor/app/dist/plugin.js"),
     dest: "js/vendor/capacitor-app-plugin.js",
+  },
+  {
+    src: path.join(root, "node_modules/@capacitor-community/text-to-speech/dist/plugin.js"),
+    dest: "js/vendor/capacitor-tts-plugin.js",
   },
 ];
 
@@ -58,6 +63,7 @@ const withCapacitorBridge = original.replace(
   scriptTag,
   '<script src="js/vendor/capacitor.js"></script>\n' +
     '  <script src="js/vendor/capacitor-app-plugin.js"></script>\n' +
+    '  <script src="js/vendor/capacitor-tts-plugin.js"></script>\n' +
     `  ${scriptTag}`
 );
 writeFileSync(indexPath, withCapacitorBridge);
