@@ -272,6 +272,11 @@ const homeHeaderEl = document.getElementById("home-header");
 const appHeaderEl = document.getElementById("app-header");
 const homeDarkModeBtnEl = document.getElementById("home-darkmode-btn");
 const homeNotificationsBtnEl = document.getElementById("home-notifications-btn");
+const notificationsCardEl = document.getElementById("notifications-card");
+const notifDailyToggleEl = document.getElementById("notif-daily-toggle");
+const notifStreakToggleEl = document.getElementById("notif-streak-toggle");
+const notifTimeRowEl = document.getElementById("notif-time-row");
+const notifTimeInputEl = document.getElementById("notif-time-input");
 const homeAvatarBtnEl = document.getElementById("home-avatar-btn");
 const homeLessonsStatusEl = document.getElementById("home-lessons-status");
 const homeLessonsRingEl = document.getElementById("home-lessons-ring");
@@ -1494,6 +1499,129 @@ async function checkSpeechSupport() {
 
 function speakWord(word) {
   speakText(word, 0.85);
+}
+
+// --- Notificações locais (lembrete diário de leitura / de sequência) ---
+//
+// Só usa @capacitor/local-notifications (dentro do Capacitor no Android);
+// não existe nenhum equivalente na versão web -- os toggles ficam
+// visíveis, mas ativá-los mostra um aviso explicando que só funcionam no
+// app instalado. Sem push remoto, sem servidor, sem Firebase.
+//
+// As duas notificações usam o MESMO horário (escolhido pelo usuário, ou
+// 19h por padrão) para manter a interface simples -- um único seletor de
+// horário em vez de dois. isExactNotification: false evita que o Android
+// abra a tela do sistema "Alarmes e lembretes" ao agendar (só necessária
+// pra alarmes no segundo exato, o que um lembrete de leitura não precisa)
+// e evita depender da permissão especial SCHEDULE_EXACT_ALARM;
+// allowWhileIdle mantém o lembrete confiável mesmo com o aparelho em
+// repouso (Doze).
+const NOTIFICATIONS_STORAGE_KEY = "ingles-biblia.notifications";
+const NOTIF_DAILY_READING_ID = 1001;
+const NOTIF_STREAK_ID = 1002;
+const NOTIF_CHANNEL_ID = "lembretes-leitura";
+const NOTIF_DEFAULT_HOUR = 19;
+const NOTIF_DEFAULT_MINUTE = 0;
+
+function loadNotificationPrefs() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(NOTIFICATIONS_STORAGE_KEY) || "null");
+    return {
+      dailyReading: !!(parsed && parsed.dailyReading),
+      streakReminder: !!(parsed && parsed.streakReminder),
+      hour: parsed && Number.isInteger(parsed.hour) ? parsed.hour : NOTIF_DEFAULT_HOUR,
+      minute: parsed && Number.isInteger(parsed.minute) ? parsed.minute : NOTIF_DEFAULT_MINUTE,
+    };
+  } catch (err) {
+    return { dailyReading: false, streakReminder: false, hour: NOTIF_DEFAULT_HOUR, minute: NOTIF_DEFAULT_MINUTE };
+  }
+}
+
+function saveNotificationPrefs(prefs) {
+  try {
+    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(prefs));
+  } catch (err) {
+    // localStorage indisponível -- a preferência só não persiste.
+  }
+}
+
+function isNativeNotificationsAvailable() {
+  return !!(
+    window.Capacitor &&
+    window.Capacitor.isNativePlatform &&
+    window.Capacitor.isNativePlatform() &&
+    window.Capacitor.Plugins &&
+    window.Capacitor.Plugins.LocalNotifications
+  );
+}
+
+let notifChannelEnsured = false;
+
+async function ensureNotificationChannel() {
+  if (notifChannelEnsured) return;
+  try {
+    await window.Capacitor.Plugins.LocalNotifications.createChannel({
+      id: NOTIF_CHANNEL_ID,
+      name: "Lembretes de leitura",
+      description: "Lembretes diários para ler a Bíblia e manter sua sequência de estudos.",
+      importance: 3,
+    });
+    notifChannelEnsured = true;
+  } catch (err) {
+    // Se falhar, schedule() ainda tenta usar o canal padrão do sistema --
+    // não trava o fluxo.
+  }
+}
+
+function buildNotificationSchedule(prefs) {
+  return { on: { hour: prefs.hour, minute: prefs.minute }, allowWhileIdle: true };
+}
+
+// Aplica os toggles atuais ao sistema operacional: agenda o que está ativo,
+// cancela o que foi desativado. Nunca lança exceção -- devolve { ok, reason }.
+async function applyNotificationPrefs(prefs) {
+  if (!isNativeNotificationsAvailable()) return { ok: false, reason: "unsupported" };
+  const LN = window.Capacitor.Plugins.LocalNotifications;
+  await ensureNotificationChannel();
+
+  try {
+    if (prefs.dailyReading) {
+      await LN.schedule({
+        notifications: [
+          {
+            id: NOTIF_DAILY_READING_ID,
+            title: "Hora de ler a Bíblia 📖",
+            body: "Continue seu progresso de hoje em Inglês com a Bíblia.",
+            channelId: NOTIF_CHANNEL_ID,
+            schedule: buildNotificationSchedule(prefs),
+            isExactNotification: false,
+          },
+        ],
+      });
+    } else {
+      await LN.cancel({ notifications: [{ id: NOTIF_DAILY_READING_ID }] });
+    }
+
+    if (prefs.streakReminder) {
+      await LN.schedule({
+        notifications: [
+          {
+            id: NOTIF_STREAK_ID,
+            title: "Não perca sua sequência! 🔥",
+            body: "Volte e mantenha sua sequência de estudos em dia.",
+            channelId: NOTIF_CHANNEL_ID,
+            schedule: buildNotificationSchedule(prefs),
+            isExactNotification: false,
+          },
+        ],
+      });
+    } else {
+      await LN.cancel({ notifications: [{ id: NOTIF_STREAK_ID }] });
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: "error" };
+  }
 }
 
 // Fecha qualquer popup/modal aberto no momento (palavra ou anotação).
@@ -4341,8 +4469,81 @@ homeDarkModeBtnEl.addEventListener("click", () => {
 });
 
 homeNotificationsBtnEl.addEventListener("click", () => {
-  showToast("Notificações em breve!");
+  notificationsCardEl.scrollIntoView({ behavior: "smooth", block: "center" });
 });
+
+function updateNotifTimeRowVisibility(prefs) {
+  notifTimeRowEl.hidden = !(prefs.dailyReading || prefs.streakReminder);
+}
+
+function initNotificationsUI() {
+  const prefs = loadNotificationPrefs();
+  notifDailyToggleEl.checked = prefs.dailyReading;
+  notifStreakToggleEl.checked = prefs.streakReminder;
+  notifTimeInputEl.value = `${String(prefs.hour).padStart(2, "0")}:${String(prefs.minute).padStart(2, "0")}`;
+  updateNotifTimeRowVisibility(prefs);
+}
+
+// Se o pedido de agendar/cancelar falhar (ex.: permissão negada), desliga
+// os toggles de volta e avisa por quê -- nunca deixa a interface mostrando
+// "ativado" sem o lembrete realmente estar agendado.
+async function handleNotifToggleChange() {
+  const prefs = loadNotificationPrefs();
+  prefs.dailyReading = notifDailyToggleEl.checked;
+  prefs.streakReminder = notifStreakToggleEl.checked;
+  updateNotifTimeRowVisibility(prefs);
+
+  if (!isNativeNotificationsAvailable()) {
+    if (prefs.dailyReading || prefs.streakReminder) {
+      showToast("Notificações só funcionam no app Android instalado, não no navegador.");
+      prefs.dailyReading = false;
+      prefs.streakReminder = false;
+      notifDailyToggleEl.checked = false;
+      notifStreakToggleEl.checked = false;
+      updateNotifTimeRowVisibility(prefs);
+    }
+    saveNotificationPrefs(prefs);
+    return;
+  }
+
+  const result = await applyNotificationPrefs(prefs);
+  if (!result.ok) {
+    let deniedByUser = false;
+    try {
+      const status = await window.Capacitor.Plugins.LocalNotifications.checkPermissions();
+      deniedByUser = status.display === "denied";
+    } catch (err) {
+      // Não conseguiu nem checar a permissão -- trata como falha genérica.
+    }
+    showToast(
+      deniedByUser
+        ? "Notificações bloqueadas. Ative nas configurações do Android para usar os lembretes."
+        : "Não foi possível ativar as notificações agora."
+    );
+    prefs.dailyReading = false;
+    prefs.streakReminder = false;
+    notifDailyToggleEl.checked = false;
+    notifStreakToggleEl.checked = false;
+    updateNotifTimeRowVisibility(prefs);
+  }
+  saveNotificationPrefs(prefs);
+}
+
+async function handleNotifTimeChange() {
+  const prefs = loadNotificationPrefs();
+  const [hour, minute] = (notifTimeInputEl.value || "19:00").split(":").map(Number);
+  prefs.hour = Number.isInteger(hour) ? hour : NOTIF_DEFAULT_HOUR;
+  prefs.minute = Number.isInteger(minute) ? minute : NOTIF_DEFAULT_MINUTE;
+  saveNotificationPrefs(prefs);
+  if (prefs.dailyReading || prefs.streakReminder) {
+    await applyNotificationPrefs(prefs);
+  }
+}
+
+notifDailyToggleEl.addEventListener("change", handleNotifToggleChange);
+notifStreakToggleEl.addEventListener("change", handleNotifToggleChange);
+notifTimeInputEl.addEventListener("change", handleNotifTimeChange);
+initNotificationsUI();
 
 homeAvatarBtnEl.addEventListener("click", () => {
   showToast("Perfil em breve! Por enquanto, tudo já é salvo automaticamente neste navegador.");

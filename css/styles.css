@@ -1266,6 +1266,94 @@ main {
   padding: 0;
 }
 
+/* "MINHA CONTA" e "NOTIFICAÇÕES" usam o mesmo rótulo pequeno em maiúsculas
+   -- cor fixa (não é var(--color-*)) porque já existia assim antes do modo
+   noturno; recebe um ajuste específico no bloco de dark mode abaixo. */
+:root[data-theme="dark"] .home-ac-title {
+  color: var(--color-text-muted);
+}
+
+/* Notificações (lembretes locais) */
+
+.notif-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+}
+
+.notif-row[hidden] {
+  display: none;
+}
+
+.notif-row-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.notif-switch {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.notif-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.notif-switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.notif-switch-track::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s;
+}
+
+.notif-switch input:checked + .notif-switch-track {
+  background: var(--color-accent);
+}
+
+.notif-switch input:checked + .notif-switch-track::before {
+  transform: translateX(18px);
+}
+
+.notif-switch input:focus-visible + .notif-switch-track {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.notif-time-input {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.3rem 0.5rem;
+}
+
 /* Botão flutuante de áudio do versículo do dia */
 
 .home-fab-audio {
