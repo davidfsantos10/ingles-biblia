@@ -268,6 +268,26 @@ const homeProgressRingEl = document.getElementById("home-progress-ring");
 const homeProgressTextEl = document.getElementById("home-progress-text");
 const homeProCardEl = document.getElementById("home-pro-card");
 const homeSoonButtons = document.querySelectorAll("[data-home-soon]");
+const accountSignedOutEl = document.getElementById("account-signed-out");
+const accountSignedInEl = document.getElementById("account-signed-in");
+const accountPhotoEl = document.getElementById("account-photo");
+const accountAvatarFallbackEl = document.getElementById("account-avatar-fallback");
+const accountNameEl = document.getElementById("account-name");
+const accountEmailEl = document.getElementById("account-email");
+const accountSignoutBtnEl = document.getElementById("account-signout-btn");
+const accountEmailSignupBtnEl = document.getElementById("account-email-signup-btn");
+const accountEmailLoginBtnEl = document.getElementById("account-email-login-btn");
+const accountGoogleBtnEl = document.getElementById("account-google-btn");
+const authModalEl = document.getElementById("auth-modal");
+const authModalCloseEl = document.getElementById("auth-modal-close");
+const authModalTitleEl = document.getElementById("auth-modal-title");
+const authModalErrorEl = document.getElementById("auth-modal-error");
+const authEmailInputEl = document.getElementById("auth-email-input");
+const authPasswordInputEl = document.getElementById("auth-password-input");
+const authModalSubmitEl = document.getElementById("auth-modal-submit");
+const authModalForgotEl = document.getElementById("auth-modal-forgot");
+const authModalSwitchTextEl = document.getElementById("auth-modal-switch-text");
+const authModalSwitchBtnEl = document.getElementById("auth-modal-switch-btn");
 const homeHeaderEl = document.getElementById("home-header");
 const appHeaderEl = document.getElementById("app-header");
 const homeDarkModeBtnEl = document.getElementById("home-darkmode-btn");
@@ -897,7 +917,7 @@ function openNotePopup(verseKey, verse, book, chapter, button) {
 
 function closeNotePopup() {
   notePopupEl.hidden = true;
-  if (wordPopupEl.hidden && sharePopupEl.hidden) wordPopupBackdropEl.hidden = true;
+  if (wordPopupEl.hidden && sharePopupEl.hidden && authModalEl.hidden) wordPopupBackdropEl.hidden = true;
   currentNoteVerseKey = null;
   currentNoteVerse = null;
   currentNoteBook = null;
@@ -1192,7 +1212,7 @@ function openSharePopup(verse, book, chapter) {
 
 function closeSharePopup() {
   sharePopupEl.hidden = true;
-  if (wordPopupEl.hidden && notePopupEl.hidden) wordPopupBackdropEl.hidden = true;
+  if (wordPopupEl.hidden && notePopupEl.hidden && authModalEl.hidden) wordPopupBackdropEl.hidden = true;
   currentShareVerse = null;
   currentShareBook = null;
   currentShareChapter = null;
@@ -1624,6 +1644,200 @@ async function applyNotificationPrefs(prefs) {
   }
 }
 
+// --- Conta (login com Google e com e-mail/senha via Firebase Auth) ---
+//
+// Só existe dentro do Capacitor no Android, através do
+// @capacitor-firebase/authentication -- na versão web (GitHub Pages) os
+// botões continuam mostrando o aviso "só funciona no app Android
+// instalado", igual às notificações. A sessão é gerenciada inteiramente
+// pelo SDK nativo do Firebase (persiste sozinha entre aberturas do app,
+// sem nenhum código extra aqui); não sincronizamos nada na nuvem nesta
+// etapa -- favoritos, anotações, vocabulário, progresso e streak continuam
+// 100% locais, exatamente como antes.
+let currentAuthUser = null;
+
+function isNativeAuthAvailable() {
+  return !!(
+    window.Capacitor &&
+    window.Capacitor.isNativePlatform &&
+    window.Capacitor.isNativePlatform() &&
+    window.Capacitor.Plugins &&
+    window.Capacitor.Plugins.FirebaseAuthentication
+  );
+}
+
+// O plugin normaliza erros nativos do Android para os mesmos códigos
+// "auth/..." do SDK web do Firebase (ex.: auth/wrong-password,
+// auth/email-already-in-use) -- ver FirebaseAuthenticationHelper.
+// createErrorCode() no código-fonte do plugin. Cobrimos por código
+// primeiro, com um fallback por texto pra qualquer coisa que escape disso
+// (ex.: erro de rede), pra nunca mostrar uma mensagem técnica crua.
+const AUTH_ERROR_MESSAGES = {
+  "auth/email-already-in-use": "Este e-mail já está cadastrado. Tente entrar em vez de criar uma conta nova.",
+  "auth/invalid-email": "Esse e-mail não parece válido. Confira e tente de novo.",
+  "auth/weak-password": "Escolha uma senha mais forte (pelo menos 6 caracteres).",
+  "auth/wrong-password": "Senha incorreta.",
+  "auth/invalid-credential": "E-mail ou senha incorretos.",
+  "auth/user-not-found": "Não encontramos uma conta com esse e-mail.",
+  "auth/user-disabled": "Esta conta foi desativada.",
+  "auth/too-many-requests": "Muitas tentativas seguidas. Espere um pouco e tente de novo.",
+  "auth/network-request-failed": "Sem conexão com a internet. Verifique sua rede e tente de novo.",
+};
+
+function isUserCancelledError(error) {
+  const text = `${(error && error.code) || ""} ${(error && error.message) || ""}`.toLowerCase();
+  return text.includes("cancel");
+}
+
+function mapAuthError(error) {
+  const code = error && error.code;
+  if (code && AUTH_ERROR_MESSAGES[code]) return AUTH_ERROR_MESSAGES[code];
+  const text = `${(error && error.message) || ""}`.toLowerCase();
+  if (text.includes("network")) return AUTH_ERROR_MESSAGES["auth/network-request-failed"];
+  return "Não foi possível concluir agora. Tente de novo em instantes.";
+}
+
+function updateAccountUI(user) {
+  currentAuthUser = user || null;
+  accountSignedOutEl.hidden = !!currentAuthUser;
+  accountSignedInEl.hidden = !currentAuthUser;
+  if (!currentAuthUser) return;
+
+  accountNameEl.textContent = currentAuthUser.displayName || currentAuthUser.email || "Sua conta";
+  accountEmailEl.textContent = currentAuthUser.email || "";
+  if (currentAuthUser.photoUrl) {
+    accountPhotoEl.src = currentAuthUser.photoUrl;
+    accountPhotoEl.hidden = false;
+    accountAvatarFallbackEl.hidden = true;
+  } else {
+    accountPhotoEl.hidden = true;
+    accountAvatarFallbackEl.hidden = false;
+  }
+}
+
+async function initAuthUI() {
+  if (!isNativeAuthAvailable()) return;
+  const FA = window.Capacitor.Plugins.FirebaseAuthentication;
+  FA.addListener("authStateChange", (change) => updateAccountUI(change.user));
+  try {
+    const { user } = await FA.getCurrentUser();
+    updateAccountUI(user);
+  } catch (err) {
+    // Sem usuário logado ainda -- fica no estado padrão (deslogado).
+  }
+}
+
+let authModalMode = "signup";
+
+function openAuthModal(mode) {
+  if (!isNativeAuthAvailable()) {
+    showToast("Login só funciona no app Android instalado, não no navegador.");
+    return;
+  }
+  authModalMode = mode;
+  authModalErrorEl.hidden = true;
+  authPasswordInputEl.value = "";
+  if (mode === "login") {
+    authModalTitleEl.textContent = "Entrar";
+    authModalSubmitEl.textContent = "Entrar";
+    authModalSwitchTextEl.textContent = "Ainda não tem conta?";
+    authModalSwitchBtnEl.textContent = "Criar conta";
+    authPasswordInputEl.autocomplete = "current-password";
+  } else {
+    authModalTitleEl.textContent = "Criar conta";
+    authModalSubmitEl.textContent = "Criar conta";
+    authModalSwitchTextEl.textContent = "Já tem conta?";
+    authModalSwitchBtnEl.textContent = "Entrar";
+    authPasswordInputEl.autocomplete = "new-password";
+  }
+  authModalEl.hidden = false;
+  wordPopupBackdropEl.hidden = false;
+  authEmailInputEl.focus();
+}
+
+function closeAuthModal() {
+  authModalEl.hidden = true;
+  if (wordPopupEl.hidden && notePopupEl.hidden && sharePopupEl.hidden) wordPopupBackdropEl.hidden = true;
+}
+
+async function handleAuthModalSubmit() {
+  const email = authEmailInputEl.value.trim();
+  const password = authPasswordInputEl.value;
+  authModalErrorEl.hidden = true;
+
+  if (!email || !password) {
+    authModalErrorEl.textContent = "Preencha e-mail e senha.";
+    authModalErrorEl.hidden = false;
+    return;
+  }
+  if (!isNativeAuthAvailable()) {
+    showToast("Login só funciona no app Android instalado, não no navegador.");
+    return;
+  }
+
+  const FA = window.Capacitor.Plugins.FirebaseAuthentication;
+  authModalSubmitEl.disabled = true;
+  try {
+    if (authModalMode === "signup") {
+      await FA.createUserWithEmailAndPassword({ email, password });
+    } else {
+      await FA.signInWithEmailAndPassword({ email, password });
+    }
+    closeAuthModal();
+    showToast(authModalMode === "signup" ? "Conta criada! Bem-vindo(a)." : "Login feito com sucesso.");
+  } catch (err) {
+    authModalErrorEl.textContent = mapAuthError(err);
+    authModalErrorEl.hidden = false;
+  } finally {
+    authModalSubmitEl.disabled = false;
+  }
+}
+
+async function handleForgotPassword() {
+  const email = authEmailInputEl.value.trim();
+  if (!email) {
+    authModalErrorEl.textContent = "Digite seu e-mail acima primeiro, depois toque em \"Esqueci minha senha\".";
+    authModalErrorEl.hidden = false;
+    return;
+  }
+  if (!isNativeAuthAvailable()) {
+    showToast("Login só funciona no app Android instalado, não no navegador.");
+    return;
+  }
+  try {
+    await window.Capacitor.Plugins.FirebaseAuthentication.sendPasswordResetEmail({ email });
+    authModalErrorEl.hidden = true;
+    showToast("E-mail de recuperação enviado. Confira sua caixa de entrada.");
+  } catch (err) {
+    authModalErrorEl.textContent = mapAuthError(err);
+    authModalErrorEl.hidden = false;
+  }
+}
+
+async function handleGoogleSignIn() {
+  if (!isNativeAuthAvailable()) {
+    showToast("Login só funciona no app Android instalado, não no navegador.");
+    return;
+  }
+  try {
+    await window.Capacitor.Plugins.FirebaseAuthentication.signInWithGoogle();
+    showToast("Login feito com sucesso.");
+  } catch (err) {
+    if (isUserCancelledError(err)) return;
+    showToast(mapAuthError(err));
+  }
+}
+
+async function handleSignOut() {
+  if (!isNativeAuthAvailable()) return;
+  try {
+    await window.Capacitor.Plugins.FirebaseAuthentication.signOut();
+    showToast("Você saiu da conta.");
+  } catch (err) {
+    showToast("Não foi possível sair agora. Tente de novo.");
+  }
+}
+
 // Fecha qualquer popup/modal aberto no momento (palavra ou anotação).
 // Retorna se algo estava aberto e foi fechado -- usado pelo botão "voltar"
 // do Android (Capacitor) para decidir se deve só fechar o popup ou navegar.
@@ -1632,6 +1846,7 @@ function closeActivePopup() {
   if (!wordPopupEl.hidden) { hideWordPopup(); closedSomething = true; }
   if (!notePopupEl.hidden) { closeNotePopup(); closedSomething = true; }
   if (!sharePopupEl.hidden) { closeSharePopup(); closedSomething = true; }
+  if (!authModalEl.hidden) { closeAuthModal(); closedSomething = true; }
   if (!pickerOverlayEl.hidden) { closePicker(); closedSomething = true; }
   if (!appMenuOverlayEl.hidden) { closeAppMenu(); closedSomething = true; }
   if (!understandOverlayEl.hidden) { closeUnderstandPanel(); closedSomething = true; }
@@ -1683,7 +1898,7 @@ function showWordPopup(word, lang, translation, isLoading) {
 
 function hideWordPopup() {
   wordPopupEl.hidden = true;
-  if (notePopupEl.hidden && sharePopupEl.hidden) wordPopupBackdropEl.hidden = true;
+  if (notePopupEl.hidden && sharePopupEl.hidden && authModalEl.hidden) wordPopupBackdropEl.hidden = true;
   document.querySelectorAll(".word--active").forEach((el) => el.classList.remove("word--active"));
   currentPopupWord = null;
   currentPopupLang = null;
@@ -4545,8 +4760,21 @@ notifStreakToggleEl.addEventListener("change", handleNotifToggleChange);
 notifTimeInputEl.addEventListener("change", handleNotifTimeChange);
 initNotificationsUI();
 
+accountEmailSignupBtnEl.addEventListener("click", () => openAuthModal("signup"));
+accountEmailLoginBtnEl.addEventListener("click", () => openAuthModal("login"));
+accountGoogleBtnEl.addEventListener("click", handleGoogleSignIn);
+accountSignoutBtnEl.addEventListener("click", handleSignOut);
+authModalCloseEl.addEventListener("click", closeAuthModal);
+authModalSubmitEl.addEventListener("click", handleAuthModalSubmit);
+authModalForgotEl.addEventListener("click", handleForgotPassword);
+authModalSwitchBtnEl.addEventListener("click", () => openAuthModal(authModalMode === "signup" ? "login" : "signup"));
+authPasswordInputEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") handleAuthModalSubmit();
+});
+initAuthUI();
+
 homeAvatarBtnEl.addEventListener("click", () => {
-  showToast("Perfil em breve! Por enquanto, tudo já é salvo automaticamente neste navegador.");
+  document.getElementById("account-card").scrollIntoView({ behavior: "smooth", block: "center" });
 });
 
 // --- Lições: exercícios de tradução gerados a partir da própria Bíblia do

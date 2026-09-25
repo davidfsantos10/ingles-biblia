@@ -8,9 +8,10 @@
 // index.html da raiz, que continua servindo o site no GitHub Pages sem
 // nenhuma alteração) tags <script> com a ponte JS do Capacitor e dos
 // plugins @capacitor/app (botão "voltar" nativo), @capacitor-community/
-// text-to-speech (áudio nativo no Android) e @capacitor/local-notifications
-// (lembretes locais) -- ver js/app.js. Isso mantém a versão web exatamente
-// como estava: ela nunca carrega esses arquivos.
+// text-to-speech (áudio nativo no Android), @capacitor/local-notifications
+// (lembretes locais) e @capacitor-firebase/authentication (login) -- ver
+// js/app.js. Isso mantém a versão web exatamente como estava: ela nunca
+// carrega esses arquivos.
 import { cpSync, rmSync, mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -36,6 +37,16 @@ const CAPACITOR_VENDOR_FILES = [
   {
     src: path.join(root, "node_modules/@capacitor/local-notifications/dist/plugin.js"),
     dest: "js/vendor/capacitor-notifications-plugin.js",
+  },
+  {
+    // Stub próprio (não vem do node_modules) -- ver o comentário no próprio
+    // arquivo. Precisa carregar ANTES do plugin.js do Firebase Auth abaixo.
+    src: path.join(root, "js/vendor-stubs/firebase-auth-stub.js"),
+    dest: "js/vendor/firebase-auth-stub.js",
+  },
+  {
+    src: path.join(root, "node_modules/@capacitor-firebase/authentication/dist/plugin.js"),
+    dest: "js/vendor/capacitor-firebase-auth-plugin.js",
   },
 ];
 
@@ -69,6 +80,8 @@ const withCapacitorBridge = original.replace(
     '  <script src="js/vendor/capacitor-app-plugin.js"></script>\n' +
     '  <script src="js/vendor/capacitor-tts-plugin.js"></script>\n' +
     '  <script src="js/vendor/capacitor-notifications-plugin.js"></script>\n' +
+    '  <script src="js/vendor/firebase-auth-stub.js"></script>\n' +
+    '  <script src="js/vendor/capacitor-firebase-auth-plugin.js"></script>\n' +
     `  ${scriptTag}`
 );
 writeFileSync(indexPath, withCapacitorBridge);
