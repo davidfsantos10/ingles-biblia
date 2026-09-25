@@ -2452,6 +2452,32 @@ main {
   display: none;
 }
 
+/* Variante com botão de ação (ex.: "Instalar voz em inglês") -- vira um
+   retângulo em vez do formato de pílula, pra caber texto + botão numa
+   linha só sem apertar demais. */
+.toast--action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  max-width: min(92vw, 26rem);
+  border-radius: 14px;
+  text-align: left;
+}
+
+.toast-action-btn {
+  flex-shrink: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Vocabulary */
 
 .vocabulary-view {

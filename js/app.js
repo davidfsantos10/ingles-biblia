@@ -921,13 +921,29 @@ function handleNoteDelete() {
 
 let toastTimeoutId = null;
 
-function showToast(message) {
+// action é opcional -- { label, onClick } -- usado só pelo aviso de "voz em
+// inglês não instalada" (TTS no Android). Sem action, comportamento igual
+// ao de sempre: só texto, some sozinho em 2.4s.
+function showToast(message, action) {
   toastEl.textContent = message;
+  toastEl.classList.toggle("toast--action", !!action);
+  if (action) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "toast-action-btn";
+    btn.textContent = action.label;
+    btn.addEventListener("click", () => {
+      toastEl.hidden = true;
+      clearTimeout(toastTimeoutId);
+      action.onClick();
+    });
+    toastEl.appendChild(btn);
+  }
   toastEl.hidden = false;
   clearTimeout(toastTimeoutId);
   toastTimeoutId = setTimeout(() => {
     toastEl.hidden = true;
-  }, 2400);
+  }, action ? 6000 : 2400);
 }
 
 // --- Compartilhar versículo (cartão de imagem personalizável) ---
@@ -1294,23 +1310,114 @@ async function loadChapter(book, chapter) {
   }
 }
 
-// --- Pronúncia e tradução ao clicar em uma palavra ---
+// --- Pronúncia (áudio de palavra e de versículo) ---
 //
-// No Chrome/WebView do Android, speechSynthesis.getVoices() costuma
-// retornar uma lista vazia logo depois da página carregar -- as vozes
-// carregam de forma assíncrona, e falar antes delas chegarem simplesmente
-// não produz som nenhum (sem erro, sem aviso). O site desktop raramente
-// mostra esse problema porque o navegador já tem vozes carregadas de
-// sessões anteriores. Por isso: (1) disparamos getVoices() cedo, assim que
-// o app carrega, só para começar o carregamento antes do primeiro toque;
-// (2) se ainda estiver vazio na hora de falar, esperamos o evento
+// Abstração única (speakText/stopSpeech/checkSpeechSupport): quem chama não
+// precisa saber se o áudio sai pelo TTS nativo do Android ou pelo Web
+// Speech do navegador -- essas três funções decidem isso sozinhas.
+//
+// CAMADA 1 -- Android nativo (@capacitor-community/text-to-speech): usa o
+// motor TextToSpeech do próprio sistema operacional Android (o mesmo motor
+// que qualquer outro app usa), disponível desde o Android 1.6 -- bem abaixo
+// do minSdk 24 deste app -- e funciona OFFLINE sempre que o aparelho já tem
+// a voz baixada. Só ativa dentro do Capacitor no Android (a versão web
+// nunca carrega esse plugin, então cai direto na camada 2).
+//
+// CAMADA 2 -- Web Speech (window.speechSynthesis): usada na versão web
+// (GitHub Pages) e como reserva caso o plugin nativo não esteja disponível
+// por algum motivo dentro do próprio app Android. No Chrome/WebView do
+// Android, speechSynthesis.getVoices() costuma retornar uma lista vazia
+// logo depois da página carregar -- as vozes carregam de forma assíncrona,
+// e falar antes delas chegarem simplesmente não produz som nenhum (sem
+// erro, sem aviso). Por isso: (1) disparamos getVoices() cedo, assim que o
+// app carrega, só para começar o carregamento antes do primeiro toque; (2)
+// se ainda estiver vazio na hora de falar, esperamos o evento
 // "voiceschanged" (ou um voto de confiança de 300ms, caso o evento nunca
 // dispare em algum WebView) antes de tentar de novo; (3) quando existem
 // vozes, escolhemos explicitamente uma em inglês (en-US, senão qualquer
-// "en-*") em vez de confiar só em utterance.lang, porque alguns WebViews
-// ignoram utterance.lang se nenhuma voz for setada explicitamente.
+// "en-*") em vez de confiar só em utterance.lang.
+//
+// CAMADA 3 -- fallback online: avaliada, não implementada nesta tarefa (ver
+// relatório -- exigiria decidir sobre custo/privacidade/backend antes).
 if ("speechSynthesis" in window) {
   window.speechSynthesis.getVoices();
+}
+
+function isNativeTtsAvailable() {
+  return !!(
+    window.Capacitor &&
+    window.Capacitor.isNativePlatform &&
+    window.Capacitor.isNativePlatform() &&
+    window.Capacitor.Plugins &&
+    window.Capacitor.Plugins.TextToSpeech
+  );
+}
+
+// Qual idioma inglês o aparelho suporta (en-US, senão en-GB, senão "" se
+// nenhum) -- guardado em cache pra não perguntar ao sistema a cada toque.
+// invalidateNativeEnglishLangCache() força perguntar de novo (chamada depois
+// que o usuário volta da tela de instalação de voz).
+let nativeEnglishLangCache = null;
+
+function invalidateNativeEnglishLangCache() {
+  nativeEnglishLangCache = null;
+}
+
+async function resolveNativeEnglishLang() {
+  if (nativeEnglishLangCache !== null) return nativeEnglishLangCache;
+  const TTS = window.Capacitor.Plugins.TextToSpeech;
+  try {
+    for (const candidate of ["en-US", "en-GB"]) {
+      const { supported } = await TTS.isLanguageSupported({ lang: candidate });
+      if (supported) {
+        nativeEnglishLangCache = candidate;
+        return candidate;
+      }
+    }
+  } catch (err) {
+    // Se a checagem falhar, segue como "nenhum idioma confirmado" em vez de
+    // travar -- o pior caso é mostrar o aviso de instalar voz sem precisar.
+  }
+  nativeEnglishLangCache = "";
+  return "";
+}
+
+function showEnglishVoiceMissingPrompt() {
+  showToast("Este aparelho não tem voz em inglês instalada.", {
+    label: "Instalar voz em inglês",
+    onClick: async () => {
+      try {
+        await window.Capacitor.Plugins.TextToSpeech.openInstall();
+      } catch (err) {
+        // Alguns aparelhos/fabricantes não oferecem esse fluxo -- não há
+        // nada mais a fazer por aqui além de deixar o toque sem efeito.
+      }
+      invalidateNativeEnglishLangCache();
+    },
+  });
+}
+
+async function speakNative(text, rate) {
+  const TTS = window.Capacitor.Plugins.TextToSpeech;
+  const lang = await resolveNativeEnglishLang();
+  if (!lang) {
+    showEnglishVoiceMissingPrompt();
+    return;
+  }
+  try {
+    await TTS.stop();
+  } catch (err) {
+    // stop() antes de falar é só por segurança -- ignora se não tinha nada
+    // tocando ainda.
+  }
+  try {
+    // queueStrategy 0 = Flush: qualquer fala em andamento é interrompida
+    // pela nova, sem precisar chamar stop() manualmente (evita sobreposição
+    // mesmo em toques rápidos em sequência).
+    await TTS.speak({ text, lang, rate: rate || 0.9, queueStrategy: 0 });
+  } catch (err) {
+    showToast("Não foi possível reproduzir o áudio agora.");
+  }
 }
 
 function pickEnglishVoice() {
@@ -1322,7 +1429,7 @@ function pickEnglishVoice() {
   );
 }
 
-function speakText(text, rate) {
+function speakTextWeb(text, rate) {
   if (!("speechSynthesis" in window)) return;
 
   const doSpeak = () => {
@@ -1351,6 +1458,38 @@ function speakText(text, rate) {
   };
   window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged);
   setTimeout(onVoicesChanged, 300);
+}
+
+// Ponto de entrada único usado em todo o app (word tap, botão de ouvir
+// versículo, "Entender trecho", Lições etc.) -- decide sozinho qual camada
+// usar. Nunca lança exceção pra quem chama, mesmo se o TTS falhar.
+function speakText(text, rate) {
+  if (isNativeTtsAvailable()) {
+    speakNative(text, rate);
+    return;
+  }
+  speakTextWeb(text, rate);
+}
+
+function stopSpeech() {
+  if (isNativeTtsAvailable()) {
+    window.Capacitor.Plugins.TextToSpeech.stop().catch(() => {});
+    return;
+  }
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+}
+
+// Detecta disponibilidade sem falar nada -- usada só internamente por
+// enquanto (ex.: poderia alimentar um indicador futuro), mas faz parte da
+// mesma abstração única por completude e pra não espalhar essa lógica de
+// detecção em outro lugar do app no futuro.
+async function checkSpeechSupport() {
+  if (isNativeTtsAvailable()) {
+    const lang = await resolveNativeEnglishLang();
+    return { available: true, native: true, englishSupported: !!lang, lang: lang || null };
+  }
+  const webAvailable = "speechSynthesis" in window;
+  return { available: webAvailable, native: false, englishSupported: webAvailable, lang: webAvailable ? "en-US" : null };
 }
 
 function speakWord(word) {

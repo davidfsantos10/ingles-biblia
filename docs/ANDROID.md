@@ -72,10 +72,11 @@ Mint) antes de continuar.
 npm install
 ```
 
-Isso baixa `@capacitor/core`, `@capacitor/cli`, `@capacitor/android` e
-`@capacitor/app` (usado só para o botão "voltar" nativo — veja "O que o
-Capacitor mudou" no fim deste documento) dentro de `node_modules/` (não vai
-para o Git).
+Isso baixa `@capacitor/core`, `@capacitor/cli`, `@capacitor/android`,
+`@capacitor/app` (botão "voltar" nativo) e
+`@capacitor-community/text-to-speech` (áudio nativo do Android — veja "O
+que o Capacitor mudou" no fim deste documento) dentro de `node_modules/`
+(não vai para o Git).
 
 **6. Preparar o conteúdo web (`www/`)**
 
@@ -179,12 +180,21 @@ produção própria, gerada à parte (fora deste repositório) numa etapa futura
      para isso (confirmado lendo o código-fonte do `@capacitor/android`; não
      havia nada preservável aqui). Na versão web (GitHub Pages) esse bloco
      não faz nada, porque `window.Capacitor` não existe lá.
-- **`www/index.html` (gerado, não versionado)**: recebe duas tags `<script>`
+  3. `speakText()` (áudio de palavra e de versículo) agora decide sozinho
+     entre o TTS nativo do Android (`@capacitor-community/text-to-speech`,
+     que usa o motor `TextToSpeech` do próprio sistema operacional — funciona
+     offline com a voz já instalada) e o Web Speech (`window.speechSynthesis`,
+     inalterado) usado na versão web. Tenta `en-US`, depois `en-GB`; se o
+     aparelho não tiver nenhuma voz em inglês instalada, mostra um aviso com
+     um botão "Instalar voz em inglês" que abre a tela de instalação do
+     próprio Android (`openInstall()`). Ver `docs/TTS.md` para detalhes.
+- **`www/index.html` (gerado, não versionado)**: recebe três tags `<script>`
   a mais, injetadas só na cópia gerada por `scripts/build-www.mjs` — carregam
-  a ponte JS do Capacitor e do plugin `@capacitor/app`, necessárias para o
-  item 2 acima funcionar. O `index.html` da raiz (o que o GitHub Pages serve)
+  a ponte JS do Capacitor e dos plugins `@capacitor/app` e
+  `@capacitor-community/text-to-speech`, necessárias para os itens 2 e 3
+  acima funcionarem. O `index.html` da raiz (o que o GitHub Pages serve)
   **não é tocado**.
 
 Tudo o mais (leitura, traduções, Lições, Flashcards, Gramática, Favoritos,
-Anotações, compartilhamento, "Entender trecho", TTS, localStorage) continua
+Anotações, compartilhamento, "Entender trecho", localStorage) continua
 sendo exatamente o código já existente, sem alteração.
