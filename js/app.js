@@ -128,6 +128,29 @@ function loadReadingLayout() {
 
 let readingLayout = loadReadingLayout();
 
+// Modo noturno: o tema inicial já foi aplicado no <html> por um script
+// inline no <head> de index.html (evita piscar o tema errado antes do CSS
+// carregar); aqui só lemos o que foi aplicado e trocamos/salvamos quando o
+// usuário clica no botão. Mesma chave de localStorage dos dois lugares.
+const THEME_STORAGE_KEY = "ingles-biblia.theme";
+
+function getCurrentTheme() {
+  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+}
+
+function setTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch (err) {
+    // localStorage indisponível (ex.: modo privado) -- tema só não persiste.
+  }
+}
+
+function toggleTheme() {
+  setTheme(getCurrentTheme() === "dark" ? "light" : "dark");
+}
+
 const bookSelectBtnEl = document.getElementById("book-select-btn");
 const bookSelectLabelEl = document.getElementById("book-select-label");
 const chapterSelectBtnEl = document.getElementById("chapter-select-btn");
@@ -1272,14 +1295,62 @@ async function loadChapter(book, chapter) {
 }
 
 // --- Pronúncia e tradução ao clicar em uma palavra ---
+//
+// No Chrome/WebView do Android, speechSynthesis.getVoices() costuma
+// retornar uma lista vazia logo depois da página carregar -- as vozes
+// carregam de forma assíncrona, e falar antes delas chegarem simplesmente
+// não produz som nenhum (sem erro, sem aviso). O site desktop raramente
+// mostra esse problema porque o navegador já tem vozes carregadas de
+// sessões anteriores. Por isso: (1) disparamos getVoices() cedo, assim que
+// o app carrega, só para começar o carregamento antes do primeiro toque;
+// (2) se ainda estiver vazio na hora de falar, esperamos o evento
+// "voiceschanged" (ou um voto de confiança de 300ms, caso o evento nunca
+// dispare em algum WebView) antes de tentar de novo; (3) quando existem
+// vozes, escolhemos explicitamente uma em inglês (en-US, senão qualquer
+// "en-*") em vez de confiar só em utterance.lang, porque alguns WebViews
+// ignoram utterance.lang se nenhuma voz for setada explicitamente.
+if ("speechSynthesis" in window) {
+  window.speechSynthesis.getVoices();
+}
+
+function pickEnglishVoice() {
+  const voices = window.speechSynthesis.getVoices();
+  return (
+    voices.find((v) => v.lang === "en-US") ||
+    voices.find((v) => v.lang && v.lang.toLowerCase().startsWith("en")) ||
+    null
+  );
+}
 
 function speakText(text, rate) {
   if (!("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
-  utterance.rate = rate || 0.9;
-  window.speechSynthesis.speak(utterance);
+
+  const doSpeak = () => {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+    utterance.rate = rate || 0.9;
+    const voice = pickEnglishVoice();
+    if (voice) utterance.voice = voice;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  if (window.speechSynthesis.getVoices().length > 0) {
+    doSpeak();
+    return;
+  }
+  // Vozes ainda não carregaram: tenta de novo assim que carregarem, com um
+  // prazo máximo de 300ms para não travar o toque do usuário indefinidamente
+  // caso "voiceschanged" nunca dispare nesse WebView.
+  let spoken = false;
+  const onVoicesChanged = () => {
+    if (spoken) return;
+    spoken = true;
+    window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
+    doSpeak();
+  };
+  window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged);
+  setTimeout(onVoicesChanged, 300);
 }
 
 function speakWord(word) {
@@ -4127,7 +4198,7 @@ for (const btn of homeSoonButtons) {
 }
 
 homeDarkModeBtnEl.addEventListener("click", () => {
-  showToast("Modo escuro em breve!");
+  toggleTheme();
 });
 
 homeNotificationsBtnEl.addEventListener("click", () => {

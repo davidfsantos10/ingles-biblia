@@ -4,6 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Inglês com a Bíblia</title>
+  <script>
+    // Aplica o tema salvo (ou a preferência do sistema, na primeira vez)
+    // antes do CSS carregar, pra não piscar o tema errado por uma fração
+    // de segundo. js/app.js reaproveita a mesma chave pra alternar/salvar.
+    (function () {
+      try {
+        var stored = localStorage.getItem("ingles-biblia.theme");
+        var theme =
+          stored === "dark" || stored === "light"
+            ? stored
+            : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+        document.documentElement.setAttribute("data-theme", theme);
+      } catch (err) {}
+    })();
+  </script>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
