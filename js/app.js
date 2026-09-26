@@ -268,10 +268,35 @@ const homeProgressRingEl = document.getElementById("home-progress-ring");
 const homeProgressTextEl = document.getElementById("home-progress-text");
 const homeProCardEl = document.getElementById("home-pro-card");
 const homeSoonButtons = document.querySelectorAll("[data-home-soon]");
+const accountSignedOutEl = document.getElementById("account-signed-out");
+const accountSignedInEl = document.getElementById("account-signed-in");
+const accountPhotoEl = document.getElementById("account-photo");
+const accountAvatarFallbackEl = document.getElementById("account-avatar-fallback");
+const accountNameEl = document.getElementById("account-name");
+const accountEmailEl = document.getElementById("account-email");
+const accountSignoutBtnEl = document.getElementById("account-signout-btn");
+const accountEmailSignupBtnEl = document.getElementById("account-email-signup-btn");
+const accountEmailLoginBtnEl = document.getElementById("account-email-login-btn");
+const accountGoogleBtnEl = document.getElementById("account-google-btn");
+const authModalEl = document.getElementById("auth-modal");
+const authModalCloseEl = document.getElementById("auth-modal-close");
+const authModalTitleEl = document.getElementById("auth-modal-title");
+const authModalErrorEl = document.getElementById("auth-modal-error");
+const authEmailInputEl = document.getElementById("auth-email-input");
+const authPasswordInputEl = document.getElementById("auth-password-input");
+const authModalSubmitEl = document.getElementById("auth-modal-submit");
+const authModalForgotEl = document.getElementById("auth-modal-forgot");
+const authModalSwitchTextEl = document.getElementById("auth-modal-switch-text");
+const authModalSwitchBtnEl = document.getElementById("auth-modal-switch-btn");
 const homeHeaderEl = document.getElementById("home-header");
 const appHeaderEl = document.getElementById("app-header");
 const homeDarkModeBtnEl = document.getElementById("home-darkmode-btn");
 const homeNotificationsBtnEl = document.getElementById("home-notifications-btn");
+const notificationsCardEl = document.getElementById("notifications-card");
+const notifDailyToggleEl = document.getElementById("notif-daily-toggle");
+const notifStreakToggleEl = document.getElementById("notif-streak-toggle");
+const notifTimeRowEl = document.getElementById("notif-time-row");
+const notifTimeInputEl = document.getElementById("notif-time-input");
 const homeAvatarBtnEl = document.getElementById("home-avatar-btn");
 const homeLessonsStatusEl = document.getElementById("home-lessons-status");
 const homeLessonsRingEl = document.getElementById("home-lessons-ring");
@@ -892,7 +917,7 @@ function openNotePopup(verseKey, verse, book, chapter, button) {
 
 function closeNotePopup() {
   notePopupEl.hidden = true;
-  if (wordPopupEl.hidden && sharePopupEl.hidden) wordPopupBackdropEl.hidden = true;
+  if (wordPopupEl.hidden && sharePopupEl.hidden && authModalEl.hidden) wordPopupBackdropEl.hidden = true;
   currentNoteVerseKey = null;
   currentNoteVerse = null;
   currentNoteBook = null;
@@ -1187,7 +1212,7 @@ function openSharePopup(verse, book, chapter) {
 
 function closeSharePopup() {
   sharePopupEl.hidden = true;
-  if (wordPopupEl.hidden && notePopupEl.hidden) wordPopupBackdropEl.hidden = true;
+  if (wordPopupEl.hidden && notePopupEl.hidden && authModalEl.hidden) wordPopupBackdropEl.hidden = true;
   currentShareVerse = null;
   currentShareBook = null;
   currentShareChapter = null;
@@ -1496,6 +1521,388 @@ function speakWord(word) {
   speakText(word, 0.85);
 }
 
+// --- Notificações locais (lembrete diário de leitura / de sequência) ---
+//
+// Só usa @capacitor/local-notifications (dentro do Capacitor no Android);
+// não existe nenhum equivalente na versão web -- os toggles ficam
+// visíveis, mas ativá-los mostra um aviso explicando que só funcionam no
+// app instalado. Sem push remoto, sem servidor, sem Firebase.
+//
+// As duas notificações usam o MESMO horário (escolhido pelo usuário, ou
+// 19h por padrão) para manter a interface simples -- um único seletor de
+// horário em vez de dois. isExactNotification: false evita que o Android
+// abra a tela do sistema "Alarmes e lembretes" ao agendar (só necessária
+// pra alarmes no segundo exato, o que um lembrete de leitura não precisa)
+// e evita depender da permissão especial SCHEDULE_EXACT_ALARM;
+// allowWhileIdle mantém o lembrete confiável mesmo com o aparelho em
+// repouso (Doze).
+const NOTIFICATIONS_STORAGE_KEY = "ingles-biblia.notifications";
+const NOTIF_DAILY_READING_ID = 1001;
+const NOTIF_STREAK_ID = 1002;
+const NOTIF_CHANNEL_ID = "lembretes-leitura";
+const NOTIF_DEFAULT_HOUR = 19;
+const NOTIF_DEFAULT_MINUTE = 0;
+
+function loadNotificationPrefs() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(NOTIFICATIONS_STORAGE_KEY) || "null");
+    return {
+      dailyReading: !!(parsed && parsed.dailyReading),
+      streakReminder: !!(parsed && parsed.streakReminder),
+      hour: parsed && Number.isInteger(parsed.hour) ? parsed.hour : NOTIF_DEFAULT_HOUR,
+      minute: parsed && Number.isInteger(parsed.minute) ? parsed.minute : NOTIF_DEFAULT_MINUTE,
+    };
+  } catch (err) {
+    return { dailyReading: false, streakReminder: false, hour: NOTIF_DEFAULT_HOUR, minute: NOTIF_DEFAULT_MINUTE };
+  }
+}
+
+function saveNotificationPrefs(prefs) {
+  try {
+    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(prefs));
+  } catch (err) {
+    // localStorage indisponível -- a preferência só não persiste.
+  }
+}
+
+function isNativeNotificationsAvailable() {
+  return !!(
+    window.Capacitor &&
+    window.Capacitor.isNativePlatform &&
+    window.Capacitor.isNativePlatform() &&
+    window.Capacitor.Plugins &&
+    window.Capacitor.Plugins.LocalNotifications
+  );
+}
+
+let notifChannelEnsured = false;
+
+async function ensureNotificationChannel() {
+  if (notifChannelEnsured) return;
+  try {
+    await window.Capacitor.Plugins.LocalNotifications.createChannel({
+      id: NOTIF_CHANNEL_ID,
+      name: "Lembretes de leitura",
+      description: "Lembretes diários para ler a Bíblia e manter sua sequência de estudos.",
+      importance: 3,
+    });
+    notifChannelEnsured = true;
+  } catch (err) {
+    // Se falhar, schedule() ainda tenta usar o canal padrão do sistema --
+    // não trava o fluxo.
+  }
+}
+
+function buildNotificationSchedule(prefs) {
+  return { on: { hour: prefs.hour, minute: prefs.minute }, allowWhileIdle: true };
+}
+
+// Aplica os toggles atuais ao sistema operacional: agenda o que está ativo,
+// cancela o que foi desativado. Nunca lança exceção -- devolve { ok, reason }.
+async function applyNotificationPrefs(prefs) {
+  if (!isNativeNotificationsAvailable()) return { ok: false, reason: "unsupported" };
+  const LN = window.Capacitor.Plugins.LocalNotifications;
+  await ensureNotificationChannel();
+
+  try {
+    if (prefs.dailyReading) {
+      await LN.schedule({
+        notifications: [
+          {
+            id: NOTIF_DAILY_READING_ID,
+            title: "Hora de ler a Bíblia 📖",
+            body: "Continue seu progresso de hoje em Inglês com a Bíblia.",
+            channelId: NOTIF_CHANNEL_ID,
+            schedule: buildNotificationSchedule(prefs),
+            isExactNotification: false,
+          },
+        ],
+      });
+    } else {
+      await LN.cancel({ notifications: [{ id: NOTIF_DAILY_READING_ID }] });
+    }
+
+    if (prefs.streakReminder) {
+      await LN.schedule({
+        notifications: [
+          {
+            id: NOTIF_STREAK_ID,
+            title: "Não perca sua sequência! 🔥",
+            body: "Volte e mantenha sua sequência de estudos em dia.",
+            channelId: NOTIF_CHANNEL_ID,
+            schedule: buildNotificationSchedule(prefs),
+            isExactNotification: false,
+          },
+        ],
+      });
+    } else {
+      await LN.cancel({ notifications: [{ id: NOTIF_STREAK_ID }] });
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: "error" };
+  }
+}
+
+// --- Conta (login com Google e com e-mail/senha via Firebase Auth) ---
+//
+// Só existe dentro do Capacitor no Android, através do
+// @capacitor-firebase/authentication -- na versão web (GitHub Pages) os
+// botões continuam mostrando o aviso "só funciona no app Android
+// instalado", igual às notificações. A sessão é gerenciada inteiramente
+// pelo SDK nativo do Firebase (persiste sozinha entre aberturas do app,
+// sem nenhum código extra aqui); não sincronizamos nada na nuvem nesta
+// etapa -- favoritos, anotações, vocabulário, progresso e streak continuam
+// 100% locais, exatamente como antes.
+let currentAuthUser = null;
+
+// DIAGNÓSTICO TEMPORÁRIO (remover depois de confirmar e corrigir a causa
+// raiz do cadastro por e-mail/senha não funcionar no Galaxy A56): liga
+// logs no console (visíveis via `adb logcat` filtrando por "auth-debug")
+// e mostra o código de erro real (ex.: "auth/xxxxx") junto da mensagem
+// amigável, para conseguirmos ver exatamente o que o Firebase/plugin
+// retorna no aparelho real. Nunca loga senha, token, credencial ou
+// qualquer dado sensível -- só error.code, error.message e a etapa.
+const AUTH_DEBUG = true;
+
+// Usa console.warn (não console.error) de propósito -- fica visível no
+// `adb logcat` igualmente, mas não é confundido com um erro real de
+// página pelos testes automatizados existentes (que falham se detectam
+// qualquer console.error, e é esperado ter várias etapas "falhou" aqui
+// durante o diagnóstico sem que isso signifique uma quebra da página).
+function logAuthDebug(step, error) {
+  if (!AUTH_DEBUG) return;
+  console.warn(`[auth-debug] ${step}`, {
+    code: (error && error.code) || null,
+    message: (error && error.message) || null,
+  });
+}
+
+function isNativeAuthAvailable() {
+  const capacitor = window.Capacitor;
+  const isNative = !!(capacitor && capacitor.isNativePlatform && capacitor.isNativePlatform());
+  const hasPlugin = !!(capacitor && capacitor.Plugins && capacitor.Plugins.FirebaseAuthentication);
+  // Só é digno de log quando a plataforma nativa foi detectada mas o
+  // plugin não está lá -- esse é o caso anômalo (ex.: falha de registro
+  // do plugin no app instalado). No navegador (isNative=false) é sempre
+  // assim, então logar ali só faria ruído a cada carregamento de página.
+  if (AUTH_DEBUG && isNative && !hasPlugin) {
+    console.warn("[auth-debug] plataforma nativa detectada mas FirebaseAuthentication não registrado", {
+      hasCapacitor: !!capacitor,
+      isNativePlatform: isNative,
+      hasFirebaseAuthPlugin: hasPlugin,
+    });
+  }
+  return isNative && hasPlugin;
+}
+
+// O plugin normaliza erros nativos do Android para os mesmos códigos
+// "auth/..." do SDK web do Firebase (ex.: auth/wrong-password,
+// auth/email-already-in-use) -- ver FirebaseAuthenticationHelper.
+// createErrorCode() no código-fonte do plugin. Cobrimos por código
+// primeiro, com um fallback por texto pra qualquer coisa que escape disso
+// (ex.: erro de rede), pra nunca mostrar uma mensagem técnica crua.
+//
+// IMPORTANTE (achado na revisão desta correção): createErrorCode() no
+// plugin só gera um código "auth/..." quando a exceção nativa é uma
+// FirebaseAuthException. Qualquer outra exceção (ex.: IllegalStateException
+// se o FirebaseApp não tiver sido inicializado corretamente a partir do
+// google-services.json, ou um FirebaseNetworkException) chega ao JS com
+// code=null -- por isso a mensagem genérica abaixo, e por isso o código
+// real (quando existe) é exposto separadamente em formatAuthErrorForDisplay.
+const AUTH_ERROR_MESSAGES = {
+  "auth/email-already-in-use": "Este e-mail já está cadastrado. Tente entrar em vez de criar uma conta nova.",
+  "auth/invalid-email": "Esse e-mail não parece válido. Confira e tente de novo.",
+  "auth/weak-password": "Escolha uma senha mais forte (pelo menos 6 caracteres).",
+  "auth/wrong-password": "Senha incorreta.",
+  "auth/invalid-credential": "E-mail ou senha incorretos.",
+  "auth/user-not-found": "Não encontramos uma conta com esse e-mail.",
+  "auth/user-disabled": "Esta conta foi desativada.",
+  "auth/too-many-requests": "Muitas tentativas seguidas. Espere um pouco e tente de novo.",
+  "auth/network-request-failed": "Sem conexão com a internet. Verifique sua rede e tente de novo.",
+};
+
+function isUserCancelledError(error) {
+  const text = `${(error && error.code) || ""} ${(error && error.message) || ""}`.toLowerCase();
+  return text.includes("cancel");
+}
+
+function mapAuthError(error) {
+  const code = error && error.code;
+  if (code && AUTH_ERROR_MESSAGES[code]) return AUTH_ERROR_MESSAGES[code];
+  const text = `${(error && error.message) || ""}`.toLowerCase();
+  if (text.includes("network")) return AUTH_ERROR_MESSAGES["auth/network-request-failed"];
+  return "Não foi possível concluir agora. Tente de novo em instantes.";
+}
+
+// DIAGNÓSTICO TEMPORÁRIO -- ver comentário acima de AUTH_DEBUG. Mostra a
+// mensagem amigável de sempre + o código real entre parênteses (ou
+// "sem-codigo" quando o plugin não retornou nenhum), ex.:
+// "Não encontramos uma conta com esse e-mail. (auth/user-not-found)".
+function formatAuthErrorForDisplay(error) {
+  const friendly = mapAuthError(error);
+  if (!AUTH_DEBUG) return friendly;
+  const code = (error && error.code) || "sem-codigo";
+  return `${friendly} (${code})`;
+}
+
+function updateAccountUI(user) {
+  currentAuthUser = user || null;
+  accountSignedOutEl.hidden = !!currentAuthUser;
+  accountSignedInEl.hidden = !currentAuthUser;
+  if (!currentAuthUser) return;
+
+  accountNameEl.textContent = currentAuthUser.displayName || currentAuthUser.email || "Sua conta";
+  accountEmailEl.textContent = currentAuthUser.email || "";
+  if (currentAuthUser.photoUrl) {
+    accountPhotoEl.src = currentAuthUser.photoUrl;
+    accountPhotoEl.hidden = false;
+    accountAvatarFallbackEl.hidden = true;
+  } else {
+    accountPhotoEl.hidden = true;
+    accountAvatarFallbackEl.hidden = false;
+  }
+}
+
+async function initAuthUI() {
+  if (!isNativeAuthAvailable()) return;
+  const FA = window.Capacitor.Plugins.FirebaseAuthentication;
+  logAuthDebug("initAuthUI: plugin nativo disponível, registrando authStateChange", null);
+  FA.addListener("authStateChange", (change) => updateAccountUI(change.user));
+  try {
+    const { user } = await FA.getCurrentUser();
+    logAuthDebug("getCurrentUser: ok", null);
+    updateAccountUI(user);
+  } catch (err) {
+    // Sem usuário logado ainda -- fica no estado padrão (deslogado).
+    logAuthDebug("getCurrentUser: sem usuário logado (esperado)", err);
+  }
+}
+
+let authModalMode = "signup";
+
+function openAuthModal(mode) {
+  if (!isNativeAuthAvailable()) {
+    showToast("Login só funciona no app Android instalado, não no navegador.");
+    return;
+  }
+  authModalMode = mode;
+  authModalErrorEl.hidden = true;
+  authPasswordInputEl.value = "";
+  if (mode === "login") {
+    authModalTitleEl.textContent = "Entrar";
+    authModalSubmitEl.textContent = "Entrar";
+    authModalSwitchTextEl.textContent = "Ainda não tem conta?";
+    authModalSwitchBtnEl.textContent = "Criar conta";
+    authPasswordInputEl.autocomplete = "current-password";
+  } else {
+    authModalTitleEl.textContent = "Criar conta";
+    authModalSubmitEl.textContent = "Criar conta";
+    authModalSwitchTextEl.textContent = "Já tem conta?";
+    authModalSwitchBtnEl.textContent = "Entrar";
+    authPasswordInputEl.autocomplete = "new-password";
+  }
+  authModalEl.hidden = false;
+  wordPopupBackdropEl.hidden = false;
+  authEmailInputEl.focus();
+}
+
+function closeAuthModal() {
+  authModalEl.hidden = true;
+  if (wordPopupEl.hidden && notePopupEl.hidden && sharePopupEl.hidden) wordPopupBackdropEl.hidden = true;
+}
+
+async function handleAuthModalSubmit() {
+  const email = authEmailInputEl.value.trim();
+  const password = authPasswordInputEl.value;
+  authModalErrorEl.hidden = true;
+
+  if (!email || !password) {
+    authModalErrorEl.textContent = "Preencha e-mail e senha.";
+    authModalErrorEl.hidden = false;
+    return;
+  }
+  if (!isNativeAuthAvailable()) {
+    showToast("Login só funciona no app Android instalado, não no navegador.");
+    return;
+  }
+
+  const FA = window.Capacitor.Plugins.FirebaseAuthentication;
+  const step = authModalMode === "signup" ? "createUserWithEmailAndPassword" : "signInWithEmailAndPassword";
+  authModalSubmitEl.disabled = true;
+  logAuthDebug(`${step}: iniciando`, null);
+  try {
+    if (authModalMode === "signup") {
+      await FA.createUserWithEmailAndPassword({ email, password });
+    } else {
+      await FA.signInWithEmailAndPassword({ email, password });
+    }
+    logAuthDebug(`${step}: sucesso`, null);
+    closeAuthModal();
+    showToast(authModalMode === "signup" ? "Conta criada! Bem-vindo(a)." : "Login feito com sucesso.");
+  } catch (err) {
+    logAuthDebug(`${step}: falhou`, err);
+    authModalErrorEl.textContent = formatAuthErrorForDisplay(err);
+    authModalErrorEl.hidden = false;
+  } finally {
+    authModalSubmitEl.disabled = false;
+  }
+}
+
+async function handleForgotPassword() {
+  const email = authEmailInputEl.value.trim();
+  if (!email) {
+    authModalErrorEl.textContent = "Digite seu e-mail acima primeiro, depois toque em \"Esqueci minha senha\".";
+    authModalErrorEl.hidden = false;
+    return;
+  }
+  if (!isNativeAuthAvailable()) {
+    showToast("Login só funciona no app Android instalado, não no navegador.");
+    return;
+  }
+  logAuthDebug("sendPasswordResetEmail: iniciando", null);
+  try {
+    await window.Capacitor.Plugins.FirebaseAuthentication.sendPasswordResetEmail({ email });
+    logAuthDebug("sendPasswordResetEmail: sucesso", null);
+    authModalErrorEl.hidden = true;
+    showToast("E-mail de recuperação enviado. Confira sua caixa de entrada.");
+  } catch (err) {
+    logAuthDebug("sendPasswordResetEmail: falhou", err);
+    authModalErrorEl.textContent = formatAuthErrorForDisplay(err);
+    authModalErrorEl.hidden = false;
+  }
+}
+
+async function handleGoogleSignIn() {
+  if (!isNativeAuthAvailable()) {
+    showToast("Login só funciona no app Android instalado, não no navegador.");
+    return;
+  }
+  logAuthDebug("signInWithGoogle: iniciando", null);
+  try {
+    await window.Capacitor.Plugins.FirebaseAuthentication.signInWithGoogle();
+    logAuthDebug("signInWithGoogle: sucesso", null);
+    showToast("Login feito com sucesso.");
+  } catch (err) {
+    logAuthDebug("signInWithGoogle: falhou", err);
+    if (isUserCancelledError(err)) return;
+    showToast(formatAuthErrorForDisplay(err));
+  }
+}
+
+async function handleSignOut() {
+  if (!isNativeAuthAvailable()) return;
+  logAuthDebug("signOut: iniciando", null);
+  try {
+    await window.Capacitor.Plugins.FirebaseAuthentication.signOut();
+    logAuthDebug("signOut: sucesso", null);
+    showToast("Você saiu da conta.");
+  } catch (err) {
+    logAuthDebug("signOut: falhou", err);
+    showToast("Não foi possível sair agora. Tente de novo.");
+  }
+}
+
 // Fecha qualquer popup/modal aberto no momento (palavra ou anotação).
 // Retorna se algo estava aberto e foi fechado -- usado pelo botão "voltar"
 // do Android (Capacitor) para decidir se deve só fechar o popup ou navegar.
@@ -1504,6 +1911,7 @@ function closeActivePopup() {
   if (!wordPopupEl.hidden) { hideWordPopup(); closedSomething = true; }
   if (!notePopupEl.hidden) { closeNotePopup(); closedSomething = true; }
   if (!sharePopupEl.hidden) { closeSharePopup(); closedSomething = true; }
+  if (!authModalEl.hidden) { closeAuthModal(); closedSomething = true; }
   if (!pickerOverlayEl.hidden) { closePicker(); closedSomething = true; }
   if (!appMenuOverlayEl.hidden) { closeAppMenu(); closedSomething = true; }
   if (!understandOverlayEl.hidden) { closeUnderstandPanel(); closedSomething = true; }
@@ -1555,7 +1963,7 @@ function showWordPopup(word, lang, translation, isLoading) {
 
 function hideWordPopup() {
   wordPopupEl.hidden = true;
-  if (notePopupEl.hidden && sharePopupEl.hidden) wordPopupBackdropEl.hidden = true;
+  if (notePopupEl.hidden && sharePopupEl.hidden && authModalEl.hidden) wordPopupBackdropEl.hidden = true;
   document.querySelectorAll(".word--active").forEach((el) => el.classList.remove("word--active"));
   currentPopupWord = null;
   currentPopupLang = null;
@@ -4341,11 +4749,97 @@ homeDarkModeBtnEl.addEventListener("click", () => {
 });
 
 homeNotificationsBtnEl.addEventListener("click", () => {
-  showToast("Notificações em breve!");
+  notificationsCardEl.scrollIntoView({ behavior: "smooth", block: "center" });
 });
 
+function updateNotifTimeRowVisibility(prefs) {
+  notifTimeRowEl.hidden = !(prefs.dailyReading || prefs.streakReminder);
+}
+
+function initNotificationsUI() {
+  const prefs = loadNotificationPrefs();
+  notifDailyToggleEl.checked = prefs.dailyReading;
+  notifStreakToggleEl.checked = prefs.streakReminder;
+  notifTimeInputEl.value = `${String(prefs.hour).padStart(2, "0")}:${String(prefs.minute).padStart(2, "0")}`;
+  updateNotifTimeRowVisibility(prefs);
+}
+
+// Se o pedido de agendar/cancelar falhar (ex.: permissão negada), desliga
+// os toggles de volta e avisa por quê -- nunca deixa a interface mostrando
+// "ativado" sem o lembrete realmente estar agendado.
+async function handleNotifToggleChange() {
+  const prefs = loadNotificationPrefs();
+  prefs.dailyReading = notifDailyToggleEl.checked;
+  prefs.streakReminder = notifStreakToggleEl.checked;
+  updateNotifTimeRowVisibility(prefs);
+
+  if (!isNativeNotificationsAvailable()) {
+    if (prefs.dailyReading || prefs.streakReminder) {
+      showToast("Notificações só funcionam no app Android instalado, não no navegador.");
+      prefs.dailyReading = false;
+      prefs.streakReminder = false;
+      notifDailyToggleEl.checked = false;
+      notifStreakToggleEl.checked = false;
+      updateNotifTimeRowVisibility(prefs);
+    }
+    saveNotificationPrefs(prefs);
+    return;
+  }
+
+  const result = await applyNotificationPrefs(prefs);
+  if (!result.ok) {
+    let deniedByUser = false;
+    try {
+      const status = await window.Capacitor.Plugins.LocalNotifications.checkPermissions();
+      deniedByUser = status.display === "denied";
+    } catch (err) {
+      // Não conseguiu nem checar a permissão -- trata como falha genérica.
+    }
+    showToast(
+      deniedByUser
+        ? "Notificações bloqueadas. Ative nas configurações do Android para usar os lembretes."
+        : "Não foi possível ativar as notificações agora."
+    );
+    prefs.dailyReading = false;
+    prefs.streakReminder = false;
+    notifDailyToggleEl.checked = false;
+    notifStreakToggleEl.checked = false;
+    updateNotifTimeRowVisibility(prefs);
+  }
+  saveNotificationPrefs(prefs);
+}
+
+async function handleNotifTimeChange() {
+  const prefs = loadNotificationPrefs();
+  const [hour, minute] = (notifTimeInputEl.value || "19:00").split(":").map(Number);
+  prefs.hour = Number.isInteger(hour) ? hour : NOTIF_DEFAULT_HOUR;
+  prefs.minute = Number.isInteger(minute) ? minute : NOTIF_DEFAULT_MINUTE;
+  saveNotificationPrefs(prefs);
+  if (prefs.dailyReading || prefs.streakReminder) {
+    await applyNotificationPrefs(prefs);
+  }
+}
+
+notifDailyToggleEl.addEventListener("change", handleNotifToggleChange);
+notifStreakToggleEl.addEventListener("change", handleNotifToggleChange);
+notifTimeInputEl.addEventListener("change", handleNotifTimeChange);
+initNotificationsUI();
+
+accountEmailSignupBtnEl.addEventListener("click", () => openAuthModal("signup"));
+accountEmailLoginBtnEl.addEventListener("click", () => openAuthModal("login"));
+accountGoogleBtnEl.addEventListener("click", handleGoogleSignIn);
+accountSignoutBtnEl.addEventListener("click", handleSignOut);
+authModalCloseEl.addEventListener("click", closeAuthModal);
+authModalSubmitEl.addEventListener("click", handleAuthModalSubmit);
+authModalForgotEl.addEventListener("click", handleForgotPassword);
+authModalSwitchBtnEl.addEventListener("click", () => openAuthModal(authModalMode === "signup" ? "login" : "signup"));
+authPasswordInputEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") handleAuthModalSubmit();
+});
+initAuthUI();
+
 homeAvatarBtnEl.addEventListener("click", () => {
-  showToast("Perfil em breve! Por enquanto, tudo já é salvo automaticamente neste navegador.");
+  document.getElementById("account-card").scrollIntoView({ behavior: "smooth", block: "center" });
 });
 
 // --- Lições: exercícios de tradução gerados a partir da própria Bíblia do

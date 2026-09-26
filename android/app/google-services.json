@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "907590496849",
+    "project_id": "ingles-com-a-biblia-86c89",
+    "storage_bucket": "ingles-com-a-biblia-86c89.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:907590496849:android:0409539158df70edc4be70",
+        "android_client_info": {
+          "package_name": "com.davidfsantos.inglesbiblia"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "907590496849-eiqtcigt45m3rvjon5s97h4tn683q4e9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.davidfsantos.inglesbiblia",
+            "certificate_hash": "e612a8333419c51790e012910368b8ab4f39cfcb"
+          }
+        },
+        {
+          "client_id": "907590496849-045fsnif2l1k2u0dvmq60bqentn1vkac.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATa-XUHCMx4Bse1QqQWZ9kFjfCUktkTSw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "907590496849-045fsnif2l1k2u0dvmq60bqentn1vkac.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
