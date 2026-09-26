@@ -1656,14 +1656,44 @@ async function applyNotificationPrefs(prefs) {
 // 100% locais, exatamente como antes.
 let currentAuthUser = null;
 
+// DIAGNÓSTICO TEMPORÁRIO (remover depois de confirmar e corrigir a causa
+// raiz do cadastro por e-mail/senha não funcionar no Galaxy A56): liga
+// logs no console (visíveis via `adb logcat` filtrando por "auth-debug")
+// e mostra o código de erro real (ex.: "auth/xxxxx") junto da mensagem
+// amigável, para conseguirmos ver exatamente o que o Firebase/plugin
+// retorna no aparelho real. Nunca loga senha, token, credencial ou
+// qualquer dado sensível -- só error.code, error.message e a etapa.
+const AUTH_DEBUG = true;
+
+// Usa console.warn (não console.error) de propósito -- fica visível no
+// `adb logcat` igualmente, mas não é confundido com um erro real de
+// página pelos testes automatizados existentes (que falham se detectam
+// qualquer console.error, e é esperado ter várias etapas "falhou" aqui
+// durante o diagnóstico sem que isso signifique uma quebra da página).
+function logAuthDebug(step, error) {
+  if (!AUTH_DEBUG) return;
+  console.warn(`[auth-debug] ${step}`, {
+    code: (error && error.code) || null,
+    message: (error && error.message) || null,
+  });
+}
+
 function isNativeAuthAvailable() {
-  return !!(
-    window.Capacitor &&
-    window.Capacitor.isNativePlatform &&
-    window.Capacitor.isNativePlatform() &&
-    window.Capacitor.Plugins &&
-    window.Capacitor.Plugins.FirebaseAuthentication
-  );
+  const capacitor = window.Capacitor;
+  const isNative = !!(capacitor && capacitor.isNativePlatform && capacitor.isNativePlatform());
+  const hasPlugin = !!(capacitor && capacitor.Plugins && capacitor.Plugins.FirebaseAuthentication);
+  // Só é digno de log quando a plataforma nativa foi detectada mas o
+  // plugin não está lá -- esse é o caso anômalo (ex.: falha de registro
+  // do plugin no app instalado). No navegador (isNative=false) é sempre
+  // assim, então logar ali só faria ruído a cada carregamento de página.
+  if (AUTH_DEBUG && isNative && !hasPlugin) {
+    console.warn("[auth-debug] plataforma nativa detectada mas FirebaseAuthentication não registrado", {
+      hasCapacitor: !!capacitor,
+      isNativePlatform: isNative,
+      hasFirebaseAuthPlugin: hasPlugin,
+    });
+  }
+  return isNative && hasPlugin;
 }
 
 // O plugin normaliza erros nativos do Android para os mesmos códigos
@@ -1672,6 +1702,14 @@ function isNativeAuthAvailable() {
 // createErrorCode() no código-fonte do plugin. Cobrimos por código
 // primeiro, com um fallback por texto pra qualquer coisa que escape disso
 // (ex.: erro de rede), pra nunca mostrar uma mensagem técnica crua.
+//
+// IMPORTANTE (achado na revisão desta correção): createErrorCode() no
+// plugin só gera um código "auth/..." quando a exceção nativa é uma
+// FirebaseAuthException. Qualquer outra exceção (ex.: IllegalStateException
+// se o FirebaseApp não tiver sido inicializado corretamente a partir do
+// google-services.json, ou um FirebaseNetworkException) chega ao JS com
+// code=null -- por isso a mensagem genérica abaixo, e por isso o código
+// real (quando existe) é exposto separadamente em formatAuthErrorForDisplay.
 const AUTH_ERROR_MESSAGES = {
   "auth/email-already-in-use": "Este e-mail já está cadastrado. Tente entrar em vez de criar uma conta nova.",
   "auth/invalid-email": "Esse e-mail não parece válido. Confira e tente de novo.",
@@ -1697,6 +1735,17 @@ function mapAuthError(error) {
   return "Não foi possível concluir agora. Tente de novo em instantes.";
 }
 
+// DIAGNÓSTICO TEMPORÁRIO -- ver comentário acima de AUTH_DEBUG. Mostra a
+// mensagem amigável de sempre + o código real entre parênteses (ou
+// "sem-codigo" quando o plugin não retornou nenhum), ex.:
+// "Não encontramos uma conta com esse e-mail. (auth/user-not-found)".
+function formatAuthErrorForDisplay(error) {
+  const friendly = mapAuthError(error);
+  if (!AUTH_DEBUG) return friendly;
+  const code = (error && error.code) || "sem-codigo";
+  return `${friendly} (${code})`;
+}
+
 function updateAccountUI(user) {
   currentAuthUser = user || null;
   accountSignedOutEl.hidden = !!currentAuthUser;
@@ -1718,12 +1767,15 @@ function updateAccountUI(user) {
 async function initAuthUI() {
   if (!isNativeAuthAvailable()) return;
   const FA = window.Capacitor.Plugins.FirebaseAuthentication;
+  logAuthDebug("initAuthUI: plugin nativo disponível, registrando authStateChange", null);
   FA.addListener("authStateChange", (change) => updateAccountUI(change.user));
   try {
     const { user } = await FA.getCurrentUser();
+    logAuthDebug("getCurrentUser: ok", null);
     updateAccountUI(user);
   } catch (err) {
     // Sem usuário logado ainda -- fica no estado padrão (deslogado).
+    logAuthDebug("getCurrentUser: sem usuário logado (esperado)", err);
   }
 }
 
@@ -1776,17 +1828,21 @@ async function handleAuthModalSubmit() {
   }
 
   const FA = window.Capacitor.Plugins.FirebaseAuthentication;
+  const step = authModalMode === "signup" ? "createUserWithEmailAndPassword" : "signInWithEmailAndPassword";
   authModalSubmitEl.disabled = true;
+  logAuthDebug(`${step}: iniciando`, null);
   try {
     if (authModalMode === "signup") {
       await FA.createUserWithEmailAndPassword({ email, password });
     } else {
       await FA.signInWithEmailAndPassword({ email, password });
     }
+    logAuthDebug(`${step}: sucesso`, null);
     closeAuthModal();
     showToast(authModalMode === "signup" ? "Conta criada! Bem-vindo(a)." : "Login feito com sucesso.");
   } catch (err) {
-    authModalErrorEl.textContent = mapAuthError(err);
+    logAuthDebug(`${step}: falhou`, err);
+    authModalErrorEl.textContent = formatAuthErrorForDisplay(err);
     authModalErrorEl.hidden = false;
   } finally {
     authModalSubmitEl.disabled = false;
@@ -1804,12 +1860,15 @@ async function handleForgotPassword() {
     showToast("Login só funciona no app Android instalado, não no navegador.");
     return;
   }
+  logAuthDebug("sendPasswordResetEmail: iniciando", null);
   try {
     await window.Capacitor.Plugins.FirebaseAuthentication.sendPasswordResetEmail({ email });
+    logAuthDebug("sendPasswordResetEmail: sucesso", null);
     authModalErrorEl.hidden = true;
     showToast("E-mail de recuperação enviado. Confira sua caixa de entrada.");
   } catch (err) {
-    authModalErrorEl.textContent = mapAuthError(err);
+    logAuthDebug("sendPasswordResetEmail: falhou", err);
+    authModalErrorEl.textContent = formatAuthErrorForDisplay(err);
     authModalErrorEl.hidden = false;
   }
 }
@@ -1819,21 +1878,27 @@ async function handleGoogleSignIn() {
     showToast("Login só funciona no app Android instalado, não no navegador.");
     return;
   }
+  logAuthDebug("signInWithGoogle: iniciando", null);
   try {
     await window.Capacitor.Plugins.FirebaseAuthentication.signInWithGoogle();
+    logAuthDebug("signInWithGoogle: sucesso", null);
     showToast("Login feito com sucesso.");
   } catch (err) {
+    logAuthDebug("signInWithGoogle: falhou", err);
     if (isUserCancelledError(err)) return;
-    showToast(mapAuthError(err));
+    showToast(formatAuthErrorForDisplay(err));
   }
 }
 
 async function handleSignOut() {
   if (!isNativeAuthAvailable()) return;
+  logAuthDebug("signOut: iniciando", null);
   try {
     await window.Capacitor.Plugins.FirebaseAuthentication.signOut();
+    logAuthDebug("signOut: sucesso", null);
     showToast("Você saiu da conta.");
   } catch (err) {
+    logAuthDebug("signOut: falhou", err);
     showToast("Não foi possível sair agora. Tente de novo.");
   }
 }
