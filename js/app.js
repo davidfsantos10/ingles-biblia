@@ -1763,23 +1763,6 @@ function isUserCancelledError(error) {
   return false;
 }
 
-// Achado real no Galaxy A56 (log com androidx.credentials.exceptions.
-// GetCredentialCancellationException: "[16] Account reauth failed."):
-// essa exceção do Credential Manager tem "Cancellation" no nome da
-// classe, mas a própria documentação oficial do Android avisa que ela
-// não significa só "usuário cancelou" -- também cobre falha técnica na
-// reautenticação. A mensagem "reauth failed" nunca inclui a palavra
-// "cancel", então isUserCancelledError() acima não a engole -- ela
-// chega até aqui como erro de verdade. Único gatilho para o fallback
-// abaixo: mensagem sem código (sintoma já confirmado de exceções do
-// Credential Manager, que não são FirebaseAuthException) e contendo
-// "reauth".
-function isCredentialManagerReauthError(error) {
-  const hasCode = !!(error && error.code);
-  const text = `${(error && error.message) || ""}`.toLowerCase();
-  return !hasCode && text.includes("reauth");
-}
-
 function mapAuthError(error) {
   const code = error && error.code;
   if (code && AUTH_ERROR_MESSAGES[code]) return AUTH_ERROR_MESSAGES[code];
@@ -1926,75 +1909,34 @@ async function handleForgotPassword() {
   }
 }
 
-// DIAGNÓSTICO TEMPORÁRIO (rodada da "janela dupla" no Galaxy A56): o log
-// real mostrou 2 seletores de conta em sequência e, no fim, um erro
-// "(sem-codigo)" que não deixa claro se é da 1ª tentativa (Credential
-// Manager) ou da 2ª (fallback legado). Enquanto true, PULA a 1ª
-// tentativa inteiramente e chama só signInWithGoogle({
-// useCredentialManager: false }) -- isola se o fluxo legado sozinho
-// funciona, sem a janela dupla. Reverter para false (ou remover) assim
-// que esse diagnóstico específico for concluído.
-const AUTH_GOOGLE_SKIP_CREDENTIAL_MANAGER_FOR_DIAGNOSIS = true;
-
+// Fluxo único e definitivo: Credential Manager (useCredentialManager:
+// true, o padrão e o comportamento recomendado do plugin --
+// SignInWithGoogleOptions.useCredentialManager, @default true desde a
+// v7.2.0). Sem fallback automático para o fluxo legado (GoogleSignInClient)
+// -- essa era uma medida de diagnóstico temporária (commits 9fcb5e8,
+// dc14272, d1473d0) para uma causa que já foi identificada e corrigida
+// externamente (SHA-1 do OAuth client Android estava desatualizado no
+// Firebase/Google Cloud; corrigido e um google-services.json novo já foi
+// aplicado). Mantendo as duas implementações permanentemente só
+// adicionaria complexidade sem necessidade comprovada.
 async function handleGoogleSignIn() {
   if (!isNativeAuthAvailable()) {
     showToast("Login só funciona no app Android instalado, não no navegador.");
     return;
   }
   const FA = window.Capacitor.Plugins.FirebaseAuthentication;
-
-  if (AUTH_GOOGLE_SKIP_CREDENTIAL_MANAGER_FOR_DIAGNOSIS) {
-    logAuthDebug("google-legacy-start", null);
-    try {
-      await FA.signInWithGoogle({ useCredentialManager: false });
-      logAuthDebug("google-legacy-success", null);
-      showToast("Login feito com sucesso.");
-    } catch (err) {
-      // Cancelamento (real ou 12501 -- ver isUserCancelledError) fica
-      // com seu próprio marcador de log e NÃO mostra nada na tela, como
-      // pedido. Qualquer outro erro é "failure" de verdade e aparece
-      // visível, com o código/mensagem reais -- nunca mais escondido
-      // atrás de um "(sem-codigo)" genérico sem contexto.
-      if (isUserCancelledError(err)) {
-        logAuthDebug("google-legacy-cancelled", err);
-        return;
-      }
-      logAuthDebug("google-legacy-failure", err);
-      showToast(`Falha no login Google (fallback): ${formatAuthErrorForDisplay(err)}`);
-    }
-    return;
-  }
-
-  logAuthDebug("google-primary-start", null);
+  logAuthDebug("google-signin-start", null);
   try {
     await FA.signInWithGoogle({ useCredentialManager: true });
-    logAuthDebug("google-primary-success", null);
+    logAuthDebug("google-signin-success", null);
     showToast("Login feito com sucesso.");
-    return;
   } catch (err) {
-    logAuthDebug("google-primary-failure", err);
-    if (isUserCancelledError(err)) return;
-    if (!isCredentialManagerReauthError(err)) {
-      showToast(formatAuthErrorForDisplay(err));
+    if (isUserCancelledError(err)) {
+      logAuthDebug("google-signin-cancelled", err);
       return;
     }
-  }
-
-  // Fallback único, só Android, só para esse tipo específico de falha do
-  // Credential Manager (ver isCredentialManagerReauthError acima) --
-  // useCredentialManager: false usa o fluxo antigo (GoogleSignInClient +
-  // Activity), que não passa pelo Credential Manager. Não é um loop: só
-  // essa segunda tentativa, e qualquer erro dela (incluindo outro
-  // "reauth") é mostrado normalmente, sem mais retentativas.
-  logAuthDebug("google-fallback-start", null);
-  try {
-    await FA.signInWithGoogle({ useCredentialManager: false });
-    logAuthDebug("google-fallback-success", null);
-    showToast("Login feito com sucesso.");
-  } catch (err2) {
-    logAuthDebug("google-fallback-failure", err2);
-    if (isUserCancelledError(err2)) return;
-    showToast(`Falha no login Google (fallback): ${formatAuthErrorForDisplay(err2)}`);
+    logAuthDebug("google-signin-failure", err);
+    showToast(`Falha no login com Google: ${formatAuthErrorForDisplay(err)}`);
   }
 }
 
