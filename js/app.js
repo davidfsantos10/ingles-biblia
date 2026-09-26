@@ -1675,6 +1675,14 @@ function logAuthDebug(step, error) {
   console.warn(`[auth-debug] ${step}`, {
     code: (error && error.code) || null,
     message: (error && error.message) || null,
+    // error.name no lado JS quase sempre é só "Error" genérico -- a
+    // bridge do Capacitor (native-bridge.js) recebe {message, code} do
+    // Java e monta um CapacitorException SEM setar .name customizado.
+    // A classe real da exceção nativa (ex.:
+    // GetCredentialCancellationException) só aparece no adb logcat, tag
+    // FirebaseAuthentication (o próprio plugin já loga isso com
+    // Logger.error(), stack trace completo incluído).
+    name: (error && error.name) || null,
   });
 }
 
@@ -1890,20 +1898,45 @@ async function handleForgotPassword() {
   }
 }
 
+// DIAGNÓSTICO TEMPORÁRIO (rodada da "janela dupla" no Galaxy A56): o log
+// real mostrou 2 seletores de conta em sequência e, no fim, um erro
+// "(sem-codigo)" que não deixa claro se é da 1ª tentativa (Credential
+// Manager) ou da 2ª (fallback legado). Enquanto true, PULA a 1ª
+// tentativa inteiramente e chama só signInWithGoogle({
+// useCredentialManager: false }) -- isola se o fluxo legado sozinho
+// funciona, sem a janela dupla. Reverter para false (ou remover) assim
+// que esse diagnóstico específico for concluído.
+const AUTH_GOOGLE_SKIP_CREDENTIAL_MANAGER_FOR_DIAGNOSIS = true;
+
 async function handleGoogleSignIn() {
   if (!isNativeAuthAvailable()) {
     showToast("Login só funciona no app Android instalado, não no navegador.");
     return;
   }
   const FA = window.Capacitor.Plugins.FirebaseAuthentication;
-  logAuthDebug("signInWithGoogle: iniciando (useCredentialManager=true)", null);
+
+  if (AUTH_GOOGLE_SKIP_CREDENTIAL_MANAGER_FOR_DIAGNOSIS) {
+    logAuthDebug("google-fallback-start (diagnóstico: Credential Manager pulado de propósito)", null);
+    try {
+      await FA.signInWithGoogle({ useCredentialManager: false });
+      logAuthDebug("google-fallback-success", null);
+      showToast("Login feito com sucesso.");
+    } catch (err) {
+      logAuthDebug("google-fallback-failure", err);
+      if (isUserCancelledError(err)) return;
+      showToast(`Falha no login Google (fallback): ${formatAuthErrorForDisplay(err)}`);
+    }
+    return;
+  }
+
+  logAuthDebug("google-primary-start", null);
   try {
     await FA.signInWithGoogle({ useCredentialManager: true });
-    logAuthDebug("signInWithGoogle: sucesso (useCredentialManager=true)", null);
+    logAuthDebug("google-primary-success", null);
     showToast("Login feito com sucesso.");
     return;
   } catch (err) {
-    logAuthDebug("signInWithGoogle: falhou (useCredentialManager=true)", err);
+    logAuthDebug("google-primary-failure", err);
     if (isUserCancelledError(err)) return;
     if (!isCredentialManagerReauthError(err)) {
       showToast(formatAuthErrorForDisplay(err));
@@ -1917,15 +1950,15 @@ async function handleGoogleSignIn() {
   // Activity), que não passa pelo Credential Manager. Não é um loop: só
   // essa segunda tentativa, e qualquer erro dela (incluindo outro
   // "reauth") é mostrado normalmente, sem mais retentativas.
-  logAuthDebug("signInWithGoogle: tentando fallback (useCredentialManager=false)", null);
+  logAuthDebug("google-fallback-start", null);
   try {
     await FA.signInWithGoogle({ useCredentialManager: false });
-    logAuthDebug("signInWithGoogle: sucesso (useCredentialManager=false)", null);
+    logAuthDebug("google-fallback-success", null);
     showToast("Login feito com sucesso.");
   } catch (err2) {
-    logAuthDebug("signInWithGoogle: falhou (useCredentialManager=false)", err2);
+    logAuthDebug("google-fallback-failure", err2);
     if (isUserCancelledError(err2)) return;
-    showToast(formatAuthErrorForDisplay(err2));
+    showToast(`Falha no login Google (fallback): ${formatAuthErrorForDisplay(err2)}`);
   }
 }
 
