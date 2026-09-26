@@ -1678,12 +1678,18 @@ function logAuthDebug(step, error) {
     // error.name no lado JS quase sempre é só "Error" genérico -- a
     // bridge do Capacitor (native-bridge.js) recebe {message, code} do
     // Java e monta um CapacitorException SEM setar .name customizado.
-    // A classe real da exceção nativa (ex.:
-    // GetCredentialCancellationException) só aparece no adb logcat, tag
-    // FirebaseAuthentication (o próprio plugin já loga isso com
-    // Logger.error(), stack trace completo incluído).
     name: (error && error.name) || null,
   });
+  // statusCode (de um ApiException/GetCredentialException) e a classe
+  // real da exceção nativa (ex.: GetCredentialCancellationException,
+  // ApiException) NÃO existem no objeto de erro em JS -- a bridge do
+  // Capacitor só repassa {message, code}, nada além disso (confirmado
+  // lendo native-bridge.js: returnResult() copia só as chaves presentes
+  // no JSON vindo do Java, e o plugin só chama call.reject(message,
+  // code) -- nunca um 3º campo de dados). Essa informação só existe no
+  // `adb logcat`, tag FirebaseAuthentication -- o próprio plugin já loga
+  // lá com Logger.error(TAG, message, exception), que imprime a classe
+  // completa + stack trace do Android automaticamente.
 }
 
 function isNativeAuthAvailable() {
@@ -1732,7 +1738,29 @@ const AUTH_ERROR_MESSAGES = {
 
 function isUserCancelledError(error) {
   const text = `${(error && error.code) || ""} ${(error && error.message) || ""}`.toLowerCase();
-  return text.includes("cancel");
+  if (text.includes("cancel")) return true;
+  // GoogleSignInStatusCodes.SIGN_IN_CANCELLED = 12501
+  // (com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes) --
+  // código OFICIAL e documentado do Google Play Services para
+  // "usuário cancelou a escolha de conta/consentimento OAuth" no fluxo
+  // legado (GoogleSignInClient, usado quando useCredentialManager:
+  // false). ApiException.getMessage() para esse código normalmente só
+  // traz o número cru (ex.: "12501: "), sem a palavra "cancel" -- por
+  // isso o cancelamento real ficava indistinguível de um erro real
+  // (ambos caíam na mensagem genérica "(sem-codigo)").
+  //
+  // ATENÇÃO documentada (não é suposição nossa, é relato recorrente de
+  // outros devs com esse exato código): 12501 também é o sintoma mais
+  // comum de SHA-1 não cadastrado/incompatível no Firebase/Google Cloud
+  // -- o Play Services devolve SIGN_IN_CANCELLED mesmo quando uma conta
+  // real foi escolhida, se a assinatura do APK não bate com o OAuth
+  // client Android. Se depois desta mudança ESCOLHER UMA CONTA REAL não
+  // mostrar mais nenhum erro (silêncio total, sem toast, só o log
+  // "google-legacy-cancelled"), isso é sinal forte de SHA-1
+  // incompatível, não de cancelamento de verdade -- nesse caso, comparar
+  // `./gradlew signingReport` com o SHA-1 do google-services.json.
+  if (/\b12501\b/.test(text)) return true;
+  return false;
 }
 
 // Achado real no Galaxy A56 (log com androidx.credentials.exceptions.
@@ -1916,14 +1944,22 @@ async function handleGoogleSignIn() {
   const FA = window.Capacitor.Plugins.FirebaseAuthentication;
 
   if (AUTH_GOOGLE_SKIP_CREDENTIAL_MANAGER_FOR_DIAGNOSIS) {
-    logAuthDebug("google-fallback-start (diagnóstico: Credential Manager pulado de propósito)", null);
+    logAuthDebug("google-legacy-start", null);
     try {
       await FA.signInWithGoogle({ useCredentialManager: false });
-      logAuthDebug("google-fallback-success", null);
+      logAuthDebug("google-legacy-success", null);
       showToast("Login feito com sucesso.");
     } catch (err) {
-      logAuthDebug("google-fallback-failure", err);
-      if (isUserCancelledError(err)) return;
+      // Cancelamento (real ou 12501 -- ver isUserCancelledError) fica
+      // com seu próprio marcador de log e NÃO mostra nada na tela, como
+      // pedido. Qualquer outro erro é "failure" de verdade e aparece
+      // visível, com o código/mensagem reais -- nunca mais escondido
+      // atrás de um "(sem-codigo)" genérico sem contexto.
+      if (isUserCancelledError(err)) {
+        logAuthDebug("google-legacy-cancelled", err);
+        return;
+      }
+      logAuthDebug("google-legacy-failure", err);
       showToast(`Falha no login Google (fallback): ${formatAuthErrorForDisplay(err)}`);
     }
     return;
