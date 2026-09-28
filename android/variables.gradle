@@ -37,4 +37,8 @@ ext {
     // release) usado pelo Credential Manager para a camada Play Services
     // -- mantido na mesma versão para evitar descompasso entre os dois.
     androidxCredentialsPlayServicesAuthVersion = '1.3.0'
+    // Mesmo mecanismo do rgcfaIncludeGoogle acima, mas para o Facebook
+    // Login (com.facebook.android:facebook-login) -- ver android/build.gradle
+    // do próprio plugin.
+    rgcfaIncludeFacebook = true
 }

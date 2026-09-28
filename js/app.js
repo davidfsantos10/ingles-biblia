@@ -278,6 +278,7 @@ const accountSignoutBtnEl = document.getElementById("account-signout-btn");
 const accountEmailSignupBtnEl = document.getElementById("account-email-signup-btn");
 const accountEmailLoginBtnEl = document.getElementById("account-email-login-btn");
 const accountGoogleBtnEl = document.getElementById("account-google-btn");
+const accountFacebookBtnEl = document.getElementById("account-facebook-btn");
 const authModalEl = document.getElementById("auth-modal");
 const authModalCloseEl = document.getElementById("auth-modal-close");
 const authModalTitleEl = document.getElementById("auth-modal-title");
@@ -1697,6 +1698,7 @@ const AUTH_ERROR_MESSAGES = {
   "auth/user-disabled": "Esta conta foi desativada.",
   "auth/too-many-requests": "Muitas tentativas seguidas. Espere um pouco e tente de novo.",
   "auth/network-request-failed": "Sem conexão com a internet. Verifique sua rede e tente de novo.",
+  "auth/account-exists-with-different-credential": "Já existe uma conta com este e-mail usando outro método de acesso.",
 };
 
 function isUserCancelledError(error) {
@@ -1857,6 +1859,32 @@ async function handleGoogleSignIn() {
     if (isUserCancelledError(err)) return;
     logAuthFailure("signInWithGoogle", err);
     showToast(`Falha no login com Google: ${mapAuthError(err)}`);
+  }
+}
+
+// Login clássico do SDK do Facebook (LoginManager + CallbackManager) --
+// o plugin já pede só "email" + "public_profile" por padrão (ver
+// FacebookAuthProviderHandler.getPermissions()), sem escopos extras.
+// Desabilita o botão durante a chamada pra evitar duplo toque, já que
+// (ao contrário do Google) esse fluxo pode envolver troca pro app do
+// Facebook e volta, com uma latência maior e mais perceptível.
+async function handleFacebookSignIn() {
+  if (!isNativeAuthAvailable()) {
+    showToast("Login só funciona no app Android instalado, não no navegador.");
+    return;
+  }
+  if (accountFacebookBtnEl.disabled) return;
+  const FA = window.Capacitor.Plugins.FirebaseAuthentication;
+  accountFacebookBtnEl.disabled = true;
+  try {
+    await FA.signInWithFacebook();
+    showToast("Login feito com sucesso.");
+  } catch (err) {
+    if (isUserCancelledError(err)) return;
+    logAuthFailure("signInWithFacebook", err);
+    showToast(`Falha no login com Facebook: ${mapAuthError(err)}`);
+  } finally {
+    accountFacebookBtnEl.disabled = false;
   }
 }
 
@@ -4796,6 +4824,7 @@ initNotificationsUI();
 accountEmailSignupBtnEl.addEventListener("click", () => openAuthModal("signup"));
 accountEmailLoginBtnEl.addEventListener("click", () => openAuthModal("login"));
 accountGoogleBtnEl.addEventListener("click", handleGoogleSignIn);
+accountFacebookBtnEl.addEventListener("click", handleFacebookSignIn);
 accountSignoutBtnEl.addEventListener("click", handleSignOut);
 authModalCloseEl.addEventListener("click", closeAuthModal);
 authModalSubmitEl.addEventListener("click", handleAuthModalSubmit);
