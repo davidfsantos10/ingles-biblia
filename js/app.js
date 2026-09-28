@@ -1656,56 +1656,27 @@ async function applyNotificationPrefs(prefs) {
 // 100% locais, exatamente como antes.
 let currentAuthUser = null;
 
-// DIAGNÓSTICO TEMPORÁRIO (remover depois de confirmar e corrigir a causa
-// raiz do cadastro por e-mail/senha não funcionar no Galaxy A56): liga
-// logs no console (visíveis via `adb logcat` filtrando por "auth-debug")
-// e mostra o código de erro real (ex.: "auth/xxxxx") junto da mensagem
-// amigável, para conseguirmos ver exatamente o que o Firebase/plugin
-// retorna no aparelho real. Nunca loga senha, token, credencial ou
-// qualquer dado sensível -- só error.code, error.message e a etapa.
-const AUTH_DEBUG = true;
-
-// Usa console.warn (não console.error) de propósito -- fica visível no
-// `adb logcat` igualmente, mas não é confundido com um erro real de
-// página pelos testes automatizados existentes (que falham se detectam
-// qualquer console.error, e é esperado ter várias etapas "falhou" aqui
-// durante o diagnóstico sem que isso signifique uma quebra da página).
-function logAuthDebug(step, error) {
-  if (!AUTH_DEBUG) return;
-  console.warn(`[auth-debug] ${step}`, {
+// Log leve de falhas de autenticação -- útil para diagnosticar problemas
+// em produção via `adb logcat` (tag Capacitor/Console). Nunca loga
+// senha, token, credencial ou ID token, só error.code e error.message.
+// Usa console.warn (não console.error) para não ser confundido com uma
+// falha real de página pelos testes automatizados.
+function logAuthFailure(step, error) {
+  console.warn(`[auth] ${step} falhou`, {
     code: (error && error.code) || null,
     message: (error && error.message) || null,
-    // error.name no lado JS quase sempre é só "Error" genérico -- a
-    // bridge do Capacitor (native-bridge.js) recebe {message, code} do
-    // Java e monta um CapacitorException SEM setar .name customizado.
-    name: (error && error.name) || null,
   });
-  // statusCode (de um ApiException/GetCredentialException) e a classe
-  // real da exceção nativa (ex.: GetCredentialCancellationException,
-  // ApiException) NÃO existem no objeto de erro em JS -- a bridge do
-  // Capacitor só repassa {message, code}, nada além disso (confirmado
-  // lendo native-bridge.js: returnResult() copia só as chaves presentes
-  // no JSON vindo do Java, e o plugin só chama call.reject(message,
-  // code) -- nunca um 3º campo de dados). Essa informação só existe no
-  // `adb logcat`, tag FirebaseAuthentication -- o próprio plugin já loga
-  // lá com Logger.error(TAG, message, exception), que imprime a classe
-  // completa + stack trace do Android automaticamente.
 }
 
 function isNativeAuthAvailable() {
   const capacitor = window.Capacitor;
   const isNative = !!(capacitor && capacitor.isNativePlatform && capacitor.isNativePlatform());
   const hasPlugin = !!(capacitor && capacitor.Plugins && capacitor.Plugins.FirebaseAuthentication);
-  // Só é digno de log quando a plataforma nativa foi detectada mas o
-  // plugin não está lá -- esse é o caso anômalo (ex.: falha de registro
-  // do plugin no app instalado). No navegador (isNative=false) é sempre
-  // assim, então logar ali só faria ruído a cada carregamento de página.
-  if (AUTH_DEBUG && isNative && !hasPlugin) {
-    console.warn("[auth-debug] plataforma nativa detectada mas FirebaseAuthentication não registrado", {
-      hasCapacitor: !!capacitor,
-      isNativePlatform: isNative,
-      hasFirebaseAuthPlugin: hasPlugin,
-    });
+  // Caso anômalo digno de log: plataforma nativa detectada mas o plugin
+  // não está registrado (ex.: falha na instalação do app). No navegador
+  // isso é sempre assim, então não logamos ali.
+  if (isNative && !hasPlugin) {
+    console.warn("[auth] plataforma nativa detectada mas FirebaseAuthentication não registrado");
   }
   return isNative && hasPlugin;
 }
@@ -1716,14 +1687,6 @@ function isNativeAuthAvailable() {
 // createErrorCode() no código-fonte do plugin. Cobrimos por código
 // primeiro, com um fallback por texto pra qualquer coisa que escape disso
 // (ex.: erro de rede), pra nunca mostrar uma mensagem técnica crua.
-//
-// IMPORTANTE (achado na revisão desta correção): createErrorCode() no
-// plugin só gera um código "auth/..." quando a exceção nativa é uma
-// FirebaseAuthException. Qualquer outra exceção (ex.: IllegalStateException
-// se o FirebaseApp não tiver sido inicializado corretamente a partir do
-// google-services.json, ou um FirebaseNetworkException) chega ao JS com
-// code=null -- por isso a mensagem genérica abaixo, e por isso o código
-// real (quando existe) é exposto separadamente em formatAuthErrorForDisplay.
 const AUTH_ERROR_MESSAGES = {
   "auth/email-already-in-use": "Este e-mail já está cadastrado. Tente entrar em vez de criar uma conta nova.",
   "auth/invalid-email": "Esse e-mail não parece válido. Confira e tente de novo.",
@@ -1741,24 +1704,11 @@ function isUserCancelledError(error) {
   if (text.includes("cancel")) return true;
   // GoogleSignInStatusCodes.SIGN_IN_CANCELLED = 12501
   // (com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes) --
-  // código OFICIAL e documentado do Google Play Services para
-  // "usuário cancelou a escolha de conta/consentimento OAuth" no fluxo
-  // legado (GoogleSignInClient, usado quando useCredentialManager:
-  // false). ApiException.getMessage() para esse código normalmente só
-  // traz o número cru (ex.: "12501: "), sem a palavra "cancel" -- por
-  // isso o cancelamento real ficava indistinguível de um erro real
-  // (ambos caíam na mensagem genérica "(sem-codigo)").
-  //
-  // ATENÇÃO documentada (não é suposição nossa, é relato recorrente de
-  // outros devs com esse exato código): 12501 também é o sintoma mais
-  // comum de SHA-1 não cadastrado/incompatível no Firebase/Google Cloud
-  // -- o Play Services devolve SIGN_IN_CANCELLED mesmo quando uma conta
-  // real foi escolhida, se a assinatura do APK não bate com o OAuth
-  // client Android. Se depois desta mudança ESCOLHER UMA CONTA REAL não
-  // mostrar mais nenhum erro (silêncio total, sem toast, só o log
-  // "google-legacy-cancelled"), isso é sinal forte de SHA-1
-  // incompatível, não de cancelamento de verdade -- nesse caso, comparar
-  // `./gradlew signingReport` com o SHA-1 do google-services.json.
+  // código oficial do Google Play Services para "usuário cancelou a
+  // escolha de conta/consentimento OAuth" no fluxo legado
+  // (GoogleSignInClient). ApiException.getMessage() para esse código
+  // normalmente só traz o número cru (ex.: "12501: "), sem a palavra
+  // "cancel".
   if (/\b12501\b/.test(text)) return true;
   return false;
 }
@@ -1769,17 +1719,6 @@ function mapAuthError(error) {
   const text = `${(error && error.message) || ""}`.toLowerCase();
   if (text.includes("network")) return AUTH_ERROR_MESSAGES["auth/network-request-failed"];
   return "Não foi possível concluir agora. Tente de novo em instantes.";
-}
-
-// DIAGNÓSTICO TEMPORÁRIO -- ver comentário acima de AUTH_DEBUG. Mostra a
-// mensagem amigável de sempre + o código real entre parênteses (ou
-// "sem-codigo" quando o plugin não retornou nenhum), ex.:
-// "Não encontramos uma conta com esse e-mail. (auth/user-not-found)".
-function formatAuthErrorForDisplay(error) {
-  const friendly = mapAuthError(error);
-  if (!AUTH_DEBUG) return friendly;
-  const code = (error && error.code) || "sem-codigo";
-  return `${friendly} (${code})`;
 }
 
 function updateAccountUI(user) {
@@ -1803,15 +1742,12 @@ function updateAccountUI(user) {
 async function initAuthUI() {
   if (!isNativeAuthAvailable()) return;
   const FA = window.Capacitor.Plugins.FirebaseAuthentication;
-  logAuthDebug("initAuthUI: plugin nativo disponível, registrando authStateChange", null);
   FA.addListener("authStateChange", (change) => updateAccountUI(change.user));
   try {
     const { user } = await FA.getCurrentUser();
-    logAuthDebug("getCurrentUser: ok", null);
     updateAccountUI(user);
   } catch (err) {
     // Sem usuário logado ainda -- fica no estado padrão (deslogado).
-    logAuthDebug("getCurrentUser: sem usuário logado (esperado)", err);
   }
 }
 
@@ -1866,19 +1802,17 @@ async function handleAuthModalSubmit() {
   const FA = window.Capacitor.Plugins.FirebaseAuthentication;
   const step = authModalMode === "signup" ? "createUserWithEmailAndPassword" : "signInWithEmailAndPassword";
   authModalSubmitEl.disabled = true;
-  logAuthDebug(`${step}: iniciando`, null);
   try {
     if (authModalMode === "signup") {
       await FA.createUserWithEmailAndPassword({ email, password });
     } else {
       await FA.signInWithEmailAndPassword({ email, password });
     }
-    logAuthDebug(`${step}: sucesso`, null);
     closeAuthModal();
     showToast(authModalMode === "signup" ? "Conta criada! Bem-vindo(a)." : "Login feito com sucesso.");
   } catch (err) {
-    logAuthDebug(`${step}: falhou`, err);
-    authModalErrorEl.textContent = formatAuthErrorForDisplay(err);
+    logAuthFailure(step, err);
+    authModalErrorEl.textContent = mapAuthError(err);
     authModalErrorEl.hidden = false;
   } finally {
     authModalSubmitEl.disabled = false;
@@ -1896,59 +1830,43 @@ async function handleForgotPassword() {
     showToast("Login só funciona no app Android instalado, não no navegador.");
     return;
   }
-  logAuthDebug("sendPasswordResetEmail: iniciando", null);
   try {
     await window.Capacitor.Plugins.FirebaseAuthentication.sendPasswordResetEmail({ email });
-    logAuthDebug("sendPasswordResetEmail: sucesso", null);
     authModalErrorEl.hidden = true;
     showToast("E-mail de recuperação enviado. Confira sua caixa de entrada.");
   } catch (err) {
-    logAuthDebug("sendPasswordResetEmail: falhou", err);
-    authModalErrorEl.textContent = formatAuthErrorForDisplay(err);
+    logAuthFailure("sendPasswordResetEmail", err);
+    authModalErrorEl.textContent = mapAuthError(err);
     authModalErrorEl.hidden = false;
   }
 }
 
-// Fluxo único e definitivo: Credential Manager (useCredentialManager:
-// true, o padrão e o comportamento recomendado do plugin --
-// SignInWithGoogleOptions.useCredentialManager, @default true desde a
-// v7.2.0). Sem fallback automático para o fluxo legado (GoogleSignInClient)
-// -- essa era uma medida de diagnóstico temporária (commits 9fcb5e8,
-// dc14272, d1473d0) para uma causa que já foi identificada e corrigida
-// externamente (SHA-1 do OAuth client Android estava desatualizado no
-// Firebase/Google Cloud; corrigido e um google-services.json novo já foi
-// aplicado). Mantendo as duas implementações permanentemente só
-// adicionaria complexidade sem necessidade comprovada.
+// Fluxo único: Credential Manager (useCredentialManager: true), o padrão
+// e comportamento recomendado do plugin -- SignInWithGoogleOptions.
+// useCredentialManager, @default true desde a v7.2.0.
 async function handleGoogleSignIn() {
   if (!isNativeAuthAvailable()) {
     showToast("Login só funciona no app Android instalado, não no navegador.");
     return;
   }
   const FA = window.Capacitor.Plugins.FirebaseAuthentication;
-  logAuthDebug("google-signin-start", null);
   try {
     await FA.signInWithGoogle({ useCredentialManager: true });
-    logAuthDebug("google-signin-success", null);
     showToast("Login feito com sucesso.");
   } catch (err) {
-    if (isUserCancelledError(err)) {
-      logAuthDebug("google-signin-cancelled", err);
-      return;
-    }
-    logAuthDebug("google-signin-failure", err);
-    showToast(`Falha no login com Google: ${formatAuthErrorForDisplay(err)}`);
+    if (isUserCancelledError(err)) return;
+    logAuthFailure("signInWithGoogle", err);
+    showToast(`Falha no login com Google: ${mapAuthError(err)}`);
   }
 }
 
 async function handleSignOut() {
   if (!isNativeAuthAvailable()) return;
-  logAuthDebug("signOut: iniciando", null);
   try {
     await window.Capacitor.Plugins.FirebaseAuthentication.signOut();
-    logAuthDebug("signOut: sucesso", null);
     showToast("Você saiu da conta.");
   } catch (err) {
-    logAuthDebug("signOut: falhou", err);
+    logAuthFailure("signOut", err);
     showToast("Não foi possível sair agora. Tente de novo.");
   }
 }
