@@ -274,6 +274,12 @@ const accountPhotoEl = document.getElementById("account-photo");
 const accountAvatarFallbackEl = document.getElementById("account-avatar-fallback");
 const accountNameEl = document.getElementById("account-name");
 const accountEmailEl = document.getElementById("account-email");
+const accountProviderEl = document.getElementById("account-provider");
+const accountEditNameBtnEl = document.getElementById("account-edit-name-btn");
+const accountNameEditEl = document.getElementById("account-name-edit");
+const accountNameInputEl = document.getElementById("account-name-input");
+const accountNameCancelBtnEl = document.getElementById("account-name-cancel-btn");
+const accountNameSaveBtnEl = document.getElementById("account-name-save-btn");
 const accountSignoutBtnEl = document.getElementById("account-signout-btn");
 const accountEmailSignupBtnEl = document.getElementById("account-email-signup-btn");
 const accountEmailLoginBtnEl = document.getElementById("account-email-login-btn");
@@ -1723,14 +1729,79 @@ function mapAuthError(error) {
   return "Não foi possível concluir agora. Tente de novo em instantes.";
 }
 
+// Método de login exibido no perfil -- só informativo (nunca mostramos
+// senha/token/credencial). O objeto User do plugin traz o provider real em
+// providerData[0].providerId ("google.com", "facebook.com", "password");
+// user.providerId no nível raiz é sempre a constante "firebase", não serve
+// pra isso. Também aceita o formato já achatado do cache local (ver
+// cacheAccountDisplay), que já guarda só o providerId resolvido.
+const PROVIDER_LABELS = {
+  "google.com": "Conectado com Google",
+  "facebook.com": "Conectado com Facebook",
+  "password": "Conectado com e-mail e senha",
+};
+
+function getUserProviderId(user) {
+  if (!user) return null;
+  if (user.providerData && user.providerData[0] && user.providerData[0].providerId) {
+    return user.providerData[0].providerId;
+  }
+  return user.providerId || null;
+}
+
+// Cache local só de exibição (nome, e-mail, foto, método de login -- tudo
+// que já aparece na tela mesmo) pra pintar o card de conta otimisticamente
+// assim que o app abre, sem esperar a resposta assíncrona de
+// getCurrentUser(). NÃO é usado pra decidir se a sessão é válida -- isso
+// continua 100% por conta do Firebase; getCurrentUser() sempre roda em
+// seguida e corrige a tela se o cache estiver desatualizado (ex.: sessão
+// encerrada em outro momento). Sem isso, cada abertura do app mostraria um
+// flash rápido da tela "deslogado" antes de trocar pra "logado".
+const ACCOUNT_DISPLAY_CACHE_KEY = "ib-account-display-cache";
+
+function cacheAccountDisplay(user) {
+  try {
+    if (!user) {
+      localStorage.removeItem(ACCOUNT_DISPLAY_CACHE_KEY);
+      return;
+    }
+    localStorage.setItem(
+      ACCOUNT_DISPLAY_CACHE_KEY,
+      JSON.stringify({
+        displayName: user.displayName || null,
+        email: user.email || null,
+        photoUrl: user.photoUrl || null,
+        providerId: getUserProviderId(user),
+      })
+    );
+  } catch (err) {
+    // localStorage indisponível (ex.: modo privado) -- só perde a
+    // renderização otimista da próxima abertura, nada quebra.
+  }
+}
+
+function readAccountDisplayCache() {
+  try {
+    const raw = localStorage.getItem(ACCOUNT_DISPLAY_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
 function updateAccountUI(user) {
   currentAuthUser = user || null;
   accountSignedOutEl.hidden = !!currentAuthUser;
   accountSignedInEl.hidden = !currentAuthUser;
-  if (!currentAuthUser) return;
+  cacheAccountDisplay(currentAuthUser);
+  if (!currentAuthUser) {
+    closeNameEdit(); // evita reabrir a edição de nome já aberta de uma sessão anterior
+    return;
+  }
 
   accountNameEl.textContent = currentAuthUser.displayName || currentAuthUser.email || "Sua conta";
   accountEmailEl.textContent = currentAuthUser.email || "";
+  accountProviderEl.textContent = PROVIDER_LABELS[getUserProviderId(currentAuthUser)] || "";
   if (currentAuthUser.photoUrl) {
     accountPhotoEl.src = currentAuthUser.photoUrl;
     accountPhotoEl.hidden = false;
@@ -1744,12 +1815,16 @@ function updateAccountUI(user) {
 async function initAuthUI() {
   if (!isNativeAuthAvailable()) return;
   const FA = window.Capacitor.Plugins.FirebaseAuthentication;
+  const cached = readAccountDisplayCache();
+  if (cached) updateAccountUI(cached); // pintura otimista -- corrigida abaixo
   FA.addListener("authStateChange", (change) => updateAccountUI(change.user));
   try {
     const { user } = await FA.getCurrentUser();
     updateAccountUI(user);
   } catch (err) {
-    // Sem usuário logado ainda -- fica no estado padrão (deslogado).
+    // getCurrentUser rejeitou (sem usuário) -- garante que não fica preso
+    // no estado otimista do cache se ele estava desatualizado.
+    updateAccountUI(null);
   }
 }
 
@@ -1896,6 +1971,44 @@ async function handleSignOut() {
   } catch (err) {
     logAuthFailure("signOut", err);
     showToast("Não foi possível sair agora. Tente de novo.");
+  }
+}
+
+// Edição simples de nome (única edição de perfil desta etapa -- sem foto,
+// sem infraestrutura de upload/Storage). updateProfile() só troca o
+// displayName no Firebase; ele não dispara authStateChange sozinho, por
+// isso atualizamos currentAuthUser e a tela manualmente no sucesso.
+function openNameEdit() {
+  if (!currentAuthUser) return;
+  accountNameInputEl.value = currentAuthUser.displayName || "";
+  accountNameEditEl.hidden = false;
+  accountNameInputEl.focus();
+  accountNameInputEl.select();
+}
+
+function closeNameEdit() {
+  accountNameEditEl.hidden = true;
+}
+
+async function handleSaveName() {
+  const newName = accountNameInputEl.value.trim();
+  if (!newName) {
+    showToast("Digite um nome.");
+    return;
+  }
+  if (!isNativeAuthAvailable() || accountNameSaveBtnEl.disabled) return;
+  accountNameSaveBtnEl.disabled = true;
+  try {
+    await window.Capacitor.Plugins.FirebaseAuthentication.updateProfile({ displayName: newName });
+    if (currentAuthUser) currentAuthUser.displayName = newName;
+    updateAccountUI(currentAuthUser);
+    closeNameEdit();
+    showToast("Nome atualizado.");
+  } catch (err) {
+    logAuthFailure("updateProfile", err);
+    showToast(`Não foi possível atualizar o nome: ${mapAuthError(err)}`);
+  } finally {
+    accountNameSaveBtnEl.disabled = false;
   }
 }
 
@@ -4826,6 +4939,13 @@ accountEmailLoginBtnEl.addEventListener("click", () => openAuthModal("login"));
 accountGoogleBtnEl.addEventListener("click", handleGoogleSignIn);
 accountFacebookBtnEl.addEventListener("click", handleFacebookSignIn);
 accountSignoutBtnEl.addEventListener("click", handleSignOut);
+accountEditNameBtnEl.addEventListener("click", openNameEdit);
+accountNameCancelBtnEl.addEventListener("click", closeNameEdit);
+accountNameSaveBtnEl.addEventListener("click", handleSaveName);
+accountNameInputEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") handleSaveName();
+  else if (event.key === "Escape") closeNameEdit();
+});
 authModalCloseEl.addEventListener("click", closeAuthModal);
 authModalSubmitEl.addEventListener("click", handleAuthModalSubmit);
 authModalForgotEl.addEventListener("click", handleForgotPassword);

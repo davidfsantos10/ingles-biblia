@@ -283,10 +283,27 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </div>
             <div class="account-info">
-              <p id="account-name" class="account-name"></p>
+              <div class="account-name-row">
+                <p id="account-name" class="account-name"></p>
+                <button type="button" id="account-edit-name-btn" class="account-edit-name-btn" aria-label="Editar nome">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                </button>
+              </div>
               <p id="account-email" class="account-email"></p>
+              <p id="account-provider" class="account-provider"></p>
             </div>
           </div>
+
+          <div id="account-name-edit" class="account-name-edit" hidden>
+            <input type="text" id="account-name-input" class="auth-modal-input" maxlength="60" placeholder="Seu nome" autocomplete="name">
+            <div class="account-name-edit-actions">
+              <button type="button" id="account-name-cancel-btn" class="account-name-cancel-btn">Cancelar</button>
+              <button type="button" id="account-name-save-btn" class="account-name-save-btn">Salvar</button>
+            </div>
+          </div>
+
+          <p class="account-plan-placeholder">Plano atual: <strong>Gratuito</strong> &middot; Premium &mdash; em breve</p>
+
           <button type="button" id="account-signout-btn" class="account-signout-btn">Sair</button>
         </div>
       </div>
