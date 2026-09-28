@@ -5,7 +5,7 @@
     <string name="package_name">com.davidfsantos.inglesbiblia</string>
     <string name="custom_url_scheme">com.davidfsantos.inglesbiblia</string>
     <!-- Facebook App ID e Client Token são identificadores públicos do
-         app cliente (não são segredos -- todo app Android/iOS que usa
+         app cliente (não são segredos: todo app Android/iOS que usa
          Facebook Login os embute em texto puro; o App Secret real fica
          só no Firebase Console). -->
     <string name="facebook_app_id">1676485937430689</string>
