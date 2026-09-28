@@ -1,5 +1,10 @@
 {
   "appId": "com.davidfsantos.inglesbiblia",
   "appName": "Inglês com a Bíblia",
-  "webDir": "www"
+  "webDir": "www",
+  "plugins": {
+    "FirebaseAuthentication": {
+      "providers": ["google.com"]
+    }
+  }
 }

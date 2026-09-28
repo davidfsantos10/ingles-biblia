@@ -250,29 +250,73 @@
         </div>
       </button>
 
-      <div class="home-card">
+      <div class="home-card" id="account-card">
         <p class="home-ac-title">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           MINHA CONTA
         </p>
 
-        <button type="button" class="home-btn-email" data-home-soon>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><polyline points="3.5 6.5 12 13 20.5 6.5"/></svg>
-          Inscrever-se com e-mail
-        </button>
+        <div id="account-signed-out">
+          <button type="button" class="home-btn-email" id="account-email-signup-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><polyline points="3.5 6.5 12 13 20.5 6.5"/></svg>
+            Inscrever-se com e-mail
+          </button>
 
-        <div class="home-social-row">
-          <button type="button" class="home-btn-social" data-home-soon>
-            <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-            Continuar com Google
-          </button>
-          <button type="button" class="home-btn-social" data-home-soon>
-            <svg viewBox="0 0 24 24"><path fill="#1877F2" d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12z"/></svg>
-            Continuar com Facebook
-          </button>
+          <div class="home-social-row">
+            <button type="button" class="home-btn-social" id="account-google-btn">
+              <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+              Continuar com Google
+            </button>
+            <button type="button" class="home-btn-social" data-home-soon>
+              <svg viewBox="0 0 24 24"><path fill="#1877F2" d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12z"/></svg>
+              Continuar com Facebook
+            </button>
+          </div>
+
+          <p class="home-login-link">Já tenho conta? <button type="button" class="home-link-button" id="account-email-login-btn">Entrar</button></p>
         </div>
 
-        <p class="home-login-link">Já tenho conta? <button type="button" class="home-link-button" data-home-soon>Entrar</button></p>
+        <div id="account-signed-in" hidden>
+          <div class="account-profile">
+            <img id="account-photo" class="account-photo" alt="" hidden>
+            <div id="account-avatar-fallback" class="account-avatar-fallback">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div class="account-info">
+              <p id="account-name" class="account-name"></p>
+              <p id="account-email" class="account-email"></p>
+            </div>
+          </div>
+          <button type="button" id="account-signout-btn" class="account-signout-btn">Sair</button>
+        </div>
+      </div>
+
+      <div class="home-card" id="notifications-card">
+        <p class="home-ac-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          NOTIFICAÇÕES
+        </p>
+
+        <div class="notif-row">
+          <span class="notif-row-label">Lembrete diário de leitura</span>
+          <label class="notif-switch">
+            <input type="checkbox" id="notif-daily-toggle">
+            <span class="notif-switch-track"></span>
+          </label>
+        </div>
+
+        <div class="notif-row">
+          <span class="notif-row-label">Lembrete de sequência</span>
+          <label class="notif-switch">
+            <input type="checkbox" id="notif-streak-toggle">
+            <span class="notif-switch-track"></span>
+          </label>
+        </div>
+
+        <div class="notif-row" id="notif-time-row" hidden>
+          <span class="notif-row-label">Horário do lembrete</span>
+          <input type="time" id="notif-time-input" class="notif-time-input" value="19:00">
+        </div>
       </div>
     </section>
 
@@ -717,6 +761,33 @@
       <button type="button" id="share-download-btn" class="note-popup-delete">Baixar imagem</button>
       <button type="button" id="share-native-btn" class="word-popup-save">Compartilhar</button>
     </div>
+  </div>
+
+  <div id="auth-modal" class="word-popup auth-modal" role="dialog" aria-modal="true" aria-label="Entrar ou criar conta" hidden>
+    <button type="button" id="auth-modal-close" class="word-popup-close" aria-label="Fechar">×</button>
+
+    <p id="auth-modal-title" class="auth-modal-title">Criar conta</p>
+
+    <p id="auth-modal-error" class="auth-modal-error" hidden></p>
+
+    <label class="auth-modal-label">
+      E-mail
+      <input type="email" id="auth-email-input" class="auth-modal-input" autocomplete="email" placeholder="voce@exemplo.com">
+    </label>
+
+    <label class="auth-modal-label">
+      Senha
+      <input type="password" id="auth-password-input" class="auth-modal-input" autocomplete="current-password" placeholder="••••••••">
+    </label>
+
+    <button type="button" id="auth-modal-submit" class="word-popup-save">Criar conta</button>
+
+    <button type="button" id="auth-modal-forgot" class="home-link-button auth-modal-forgot">Esqueci minha senha</button>
+
+    <p class="auth-modal-switch">
+      <span id="auth-modal-switch-text">Já tem conta?</span>
+      <button type="button" id="auth-modal-switch-btn" class="home-link-button">Entrar</button>
+    </p>
   </div>
 
   <div id="lessons-overlay" class="lessons-overlay" hidden role="dialog" aria-modal="true" aria-label="Lição de hoje">

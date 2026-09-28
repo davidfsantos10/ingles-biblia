@@ -13,4 +13,28 @@ ext {
     androidxJunitVersion = '1.3.0'
     androidxEspressoCoreVersion = '3.7.0'
     cordovaAndroidVersion = '14.0.1'
+    // Sem isso, o @capacitor-firebase/authentication compila o login com
+    // Google como "compileOnly" (presente para compilar, mas ausente/sem
+    // efeito no APK final) -- ver android/build.gradle do próprio plugin.
+    rgcfaIncludeGoogle = true
+    // O plugin (v8.5.2) usa por padrão androidx.credentials 1.2.0-rc01 --
+    // uma versão pré-lançamento de nov/2023 -- para o Credential Manager
+    // usado pelo signInWithGoogle(). Essa versão antiga é a causa
+    // documentada e confirmada pelos mantenedores de falhas em
+    // dispositivos reais (ex.: "Your device doesn't support credential
+    // manager", GetCredentialException genérica sem código de erro --
+    // exatamente o sintoma "(sem-codigo)" visto no Galaxy A56). Ver
+    // capawesome-team/capacitor-firebase issues #836 e #847, e a própria
+    // documentação oficial de setup do Google Sign-In do plugin
+    // (packages/authentication/docs/setup-google.md), que recomenda
+    // exatamente esta troca. 1.3.0 é a versão estável mínima confirmada
+    // como correção pelo mantenedor (o padrão -rc01 nunca chegou a virar
+    // estável). Versões mais novas existem (até 1.6.0 estável), mas
+    // ficamos na primeira confirmada para minimizar risco.
+    androidxCredentialsVersion = '1.3.0'
+    // Não documentado explicitamente pelo plugin, mas é o artefato irmão
+    // de androidx.credentials:credentials (mesmo grupo, mesmo ciclo de
+    // release) usado pelo Credential Manager para a camada Play Services
+    // -- mantido na mesma versão para evitar descompasso entre os dois.
+    androidxCredentialsPlayServicesAuthVersion = '1.3.0'
 }
