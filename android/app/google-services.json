@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "907590496849-bakj3ab2e9u5o65df6prbg7roie745kd.apps.googleusercontent.com",
+          "client_id": "907590496849-0mkt89na335s8o7gg8odm76rvadt4lp1.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.davidfsantos.inglesbiblia",
-            "certificate_hash": "e612a8333419c51790e012919368b8ab4f39cfc8"
+            "certificate_hash": "e612ab333419c51790e012919368b8ab4f39cfc8"
           }
         },
         {
