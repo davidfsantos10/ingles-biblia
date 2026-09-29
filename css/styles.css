@@ -2292,7 +2292,11 @@ main {
 }
 
 .verse-action--note.has-note {
-  color: var(--color-accent);
+  color: var(--color-word-yellow);
+}
+
+.verse-action--note.has-note svg {
+  fill: currentColor;
 }
 
 .verse-action--favorite.is-active {
