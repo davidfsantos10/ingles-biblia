@@ -155,6 +155,7 @@ const bookSelectBtnEl = document.getElementById("book-select-btn");
 const bookSelectLabelEl = document.getElementById("book-select-label");
 const chapterSelectBtnEl = document.getElementById("chapter-select-btn");
 const chapterSelectLabelEl = document.getElementById("chapter-select-label");
+const verseSelectBtnEl = document.getElementById("verse-select-btn");
 const pickerOverlayEl = document.getElementById("picker-overlay");
 const pickerBackdropEl = document.getElementById("picker-backdrop");
 const pickerTitleEl = document.getElementById("picker-title");
@@ -434,8 +435,36 @@ function openChapterPicker() {
   openPicker(`${book.pt} — escolha o capítulo`);
 }
 
+// Diferente de livro/capítulo, não existe um "versículo selecionado"
+// persistente -- é só um atalho pra pular direto pra um versículo do
+// capítulo já carregado (mesma navegação usada por Favoritos/Anotações em
+// goToVerse()), sem precisar rolar manualmente.
+function openVersePicker() {
+  if (!currentChapterData) return;
+  const { book, chapter, verses } = currentChapterData;
+  pickerListEl.className = "picker-list picker-list--grid";
+  pickerListEl.innerHTML = "";
+
+  for (const verse of verses) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "picker-chip";
+    chip.textContent = String(verse.number);
+    chip.addEventListener("click", () => {
+      closePicker();
+      const verseKey = `${book.slug}-${chapter}-${verse.number}`;
+      const verseEl = versesEnEl.querySelector(`[data-verse-key="${verseKey}"]`);
+      if (verseEl) verseEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    pickerListEl.appendChild(chip);
+  }
+
+  openPicker(`${book.pt} ${chapter} — escolha o versículo`);
+}
+
 bookSelectBtnEl.addEventListener("click", openBookPicker);
 chapterSelectBtnEl.addEventListener("click", openChapterPicker);
+verseSelectBtnEl.addEventListener("click", openVersePicker);
 pickerBackdropEl.addEventListener("click", closePicker);
 pickerCloseBtnEl.addEventListener("click", closePicker);
 document.addEventListener("keydown", (event) => {

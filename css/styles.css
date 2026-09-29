@@ -307,18 +307,33 @@ body {
   min-width: 0;
 }
 
-/* Livro/capítulo no lugar do título do app: sempre cabe numa linha só,
-   os dois botões dividem o espaço que sobra ao lado do menu e encolhem
-   com reticências em vez de quebrar linha ou estourar a largura. */
+/* Livro/capítulo/versículo no lugar do título do app: sempre cabem numa
+   linha só, os três botões dividem o espaço que sobra ao lado do menu e
+   encolhem com reticências em vez de quebrar linha ou estourar a largura. */
 .app-header-chapter-selector {
   flex: 1;
   min-width: 0;
+  gap: 0.35rem;
 }
 
 .app-header-chapter-selector .chapter-selector-btn {
   flex: 1;
   min-width: 0;
   max-width: none;
+  font-size: 0.82rem;
+  padding: 0.35rem 0.5rem;
+  gap: 0.25rem;
+}
+
+.app-header-chapter-selector .chapter-selector-btn svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+/* O botão de versículo não precisa do espaço extra que livro/capítulo
+   usam pro texto (é só "Vers."), então encolhe menos que os outros dois. */
+.app-header-chapter-selector .chapter-selector-btn--verse {
+  flex: 0.6 1 0;
 }
 
 /* Menu "hambúrguer" (Gramática / Flashcards) */
