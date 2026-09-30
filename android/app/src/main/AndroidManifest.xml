@@ -63,4 +63,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Só usada em Android 9 (API 28) ou anterior, para o ImageSaverPlugin
+         conseguir salvar a imagem na galeria; a partir do Android 10 (scoped
+         storage) o app não precisa de permissão nenhuma para isso. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 </manifest>

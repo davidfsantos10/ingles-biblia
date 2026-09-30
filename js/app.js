@@ -213,8 +213,6 @@ const shareFontDecreaseEl = document.getElementById("share-font-decrease");
 const shareFontIncreaseEl = document.getElementById("share-font-increase");
 const shareDownloadBtnEl = document.getElementById("share-download-btn");
 const shareNativeBtnEl = document.getElementById("share-native-btn");
-const shareWhatsappBtnEl = document.getElementById("share-whatsapp-btn");
-const shareTelegramBtnEl = document.getElementById("share-telegram-btn");
 const toastEl = document.getElementById("toast");
 const backToHomeBtnEl = document.getElementById("back-to-home-btn");
 const menuToggleEl = document.getElementById("menu-toggle");
@@ -1312,6 +1310,15 @@ function buildShareFile() {
 // suportado de fazer isso num app Capacitor, ao contrário das APIs web
 // usadas antes. A versão web (GitHub Pages) continua exatamente como era,
 // já que lá essas APIs funcionam normalmente num navegador de verdade.
+//
+// "Baixar imagem" e "Compartilhar" são dois caminhos nativos DIFERENTES de
+// propósito: Compartilhar sempre abre o menu do Android (o usuário escolhe
+// pra onde enviar, incluindo WhatsApp/Telegram/etc. -- por isso os botões
+// dedicados de WhatsApp/Telegram foram removidos, já que duplicavam
+// exatamente esse mesmo caminho). Já Baixar usa o plugin nativo ImageSaver
+// (com.davidfsantos.inglesbiblia.ImageSaverPlugin, registrado direto no
+// MainActivity -- não precisa de pacote npm) pra salvar a imagem na galeria
+// de verdade, sem abrir nenhum menu.
 function isNativeShareAvailable() {
   return !!(
     window.Capacitor &&
@@ -1320,6 +1327,16 @@ function isNativeShareAvailable() {
     window.Capacitor.Plugins &&
     window.Capacitor.Plugins.Filesystem &&
     window.Capacitor.Plugins.Share
+  );
+}
+
+function isNativeImageSaveAvailable() {
+  return !!(
+    window.Capacitor &&
+    window.Capacitor.isNativePlatform &&
+    window.Capacitor.isNativePlatform() &&
+    window.Capacitor.Plugins &&
+    window.Capacitor.Plugins.ImageSaver
   );
 }
 
@@ -1383,14 +1400,33 @@ async function shareNativeFile({ dialogTitle } = {}) {
   }
 }
 
+// Salva de verdade na galeria via ImageSaverPlugin (ver comentário acima de
+// isNativeImageSaveAvailable) -- não abre share sheet nenhum, só grava e
+// avisa com um toast, igual a qualquer "salvar imagem" de app de verdade.
+async function saveImageToGalleryNative(blob) {
+  const { ImageSaver } = window.Capacitor.Plugins;
+  const base64 = await blobToBase64(blob);
+  const attempt = () => ImageSaver.saveImage({ data: base64, fileName: getShareFileName() });
+
+  try {
+    await attempt();
+  } catch (err) {
+    console.warn("[share] 1ª tentativa de salvar falhou, tentando de novo", { message: err && err.message });
+    await attempt();
+  }
+}
+
 async function downloadShareImage() {
-  if (isNativeShareAvailable()) {
+  const blob = await getCurrentShareBlob();
+  if (!blob) {
+    showToast("Não foi possível gerar a imagem.");
+    return;
+  }
+
+  if (isNativeImageSaveAvailable()) {
     try {
-      // No Android não existe um "salvar na galeria" sem infraestrutura
-      // extra (permissão de mídia, scoped storage) -- o caminho oficial e
-      // sem permissões novas é abrir o share sheet nativo, de onde o
-      // usuário escolhe salvar em Arquivos/Galeria ou enviar direto.
-      await shareNativeFile({ dialogTitle: "Salvar imagem" });
+      await saveImageToGalleryNative(blob);
+      showToast("Imagem salva na galeria.");
     } catch (err) {
       console.warn("[share] downloadShareImage falhou", { message: err && err.message });
       showToast("Não foi possível salvar a imagem agora. Tente de novo.");
@@ -1398,11 +1434,6 @@ async function downloadShareImage() {
     return;
   }
 
-  const blob = await getCurrentShareBlob();
-  if (!blob) {
-    showToast("Não foi possível gerar a imagem.");
-    return;
-  }
   downloadShareImageBlob(blob);
 }
 
@@ -1437,55 +1468,6 @@ async function shareCardNatively() {
 
   downloadShareImage();
   showToast("Compartilhamento direto não é suportado aqui; a imagem foi baixada.");
-}
-
-// wa.me/t.me só aceitam texto na URL — não há como anexar a imagem por um link,
-// já que o site não tem servidor para hospedá-la. Por isso, quando há suporte
-// a compartilhar arquivos de verdade (nativo no Android, ou Web Share API no
-// navegador), abrimos o menu de compartilhamento, que já inclui WhatsApp/
-// Telegram com a imagem anexada; sem esse suporte, baixamos a imagem
-// automaticamente e abrimos o app com o texto, para o usuário só anexar.
-async function shareImageAndTextTo(target) {
-  if (isNativeShareAvailable()) {
-    try {
-      const appName = target === "whatsapp" ? "WhatsApp" : "Telegram";
-      await shareNativeFile({ dialogTitle: `Enviar para o ${appName}` });
-    } catch (err) {
-      console.warn("[share] shareImageAndTextTo falhou", { message: err && err.message });
-      showToast("Não foi possível compartilhar agora. Tente de novo.");
-    }
-    return;
-  }
-
-  const file = buildShareFile();
-
-  if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-    navigator
-      .share({ files: [file], title: currentShareReference, text: buildShareText() })
-      .catch(() => {
-        // Usuário cancelou o compartilhamento: nenhuma ação necessária.
-      });
-    return;
-  }
-
-  downloadShareImage();
-
-  const appName = target === "whatsapp" ? "WhatsApp" : "Telegram";
-  const url =
-    target === "whatsapp"
-      ? `https://wa.me/?text=${encodeURIComponent(`${buildShareText()}\n\n${location.href}`)}`
-      : `https://t.me/share/url?url=${encodeURIComponent(location.href)}&text=${encodeURIComponent(buildShareText())}`;
-
-  window.open(url, "_blank", "noopener");
-  showToast(`A imagem foi baixada — anexe-a na conversa do ${appName}.`);
-}
-
-function shareToWhatsApp() {
-  return shareImageAndTextTo("whatsapp");
-}
-
-function shareToTelegram() {
-  return shareImageAndTextTo("telegram");
 }
 
 async function loadChapter(book, chapter) {
@@ -3934,15 +3916,15 @@ shareFontSliderEl.addEventListener("input", () => {
 shareFontDecreaseEl.addEventListener("click", () => changeShareFontSize(-2));
 shareFontIncreaseEl.addEventListener("click", () => changeShareFontSize(2));
 // Trava contra clique duplo: sem isso, tocar duas vezes enquanto a 1ª
-// chamada nativa (Filesystem.writeFile + Share.share) ainda está em
-// andamento disparava uma 2ª chamada concorrente -- no Android isso podia
-// fazer só uma das duas abrir o share sheet de verdade, com a outra
-// rejeitando e mostrando o aviso de erro (exatamente o sintoma relatado:
-// "toco e não acontece nada, insisto e aparece o menu nativo seguido de
-// erro"). Os 4 botões ficam desabilitados juntos enquanto qualquer um
-// estiver em andamento, e voltam ao normal ao final (sucesso ou falha).
+// chamada nativa ainda está em andamento disparava uma 2ª chamada
+// concorrente -- no Android isso podia fazer só uma das duas terminar
+// direito, com a outra rejeitando e mostrando o aviso de erro (exatamente
+// o sintoma relatado: "toco e não acontece nada, insisto e aparece o menu
+// nativo seguido de erro"). Os 2 botões ficam desabilitados juntos
+// enquanto qualquer um estiver em andamento, e voltam ao normal ao final
+// (sucesso ou falha).
 let isShareActionBusy = false;
-const shareActionButtons = [shareDownloadBtnEl, shareNativeBtnEl, shareWhatsappBtnEl, shareTelegramBtnEl];
+const shareActionButtons = [shareDownloadBtnEl, shareNativeBtnEl];
 
 function setShareActionButtonsDisabled(disabled) {
   shareActionButtons.forEach((btn) => {
@@ -3966,8 +3948,6 @@ function guardShareAction(handler) {
 
 shareDownloadBtnEl.addEventListener("click", guardShareAction(downloadShareImage));
 shareNativeBtnEl.addEventListener("click", guardShareAction(shareCardNatively));
-shareWhatsappBtnEl.addEventListener("click", guardShareAction(shareToWhatsApp));
-shareTelegramBtnEl.addEventListener("click", guardShareAction(shareToTelegram));
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeActivePopup();

@@ -10,9 +10,10 @@
 // plugins @capacitor/app (botão "voltar" nativo), @capacitor-community/
 // text-to-speech (áudio nativo no Android), @capacitor/local-notifications
 // (lembretes locais), @capacitor-firebase/authentication (login),
-// @capacitor/filesystem e @capacitor/share (compartilhar/salvar a imagem
-// do versículo -- ver js/app.js). Isso mantém a versão web exatamente
-// como estava: ela nunca carrega esses arquivos.
+// @capacitor/filesystem e @capacitor/share (compartilhar a imagem do
+// versículo) e o registro do ImageSaver, plugin nativo próprio do app pra
+// salvar a imagem direto na galeria (ver js/app.js). Isso mantém a versão
+// web exatamente como estava: ela nunca carrega esses arquivos.
 import { cpSync, rmSync, mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -66,6 +67,13 @@ const CAPACITOR_VENDOR_FILES = [
     src: path.join(root, "node_modules/@capacitor/share/dist/plugin.js"),
     dest: "js/vendor/capacitor-share-plugin.js",
   },
+  {
+    // ImageSaver não tem pacote npm nem plugin.js -- é só código nativo (ver
+    // o comentário dentro do próprio arquivo). Precisa carregar depois de
+    // capacitor.js.
+    src: path.join(root, "js/vendor-stubs/image-saver-plugin-register.js"),
+    dest: "js/vendor/image-saver-plugin-register.js",
+  },
 ];
 
 rmSync(wwwDir, { recursive: true, force: true });
@@ -102,6 +110,7 @@ const withCapacitorBridge = original.replace(
     '  <script src="js/vendor/capacitor-firebase-auth-plugin.js"></script>\n' +
     '  <script src="js/vendor/capacitor-filesystem-plugin.js"></script>\n' +
     '  <script src="js/vendor/capacitor-share-plugin.js"></script>\n' +
+    '  <script src="js/vendor/image-saver-plugin-register.js"></script>\n' +
     `  ${scriptTag}`
 );
 writeFileSync(indexPath, withCapacitorBridge);

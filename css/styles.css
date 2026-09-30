@@ -2602,14 +2602,13 @@ main {
   max-height: 90vh;
   overflow-y: auto;
   align-items: stretch;
-  /* Mais seções que os outros popups (prévia, fundo, fonte, apps, ações) --
-     um gap/padding um pouco menor aqui já é suficiente pra evitar precisar
-     rolar (testado: cabe com folga em telas pequenas e com fonte do
-     sistema aumentada), sem precisar encolher texto/botões a ponto de
-     ficar difícil de ler, e sem apertar os outros popups que reaproveitam
-     .word-popup. */
-  gap: 0.75rem;
-  padding: 1.25rem 1.35rem 1.1rem;
+  /* Só 2 ações agora (Baixar/Compartilhar -- os botões dedicados de
+     WhatsApp/Telegram saíram por duplicarem o menu nativo do Compartilhar),
+     então sobrou espaço: prévia, fundo e fonte ficam maiores e mais
+     espaçados, mantendo tudo visível sem precisar rolar (testado em telas
+     pequenas e com fonte do sistema aumentada). */
+  gap: 0.9rem;
+  padding: 1.4rem 1.4rem 1.25rem;
 }
 
 .share-popup-title {
@@ -2617,7 +2616,7 @@ main {
   padding-right: 1.5rem;
   font-family: var(--font-reading);
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   text-align: center;
 }
 
@@ -2628,7 +2627,7 @@ main {
 
 .share-canvas {
   width: 100%;
-  max-width: 14.5rem;
+  max-width: 15.5rem;
   height: auto;
   aspect-ratio: 4 / 5;
   border-radius: 0.5rem;
@@ -2638,12 +2637,12 @@ main {
 .share-control {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.35rem;
 }
 
 .share-control-label {
   font-family: var(--font-ui);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--color-text-muted);
 }
@@ -2651,12 +2650,12 @@ main {
 .share-backgrounds {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
 .share-swatch {
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2.6rem;
+  height: 2.6rem;
   border-radius: 999px;
   border: 2px solid transparent;
   cursor: pointer;
@@ -2676,8 +2675,8 @@ main {
 
 .share-font-btn {
   flex-shrink: 0;
-  width: 2.3rem;
-  height: 2.3rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 999px;
   border: 1px solid var(--color-border);
   background: var(--color-bg);
@@ -2696,64 +2695,9 @@ main {
   accent-color: var(--color-accent);
 }
 
-.share-apps {
-  display: flex;
-  gap: 0.6rem;
-}
-
-.share-app-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  font-family: var(--font-ui);
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #ffffff;
-  border: none;
-  border-radius: 0.4rem;
-  padding: 0.6rem 0.8rem;
-  cursor: pointer;
-}
-
-.share-app-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  filter: none;
-}
-
-.share-app-btn svg {
-  width: 1.1rem;
-  height: 1.1rem;
-  flex-shrink: 0;
-}
-
-.share-app-btn--whatsapp {
-  background: #25d366;
-}
-
-.share-app-btn--whatsapp:hover {
-  filter: brightness(1.08);
-}
-
-.share-app-btn--telegram {
-  background: #229ed9;
-}
-
-.share-app-btn--telegram:hover {
-  filter: brightness(1.08);
-}
-
-.share-apps-note {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-}
-
 .share-popup-actions {
   display: flex;
-  gap: 0.7rem;
+  gap: 0.8rem;
 }
 
 .share-popup-actions .note-popup-delete,
