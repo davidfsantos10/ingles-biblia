@@ -1346,13 +1346,27 @@ async function shareNativeFile({ dialogTitle } = {}) {
     showToast("Não foi possível gerar a imagem.");
     return;
   }
-  const uri = await writeShareImageFile(blob);
-  await window.Capacitor.Plugins.Share.share({
-    title: currentShareReference,
-    text: buildShareText(),
-    files: [uri],
-    dialogTitle: dialogTitle || "Compartilhar versículo",
-  });
+
+  const attempt = async () => {
+    const uri = await writeShareImageFile(blob);
+    await window.Capacitor.Plugins.Share.share({
+      title: currentShareReference,
+      text: buildShareText(),
+      files: [uri],
+      dialogTitle: dialogTitle || "Compartilhar versículo",
+    });
+  };
+
+  try {
+    await attempt();
+  } catch (err) {
+    // A primeira chamada nativa a um plugin numa sessão do app pode falhar
+    // de forma passageira (o bridge Capacitor ainda "esquentando") -- uma
+    // segunda tentativa costuma resolver sozinha, sem exigir nada do
+    // usuário. Só propaga o erro (e mostra aviso) se a segunda também falhar.
+    console.warn("[share] 1ª tentativa falhou, tentando de novo", { message: err && err.message });
+    await attempt();
+  }
 }
 
 async function downloadShareImage() {

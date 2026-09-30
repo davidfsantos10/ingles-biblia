@@ -2602,6 +2602,11 @@ main {
   max-height: 90vh;
   overflow-y: auto;
   align-items: stretch;
+  /* Mais seções que os outros popups (prévia, fundo, fonte, apps, ações) --
+     um gap/padding menor aqui evita precisar rolar na maioria dos
+     celulares, sem apertar os outros popups que reaproveitam .word-popup. */
+  gap: 0.6rem;
+  padding: 1.25rem 1.25rem 1.1rem;
 }
 
 .share-popup-title {
@@ -2620,7 +2625,7 @@ main {
 
 .share-canvas {
   width: 100%;
-  max-width: 18rem;
+  max-width: 12.5rem;
   height: auto;
   aspect-ratio: 4 / 5;
   border-radius: 0.5rem;
@@ -2630,7 +2635,7 @@ main {
 .share-control {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.3rem;
 }
 
 .share-control-label {
