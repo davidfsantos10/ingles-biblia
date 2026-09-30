@@ -1481,11 +1481,11 @@ async function shareImageAndTextTo(target) {
 }
 
 function shareToWhatsApp() {
-  shareImageAndTextTo("whatsapp");
+  return shareImageAndTextTo("whatsapp");
 }
 
 function shareToTelegram() {
-  shareImageAndTextTo("telegram");
+  return shareImageAndTextTo("telegram");
 }
 
 async function loadChapter(book, chapter) {
@@ -3933,10 +3933,41 @@ shareFontSliderEl.addEventListener("input", () => {
 });
 shareFontDecreaseEl.addEventListener("click", () => changeShareFontSize(-2));
 shareFontIncreaseEl.addEventListener("click", () => changeShareFontSize(2));
-shareDownloadBtnEl.addEventListener("click", downloadShareImage);
-shareNativeBtnEl.addEventListener("click", shareCardNatively);
-shareWhatsappBtnEl.addEventListener("click", shareToWhatsApp);
-shareTelegramBtnEl.addEventListener("click", shareToTelegram);
+// Trava contra clique duplo: sem isso, tocar duas vezes enquanto a 1ª
+// chamada nativa (Filesystem.writeFile + Share.share) ainda está em
+// andamento disparava uma 2ª chamada concorrente -- no Android isso podia
+// fazer só uma das duas abrir o share sheet de verdade, com a outra
+// rejeitando e mostrando o aviso de erro (exatamente o sintoma relatado:
+// "toco e não acontece nada, insisto e aparece o menu nativo seguido de
+// erro"). Os 4 botões ficam desabilitados juntos enquanto qualquer um
+// estiver em andamento, e voltam ao normal ao final (sucesso ou falha).
+let isShareActionBusy = false;
+const shareActionButtons = [shareDownloadBtnEl, shareNativeBtnEl, shareWhatsappBtnEl, shareTelegramBtnEl];
+
+function setShareActionButtonsDisabled(disabled) {
+  shareActionButtons.forEach((btn) => {
+    btn.disabled = disabled;
+  });
+}
+
+function guardShareAction(handler) {
+  return async () => {
+    if (isShareActionBusy) return;
+    isShareActionBusy = true;
+    setShareActionButtonsDisabled(true);
+    try {
+      await handler();
+    } finally {
+      isShareActionBusy = false;
+      setShareActionButtonsDisabled(false);
+    }
+  };
+}
+
+shareDownloadBtnEl.addEventListener("click", guardShareAction(downloadShareImage));
+shareNativeBtnEl.addEventListener("click", guardShareAction(shareCardNatively));
+shareWhatsappBtnEl.addEventListener("click", guardShareAction(shareToWhatsApp));
+shareTelegramBtnEl.addEventListener("click", guardShareAction(shareToTelegram));
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeActivePopup();

@@ -2608,8 +2608,8 @@ main {
      sistema aumentada), sem precisar encolher texto/botões a ponto de
      ficar difícil de ler, e sem apertar os outros popups que reaproveitam
      .word-popup. */
-  gap: 0.6rem;
-  padding: 1.1rem 1.25rem 1rem;
+  gap: 0.75rem;
+  padding: 1.25rem 1.35rem 1.1rem;
 }
 
 .share-popup-title {
@@ -2617,7 +2617,7 @@ main {
   padding-right: 1.5rem;
   font-family: var(--font-reading);
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   text-align: center;
 }
 
@@ -2628,7 +2628,7 @@ main {
 
 .share-canvas {
   width: 100%;
-  max-width: 13rem;
+  max-width: 14.5rem;
   height: auto;
   aspect-ratio: 4 / 5;
   border-radius: 0.5rem;
@@ -2643,7 +2643,7 @@ main {
 
 .share-control-label {
   font-family: var(--font-ui);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--color-text-muted);
 }
@@ -2655,8 +2655,8 @@ main {
 }
 
 .share-swatch {
-  width: 2.2rem;
-  height: 2.2rem;
+  width: 2.4rem;
+  height: 2.4rem;
   border-radius: 999px;
   border: 2px solid transparent;
   cursor: pointer;
@@ -2676,8 +2676,8 @@ main {
 
 .share-font-btn {
   flex-shrink: 0;
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 2.3rem;
+  height: 2.3rem;
   border-radius: 999px;
   border: 1px solid var(--color-border);
   background: var(--color-bg);
@@ -2708,13 +2708,19 @@ main {
   justify-content: center;
   gap: 0.4rem;
   font-family: var(--font-ui);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #ffffff;
   border: none;
   border-radius: 0.4rem;
-  padding: 0.55rem 0.75rem;
+  padding: 0.6rem 0.8rem;
   cursor: pointer;
+}
+
+.share-app-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
 }
 
 .share-app-btn svg {
@@ -2741,19 +2747,25 @@ main {
 
 .share-apps-note {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: var(--color-text-muted);
 }
 
 .share-popup-actions {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.7rem;
 }
 
 .share-popup-actions .note-popup-delete,
 .share-popup-actions .word-popup-save {
   flex: 1;
   width: auto;
+}
+
+.share-popup-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
 }
 
 /* Aviso rápido (toast) */
