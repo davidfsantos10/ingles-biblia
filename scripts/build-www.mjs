@@ -9,9 +9,10 @@
 // nenhuma alteração) tags <script> com a ponte JS do Capacitor e dos
 // plugins @capacitor/app (botão "voltar" nativo), @capacitor-community/
 // text-to-speech (áudio nativo no Android), @capacitor/local-notifications
-// (lembretes locais) e @capacitor-firebase/authentication (login) -- ver
-// js/app.js. Isso mantém a versão web exatamente como estava: ela nunca
-// carrega esses arquivos.
+// (lembretes locais), @capacitor-firebase/authentication (login),
+// @capacitor/filesystem e @capacitor/share (compartilhar/salvar a imagem
+// do versículo -- ver js/app.js). Isso mantém a versão web exatamente
+// como estava: ela nunca carrega esses arquivos.
 import { cpSync, rmSync, mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -48,6 +49,23 @@ const CAPACITOR_VENDOR_FILES = [
     src: path.join(root, "node_modules/@capacitor-firebase/authentication/dist/plugin.js"),
     dest: "js/vendor/capacitor-firebase-auth-plugin.js",
   },
+  {
+    // @capacitor/filesystem está fixado (sem "^") em 7.0.1 no package.json de
+    // propósito: a partir da 7.1.0 o plugin passou a depender de um terceiro
+    // global "synapse" (pacote @capacitor/synapse) que só existe quando um
+    // bundler de verdade monta o app -- carregado como <script> avulso (como
+    // este projeto faz, sem bundler), o plugin.js quebra na primeira linha
+    // ("synapse is not defined") e nem chega a registrar o plugin. A 7.0.1 é
+    // a última versão estável antes dessa dependência, e cobre integralmente
+    // o único método usado aqui (writeFile). Não atualize essa versão sem
+    // resolver esse problema primeiro.
+    src: path.join(root, "node_modules/@capacitor/filesystem/dist/plugin.js"),
+    dest: "js/vendor/capacitor-filesystem-plugin.js",
+  },
+  {
+    src: path.join(root, "node_modules/@capacitor/share/dist/plugin.js"),
+    dest: "js/vendor/capacitor-share-plugin.js",
+  },
 ];
 
 rmSync(wwwDir, { recursive: true, force: true });
@@ -82,6 +100,8 @@ const withCapacitorBridge = original.replace(
     '  <script src="js/vendor/capacitor-notifications-plugin.js"></script>\n' +
     '  <script src="js/vendor/firebase-auth-stub.js"></script>\n' +
     '  <script src="js/vendor/capacitor-firebase-auth-plugin.js"></script>\n' +
+    '  <script src="js/vendor/capacitor-filesystem-plugin.js"></script>\n' +
+    '  <script src="js/vendor/capacitor-share-plugin.js"></script>\n' +
     `  ${scriptTag}`
 );
 writeFileSync(indexPath, withCapacitorBridge);

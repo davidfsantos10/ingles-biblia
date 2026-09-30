@@ -1263,37 +1263,132 @@ function changeShareFontSize(delta) {
   drawShareCard();
 }
 
+function getShareFileName() {
+  return `${currentShareReference.replace(/[:\s]+/g, "-")}.png`;
+}
+
 function downloadShareImageBlob(blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${currentShareReference.replace(/[:\s]+/g, "-")}.png`;
+  a.download = getShareFileName();
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function downloadShareImage() {
-  if (currentShareBlob) {
-    downloadShareImageBlob(currentShareBlob);
-    return;
-  }
-  shareCanvasEl.toBlob((blob) => {
-    if (!blob) {
-      showToast("Não foi possível gerar a imagem.");
-      return;
-    }
-    downloadShareImageBlob(blob);
-  }, "image/png");
-}
-
 function buildShareFile() {
   if (!currentShareBlob) return null;
-  return new File([currentShareBlob], `${currentShareReference.replace(/[:\s]+/g, "-")}.png`, { type: "image/png" });
+  return new File([currentShareBlob], getShareFileName(), { type: "image/png" });
 }
 
-function shareCardNatively() {
+// --- Compartilhar/baixar dentro do app Android ---
+//
+// navigator.share()/<a download> com URL blob: são APIs puramente web, sem
+// nenhum plugin nativo do Capacitor por trás -- dentro do WebView do
+// Android isso é historicamente instável: o WebView pode não expor
+// navigator.share (cai direto no aviso de "não suportado") e o download via
+// blob: muitas vezes não dispara nada, sem erro nenhum (exatamente os dois
+// sintomas relatados: menu nativo não abre, e "baixar" não salva nada,
+// mesmo mostrando a mensagem de sucesso). A correção é gravar a imagem num
+// arquivo de verdade (@capacitor/filesystem) e usar o plugin nativo de
+// compartilhamento (@capacitor/share), que abre o share sheet real do
+// Android com a imagem anexada -- essa combinação é o jeito oficialmente
+// suportado de fazer isso num app Capacitor, ao contrário das APIs web
+// usadas antes. A versão web (GitHub Pages) continua exatamente como era,
+// já que lá essas APIs funcionam normalmente num navegador de verdade.
+function isNativeShareAvailable() {
+  return !!(
+    window.Capacitor &&
+    window.Capacitor.isNativePlatform &&
+    window.Capacitor.isNativePlatform() &&
+    window.Capacitor.Plugins &&
+    window.Capacitor.Plugins.Filesystem &&
+    window.Capacitor.Plugins.Share
+  );
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      resolve(result.split(",")[1] || "");
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Grava a imagem num arquivo temporário (Directory.Cache) e devolve o
+// file:// pronto para usar com o plugin Share -- ele mesmo cuida do
+// FileProvider por baixo, então não expomos um content:// cru aqui.
+async function writeShareImageFile(blob) {
+  const { Filesystem } = window.Capacitor.Plugins;
+  const base64 = await blobToBase64(blob);
+  const { uri } = await Filesystem.writeFile({
+    path: getShareFileName(),
+    data: base64,
+    directory: "CACHE",
+  });
+  return uri;
+}
+
+function getCurrentShareBlob() {
+  if (currentShareBlob) return Promise.resolve(currentShareBlob);
+  return new Promise((resolve) => shareCanvasEl.toBlob(resolve, "image/png"));
+}
+
+async function shareNativeFile({ dialogTitle } = {}) {
+  const blob = await getCurrentShareBlob();
+  if (!blob) {
+    showToast("Não foi possível gerar a imagem.");
+    return;
+  }
+  const uri = await writeShareImageFile(blob);
+  await window.Capacitor.Plugins.Share.share({
+    title: currentShareReference,
+    text: buildShareText(),
+    files: [uri],
+    dialogTitle: dialogTitle || "Compartilhar versículo",
+  });
+}
+
+async function downloadShareImage() {
+  if (isNativeShareAvailable()) {
+    try {
+      // No Android não existe um "salvar na galeria" sem infraestrutura
+      // extra (permissão de mídia, scoped storage) -- o caminho oficial e
+      // sem permissões novas é abrir o share sheet nativo, de onde o
+      // usuário escolhe salvar em Arquivos/Galeria ou enviar direto.
+      await shareNativeFile({ dialogTitle: "Salvar imagem" });
+    } catch (err) {
+      console.warn("[share] downloadShareImage falhou", { message: err && err.message });
+      showToast("Não foi possível salvar a imagem agora. Tente de novo.");
+    }
+    return;
+  }
+
+  const blob = await getCurrentShareBlob();
+  if (!blob) {
+    showToast("Não foi possível gerar a imagem.");
+    return;
+  }
+  downloadShareImageBlob(blob);
+}
+
+async function shareCardNatively() {
+  if (isNativeShareAvailable()) {
+    try {
+      await shareNativeFile();
+    } catch (err) {
+      console.warn("[share] shareCardNatively falhou", { message: err && err.message });
+      showToast("Não foi possível compartilhar agora. Tente de novo.");
+    }
+    return;
+  }
+
   // Usa o blob já pré-gerado (em vez de esperar um novo toBlob) para não perder
   // o gesto do usuário, exigido pelo Web Share API em navegadores mais estritos.
   const file = buildShareFile();
@@ -1317,11 +1412,23 @@ function shareCardNatively() {
 }
 
 // wa.me/t.me só aceitam texto na URL — não há como anexar a imagem por um link,
-// já que o site não tem servidor para hospedá-la. Por isso, quando o navegador
-// suporta compartilhar arquivos (Web Share API), abrimos o menu nativo, que já
-// inclui WhatsApp/Telegram com a imagem anexada; sem esse suporte, baixamos a
-// imagem automaticamente e abrimos o app com o texto, para o usuário só anexar.
-function shareImageAndTextTo(target) {
+// já que o site não tem servidor para hospedá-la. Por isso, quando há suporte
+// a compartilhar arquivos de verdade (nativo no Android, ou Web Share API no
+// navegador), abrimos o menu de compartilhamento, que já inclui WhatsApp/
+// Telegram com a imagem anexada; sem esse suporte, baixamos a imagem
+// automaticamente e abrimos o app com o texto, para o usuário só anexar.
+async function shareImageAndTextTo(target) {
+  if (isNativeShareAvailable()) {
+    try {
+      const appName = target === "whatsapp" ? "WhatsApp" : "Telegram";
+      await shareNativeFile({ dialogTitle: `Enviar para o ${appName}` });
+    } catch (err) {
+      console.warn("[share] shareImageAndTextTo falhou", { message: err && err.message });
+      showToast("Não foi possível compartilhar agora. Tente de novo.");
+    }
+    return;
+  }
+
   const file = buildShareFile();
 
   if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
