@@ -1267,6 +1267,20 @@ function getShareFileName() {
   return `${currentShareReference.replace(/[:\s]+/g, "-")}.png`;
 }
 
+// Nome único por chamada, só para o arquivo temporário gravado no cache
+// nativo (ver writeShareImageFile) -- usar sempre o mesmo nome (baseado só
+// na referência do versículo) fazia a 2ª tentativa de compartilhar o MESMO
+// versículo (ex.: testar WhatsApp e depois "Baixar" sem fechar o popup)
+// tentar sobrescrever um arquivo cuja permissão de leitura ainda estava
+// concedida ao app anterior (WhatsApp/Telegram) via FileProvider, que o
+// Android às vezes recusa -- daí "Baixar" falhando bem depois de outro
+// botão ter funcionado no mesmo versículo. Cada chamada grava um arquivo
+// novo, nunca reaproveitado; o nome que o usuário vê ao salvar continua
+// baseado na referência (getShareFileName()), só o caminho interno muda.
+function getShareCacheFileName() {
+  return `${currentShareReference.replace(/[:\s]+/g, "-")}-${Date.now()}.png`;
+}
+
 function downloadShareImageBlob(blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -1328,7 +1342,7 @@ async function writeShareImageFile(blob) {
   const { Filesystem } = window.Capacitor.Plugins;
   const base64 = await blobToBase64(blob);
   const { uri } = await Filesystem.writeFile({
-    path: getShareFileName(),
+    path: getShareCacheFileName(),
     data: base64,
     directory: "CACHE",
   });
