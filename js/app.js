@@ -1383,6 +1383,15 @@ function getCurrentShareBlob() {
   return new Promise((resolve) => shareCanvasEl.toBlob(resolve, "image/png"));
 }
 
+// IMPORTANTE: a Promise de Share.share() só resolve quando o usuário termina
+// de interagir com o menu nativo (escolhe um app ou cancela) -- não quando o
+// menu é apenas aberto. Por isso NÃO há retry automático aqui: uma versão
+// anterior tentava de novo a qualquer falha (pensando em "bridge esquentando"
+// na 1ª chamada), mas um cancelamento do usuário (voltar/fechar o menu) TAMBÉM
+// rejeita a Promise -- o retry reabria o menu de compartilhar sozinho logo
+// depois do usuário ter acabado de fechá-lo, parecendo trava dupla e somando
+// bem mais tempo de espera (ver chamada em shareCardNatively, que trata
+// "Share canceled" separado, sem aviso de erro nem nova tentativa).
 async function shareNativeFile({ dialogTitle } = {}) {
   const blob = await getCurrentShareBlob();
   if (!blob) {
@@ -1390,42 +1399,23 @@ async function shareNativeFile({ dialogTitle } = {}) {
     return;
   }
 
-  const attempt = async () => {
-    const uri = await writeShareImageFile(blob);
-    await window.Capacitor.Plugins.Share.share({
-      title: currentShareReference,
-      text: buildShareText(),
-      files: [uri],
-      dialogTitle: dialogTitle || "Compartilhar versículo",
-    });
-  };
-
-  try {
-    await attempt();
-  } catch (err) {
-    // A primeira chamada nativa a um plugin numa sessão do app pode falhar
-    // de forma passageira (o bridge Capacitor ainda "esquentando") -- uma
-    // segunda tentativa costuma resolver sozinha, sem exigir nada do
-    // usuário. Só propaga o erro (e mostra aviso) se a segunda também falhar.
-    console.warn("[share] 1ª tentativa falhou, tentando de novo", { message: err && err.message });
-    await attempt();
-  }
+  const uri = await writeShareImageFile(blob);
+  await window.Capacitor.Plugins.Share.share({
+    title: currentShareReference,
+    text: buildShareText(),
+    files: [uri],
+    dialogTitle: dialogTitle || "Compartilhar versículo",
+  });
 }
 
 // Salva de verdade na galeria via ImageSaverPlugin (ver comentário acima de
 // isNativeImageSaveAvailable) -- não abre share sheet nenhum, só grava e
 // avisa com um toast, igual a qualquer "salvar imagem" de app de verdade.
+// Sem retry automático -- ver comentário em shareNativeFile.
 async function saveImageToGalleryNative(blob) {
   const { ImageSaver } = window.Capacitor.Plugins;
   const base64 = await blobToBase64(blob);
-  const attempt = () => ImageSaver.saveImage({ data: base64, fileName: getShareFileName() });
-
-  try {
-    await attempt();
-  } catch (err) {
-    console.warn("[share] 1ª tentativa de salvar falhou, tentando de novo", { message: err && err.message });
-    await attempt();
-  }
+  await ImageSaver.saveImage({ data: base64, fileName: getShareFileName() });
 }
 
 async function downloadShareImage() {
@@ -1454,6 +1444,7 @@ async function shareCardNatively() {
     try {
       await shareNativeFile();
     } catch (err) {
+      if (err && err.message === "Share canceled") return; // usuário fechou o menu: nenhuma ação necessária
       console.warn("[share] shareCardNatively falhou", { message: err && err.message });
       showToast("Não foi possível compartilhar agora. Tente de novo.");
     }
@@ -3927,39 +3918,30 @@ shareFontSliderEl.addEventListener("input", () => {
 });
 shareFontDecreaseEl.addEventListener("click", () => changeShareFontSize(-2));
 shareFontIncreaseEl.addEventListener("click", () => changeShareFontSize(2));
-// Trava contra clique duplo: sem isso, tocar duas vezes enquanto a 1ª
-// chamada nativa ainda está em andamento disparava uma 2ª chamada
-// concorrente -- no Android isso podia fazer só uma das duas terminar
-// direito, com a outra rejeitando e mostrando o aviso de erro (exatamente
-// o sintoma relatado: "toco e não acontece nada, insisto e aparece o menu
-// nativo seguido de erro"). Os 2 botões ficam desabilitados juntos
-// enquanto qualquer um estiver em andamento, e voltam ao normal ao final
-// (sucesso ou falha).
-let isShareActionBusy = false;
-const shareActionButtons = [shareDownloadBtnEl, shareNativeBtnEl];
-
-function setShareActionButtonsDisabled(disabled) {
-  shareActionButtons.forEach((btn) => {
-    btn.disabled = disabled;
-  });
-}
-
-function guardShareAction(handler) {
+// Trava contra clique duplo NO MESMO botão -- sem isso, tocar duas vezes
+// enquanto a 1ª chamada nativa ainda está em andamento disparava uma 2ª
+// chamada concorrente. Cada botão trava só a si mesmo (não o outro): Baixar
+// (ImageSaver) e Compartilhar (Filesystem+Share) são dois plugins nativos
+// totalmente independentes agora, sem nenhum recurso em comum entre eles --
+// e Share.share() em particular só resolve quando o usuário termina de
+// escolher um app no menu nativo (pode levar vários segundos de verdade, sem
+// ser trava nenhuma, ver comentário em shareNativeFile). Travar os dois
+// botões juntos fazia "Baixar" parecer travado/acionado toda vez que
+// "Compartilhar" ficava esperando o usuário decidir no menu.
+function guardShareAction(button, handler) {
   return async () => {
-    if (isShareActionBusy) return;
-    isShareActionBusy = true;
-    setShareActionButtonsDisabled(true);
+    if (button.disabled) return;
+    button.disabled = true;
     try {
       await handler();
     } finally {
-      isShareActionBusy = false;
-      setShareActionButtonsDisabled(false);
+      button.disabled = false;
     }
   };
 }
 
-shareDownloadBtnEl.addEventListener("click", guardShareAction(downloadShareImage));
-shareNativeBtnEl.addEventListener("click", guardShareAction(shareCardNatively));
+shareDownloadBtnEl.addEventListener("click", guardShareAction(shareDownloadBtnEl, downloadShareImage));
+shareNativeBtnEl.addEventListener("click", guardShareAction(shareNativeBtnEl, shareCardNatively));
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeActivePopup();
