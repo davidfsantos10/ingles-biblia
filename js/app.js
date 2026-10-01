@@ -478,27 +478,32 @@ function renderChapter(book, chapter, data) {
   versesEnEl.innerHTML = "";
   versesPtEl.innerHTML = "";
 
+  // Uma leitura só de favoritos/anotações pro capítulo inteiro (ver
+  // comentário em buildVerseToolbar), em vez de cada versículo reler.
+  const favorites = loadFavorites();
+  const notes = loadNotes();
+
   if (readingLayout === "stacked") {
     for (const verse of data.verses) {
-      versesEnEl.appendChild(buildStackedVerseEl(verse, book, chapter));
+      versesEnEl.appendChild(buildStackedVerseEl(verse, book, chapter, favorites, notes));
     }
   } else {
     for (const verse of data.verses) {
-      versesEnEl.appendChild(buildVerseEl(verse, "en", book, chapter));
-      versesPtEl.appendChild(buildVerseEl(verse, "pt", book, chapter));
+      versesEnEl.appendChild(buildVerseEl(verse, "en", book, chapter, favorites, notes));
+      versesPtEl.appendChild(buildVerseEl(verse, "pt", book, chapter, favorites, notes));
     }
   }
 
   applyWordHistoryStyles();
 }
 
-function buildVerseEl(verse, lang, book, chapter) {
+function buildVerseEl(verse, lang, book, chapter, favorites, notes) {
   const container = document.createElement("div");
   container.className = "verse";
 
   const verseKey = `${book.slug}-${chapter}-${verse.number}`;
   container.dataset.verseKey = verseKey;
-  container.appendChild(buildVerseToolbar(verse, book, chapter, verseKey));
+  container.appendChild(buildVerseToolbar(verse, book, chapter, verseKey, favorites, notes));
   container.appendChild(buildVerseText(verse, lang));
 
   return container;
@@ -506,13 +511,13 @@ function buildVerseEl(verse, lang, book, chapter) {
 
 // Layout "Traduzido": um único cartão por versículo, com o texto em inglês
 // e, logo abaixo, a tradução em português dentro de uma caixa destacada.
-function buildStackedVerseEl(verse, book, chapter) {
+function buildStackedVerseEl(verse, book, chapter, favorites, notes) {
   const container = document.createElement("div");
   container.className = "verse verse--stacked";
 
   const verseKey = `${book.slug}-${chapter}-${verse.number}`;
   container.dataset.verseKey = verseKey;
-  container.appendChild(buildVerseToolbar(verse, book, chapter, verseKey));
+  container.appendChild(buildVerseToolbar(verse, book, chapter, verseKey, favorites, notes));
   container.appendChild(buildVerseText(verse, "en"));
 
   const translationBox = document.createElement("div");
@@ -583,7 +588,14 @@ const ICON_NOTE =
 const ICON_HEART =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S3.8 15 3.8 9.4C3.8 6.4 6.1 4 9 4c1.6 0 2.8 0.8 3 1c0.2-0.2 1.4-1 3-1c2.9 0 5.2 2.4 5.2 5.4C20.2 15 12 20.5 12 20.5z"/></svg>';
 
-function buildVerseToolbar(verse, book, chapter, verseKey) {
+// `favorites`/`notes` vêm pré-carregados de renderChapter() (uma leitura só
+// pro capítulo inteiro) em vez de cada toolbar ler e refazer JSON.parse do
+// localStorage por conta própria -- como essa função roda 2x por versículo
+// (coluna EN + PT), repetir a leitura ficava perceptivelmente mais lento
+// conforme a lista de favoritos/anotações cresce com o uso. isFavorite()/
+// getNote() continuam existindo, sem cache, para quem só precisa consultar
+// avulso (fora do render de um capítulo inteiro).
+function buildVerseToolbar(verse, book, chapter, verseKey, favorites, notes) {
   const toolbar = document.createElement("div");
   toolbar.className = "verse-toolbar";
 
@@ -619,7 +631,7 @@ function buildVerseToolbar(verse, book, chapter, verseKey) {
   noteBtn.setAttribute("aria-label", "Anotação do versículo");
   noteBtn.title = "Anotação";
   noteBtn.innerHTML = ICON_NOTE;
-  if (getNote(verseKey)) noteBtn.classList.add("has-note");
+  if (notes[verseKey]) noteBtn.classList.add("has-note");
   noteBtn.addEventListener("click", () => openNotePopup(verseKey, verse, book, chapter, noteBtn));
   actions.appendChild(noteBtn);
 
@@ -629,7 +641,7 @@ function buildVerseToolbar(verse, book, chapter, verseKey) {
   favoriteBtn.setAttribute("aria-label", "Favoritar versículo");
   favoriteBtn.title = "Favoritar";
   favoriteBtn.innerHTML = ICON_HEART;
-  if (isFavorite(verseKey)) favoriteBtn.classList.add("is-active");
+  if (favorites[verseKey]) favoriteBtn.classList.add("is-active");
   favoriteBtn.addEventListener("click", () => toggleFavorite(verseKey, verse, book, chapter, favoriteBtn));
   actions.appendChild(favoriteBtn);
 
