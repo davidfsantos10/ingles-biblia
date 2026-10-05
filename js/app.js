@@ -284,6 +284,20 @@ const accountEmailSignupBtnEl = document.getElementById("account-email-signup-bt
 const accountEmailLoginBtnEl = document.getElementById("account-email-login-btn");
 const accountGoogleBtnEl = document.getElementById("account-google-btn");
 const accountFacebookBtnEl = document.getElementById("account-facebook-btn");
+const accountDeleteBtnEl = document.getElementById("account-delete-btn");
+const deleteAccountModalEl = document.getElementById("delete-account-modal");
+const deleteAccountModalCloseEl = document.getElementById("delete-account-modal-close");
+const deleteAccountErrorEl = document.getElementById("delete-account-error");
+const deleteAccountConfirmCheckboxEl = document.getElementById("delete-account-confirm-checkbox");
+const deleteAccountCancelBtnEl = document.getElementById("delete-account-cancel-btn");
+const deleteAccountConfirmBtnEl = document.getElementById("delete-account-confirm-btn");
+const reauthModalEl = document.getElementById("reauth-modal");
+const reauthModalCloseEl = document.getElementById("reauth-modal-close");
+const reauthModalErrorEl = document.getElementById("reauth-modal-error");
+const reauthModalTextEl = document.getElementById("reauth-modal-text");
+const reauthPasswordFieldEl = document.getElementById("reauth-password-field");
+const reauthPasswordInputEl = document.getElementById("reauth-password-input");
+const reauthModalSubmitEl = document.getElementById("reauth-modal-submit");
 const authModalEl = document.getElementById("auth-modal");
 const authModalCloseEl = document.getElementById("auth-modal-close");
 const authModalTitleEl = document.getElementById("auth-modal-title");
@@ -1854,6 +1868,7 @@ const AUTH_ERROR_MESSAGES = {
   "auth/too-many-requests": "Muitas tentativas seguidas. Espere um pouco e tente de novo.",
   "auth/network-request-failed": "Sem conexão com a internet. Verifique sua rede e tente de novo.",
   "auth/account-exists-with-different-credential": "Já existe uma conta com este e-mail usando outro método de acesso.",
+  "auth/requires-recent-login": "Por segurança, entre novamente antes de excluir sua conta.",
 };
 
 function isUserCancelledError(error) {
@@ -2161,12 +2176,184 @@ async function handleSaveName() {
   }
 }
 
+// --- Excluir conta ---
+//
+// Fluxo: popup de confirmação (com checkbox "Confirmo que desejo excluir
+// permanentemente minha conta", que precisa estar marcado pro botão
+// habilitar -- evita exclusão com um toque acidental) -> deleteUser() ->
+// se o Firebase exigir login recente, popup de reautenticação (senha de
+// novo pra e-mail/senha, ou repetir o login social pra Google/Facebook) ->
+// deleteUser() de novo.
+//
+// IMPORTANTE (achado auditando o código nativo da versão instalada do
+// plugin, @capacitor-firebase/authentication 8.5.2): no Android,
+// FirebaseAuthentication.deleteUser() (classe .java do plugin) chama
+// user.delete().addOnCompleteListener(task -> callback.run()) SEM checar
+// task.isSuccessful() -- ao contrário de outros métodos do mesmo arquivo,
+// que checam certinho. Isso significa que a Promise do JS SEMPRE resolve
+// como sucesso, mesmo quando a exclusão falhou de verdade no Firebase (ex.:
+// requires-recent-login). Por isso, depois de deleteUser() resolver,
+// confirmamos aqui mesmo se o usuário realmente sumiu via getCurrentUser()
+// antes de declarar sucesso pro usuário -- nunca confiamos cegamente no
+// resolve() desse método específico.
+function openDeleteAccountModal() {
+  if (!currentAuthUser) return;
+  reauthModalEl.hidden = true; // só um popup visível por vez (mesmo z-index/posição)
+  deleteAccountErrorEl.hidden = true;
+  deleteAccountConfirmCheckboxEl.checked = false;
+  deleteAccountConfirmBtnEl.disabled = true;
+  deleteAccountModalEl.hidden = false;
+  wordPopupBackdropEl.hidden = false;
+}
+
+function closeDeleteAccountModal() {
+  deleteAccountModalEl.hidden = true;
+  closeReauthModal(); // também esconde o backdrop se nada mais estiver aberto
+}
+
+function openReauthModal() {
+  deleteAccountModalEl.hidden = true; // só um popup visível por vez (mesmo z-index/posição)
+  const providerId = getUserProviderId(currentAuthUser);
+  reauthModalErrorEl.hidden = true;
+  reauthPasswordInputEl.value = "";
+  if (providerId === "password") {
+    reauthModalTextEl.textContent = "Por segurança, confirme sua senha antes de excluir sua conta.";
+    reauthPasswordFieldEl.hidden = false;
+    reauthModalSubmitEl.textContent = "Confirmar e excluir";
+  } else {
+    const label = providerId === "facebook.com" ? "Facebook" : "Google";
+    reauthModalTextEl.textContent = `Por segurança, entre novamente com ${label} antes de excluir sua conta.`;
+    reauthPasswordFieldEl.hidden = true;
+    reauthModalSubmitEl.textContent = `Continuar com ${label}`;
+  }
+  reauthModalEl.hidden = false;
+  wordPopupBackdropEl.hidden = false;
+}
+
+function closeReauthModal() {
+  reauthModalEl.hidden = true;
+  if (
+    wordPopupEl.hidden &&
+    notePopupEl.hidden &&
+    sharePopupEl.hidden &&
+    authModalEl.hidden &&
+    deleteAccountModalEl.hidden
+  ) {
+    wordPopupBackdropEl.hidden = true;
+  }
+}
+
+function finishAccountDeletion() {
+  closeDeleteAccountModal();
+  updateAccountUI(null);
+  showToast("Sua conta foi excluída.");
+}
+
+function showDeleteAccountError(message) {
+  // closeReauthModal() pode já ter escondido o backdrop (se chamado logo
+  // antes, na volta de uma reautenticação) -- garante visível de novo, já
+  // que estamos reabrindo o popup principal de exclusão.
+  reauthModalEl.hidden = true;
+  deleteAccountModalEl.hidden = false;
+  wordPopupBackdropEl.hidden = false;
+  deleteAccountErrorEl.textContent = message;
+  deleteAccountErrorEl.hidden = false;
+}
+
+// Tenta excluir a conta; se precisar de login recente, abre o popup de
+// reautenticação em vez de mostrar erro. Chamada tanto pelo botão de
+// confirmação quanto de novo, automaticamente, depois de uma
+// reautenticação bem-sucedida.
+async function attemptAccountDeletion() {
+  const FA = window.Capacitor.Plugins.FirebaseAuthentication;
+  try {
+    await FA.deleteUser();
+  } catch (err) {
+    logAuthFailure("deleteUser", err);
+    if (err && err.code === "auth/requires-recent-login") {
+      openReauthModal();
+    } else {
+      showDeleteAccountError(mapAuthError(err));
+    }
+    return;
+  }
+
+  // Ver comentário grande acima: deleteUser() pode "resolver com sucesso"
+  // mesmo sem ter excluído nada de verdade, nessa versão do plugin no
+  // Android. Confirmamos aqui -- getCurrentUser() resolve normalmente com
+  // user:null quando não há sessão (FirebaseAuthenticationPlugin.java,
+  // getCurrentUser(), nunca rejeita só por falta de usuário), então o
+  // sinal de "excluiu de verdade" é user ser null, não uma rejeição.
+  let stillSignedIn = false;
+  try {
+    const { user } = await FA.getCurrentUser();
+    stillSignedIn = !!user;
+  } catch (err) {
+    // Não deveria acontecer (ver acima), mas por segurança: se não dá pra
+    // confirmar o resultado real, não arriscamos declarar sucesso.
+    logAuthFailure("getCurrentUser (verificação pós-exclusão)", err);
+    stillSignedIn = true;
+  }
+
+  if (stillSignedIn) {
+    openReauthModal();
+    return;
+  }
+
+  finishAccountDeletion();
+}
+
+async function handleDeleteAccountConfirm() {
+  if (!currentAuthUser || !deleteAccountConfirmCheckboxEl.checked || deleteAccountConfirmBtnEl.disabled) return;
+  deleteAccountErrorEl.hidden = true;
+  deleteAccountConfirmBtnEl.disabled = true;
+  try {
+    await attemptAccountDeletion();
+  } finally {
+    deleteAccountConfirmBtnEl.disabled = !deleteAccountConfirmCheckboxEl.checked;
+  }
+}
+
+async function handleReauthSubmit() {
+  if (!currentAuthUser || reauthModalSubmitEl.disabled) return;
+  const providerId = getUserProviderId(currentAuthUser);
+  const FA = window.Capacitor.Plugins.FirebaseAuthentication;
+  reauthModalErrorEl.hidden = true;
+  reauthModalSubmitEl.disabled = true;
+  try {
+    if (providerId === "password") {
+      const password = reauthPasswordInputEl.value;
+      if (!password) {
+        reauthModalErrorEl.textContent = "Digite sua senha.";
+        reauthModalErrorEl.hidden = false;
+        return;
+      }
+      await FA.signInWithEmailAndPassword({ email: currentAuthUser.email, password });
+    } else if (providerId === "facebook.com") {
+      await FA.signInWithFacebook();
+    } else {
+      await FA.signInWithGoogle({ useCredentialManager: true });
+    }
+    closeReauthModal();
+    await attemptAccountDeletion();
+  } catch (err) {
+    if (isUserCancelledError(err)) return;
+    logAuthFailure("reauthenticate", err);
+    reauthModalErrorEl.textContent = mapAuthError(err);
+    reauthModalErrorEl.hidden = false;
+  } finally {
+    reauthModalSubmitEl.disabled = false;
+  }
+}
+
 // Fecha qualquer popup/modal aberto no momento (palavra ou anotação).
 // Retorna se algo estava aberto e foi fechado -- usado pelo botão "voltar"
 // do Android (Capacitor) para decidir se deve só fechar o popup ou navegar.
 function closeActivePopup() {
   let closedSomething = false;
   if (!wordPopupEl.hidden) { hideWordPopup(); closedSomething = true; }
+  if (!deleteAccountModalEl.hidden) { closeDeleteAccountModal(); closedSomething = true; }
+  if (!reauthModalEl.hidden) { closeReauthModal(); closedSomething = true; }
   if (!notePopupEl.hidden) { closeNotePopup(); closedSomething = true; }
   if (!sharePopupEl.hidden) { closeSharePopup(); closedSomething = true; }
   if (!authModalEl.hidden) { closeAuthModal(); closedSomething = true; }
@@ -5114,6 +5301,18 @@ accountNameSaveBtnEl.addEventListener("click", handleSaveName);
 accountNameInputEl.addEventListener("keydown", (event) => {
   if (event.key === "Enter") handleSaveName();
   else if (event.key === "Escape") closeNameEdit();
+});
+accountDeleteBtnEl.addEventListener("click", openDeleteAccountModal);
+deleteAccountModalCloseEl.addEventListener("click", closeDeleteAccountModal);
+deleteAccountCancelBtnEl.addEventListener("click", closeDeleteAccountModal);
+deleteAccountConfirmCheckboxEl.addEventListener("change", () => {
+  deleteAccountConfirmBtnEl.disabled = !deleteAccountConfirmCheckboxEl.checked;
+});
+deleteAccountConfirmBtnEl.addEventListener("click", handleDeleteAccountConfirm);
+reauthModalCloseEl.addEventListener("click", closeReauthModal);
+reauthModalSubmitEl.addEventListener("click", handleReauthSubmit);
+reauthPasswordInputEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") handleReauthSubmit();
 });
 authModalCloseEl.addEventListener("click", closeAuthModal);
 authModalSubmitEl.addEventListener("click", handleAuthModalSubmit);

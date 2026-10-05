@@ -309,6 +309,13 @@
           <p class="account-plan-placeholder">Plano atual: <strong>Gratuito</strong> &middot; Premium &mdash; em breve</p>
 
           <button type="button" id="account-signout-btn" class="account-signout-btn">Sair</button>
+
+          <div class="account-privacy-section">
+            <p class="account-privacy-title">Privacidade e conta</p>
+            <a href="https://inglescomabiblia.com/privacidade" target="_blank" rel="noopener" class="account-privacy-link">Política de Privacidade</a>
+            <button type="button" id="account-delete-btn" class="account-delete-btn">Excluir minha conta</button>
+            <p class="account-delete-web-hint">Também pode ser feito em <a href="https://inglescomabiblia.com/excluir-conta" target="_blank" rel="noopener">inglescomabiblia.com/excluir-conta</a></p>
+          </div>
         </div>
       </div>
 
@@ -794,6 +801,47 @@
       <span id="auth-modal-switch-text">Já tem conta?</span>
       <button type="button" id="auth-modal-switch-btn" class="home-link-button">Entrar</button>
     </p>
+  </div>
+
+  <div id="delete-account-modal" class="word-popup auth-modal" role="dialog" aria-modal="true" aria-label="Excluir conta" hidden>
+    <button type="button" id="delete-account-modal-close" class="word-popup-close" aria-label="Fechar">×</button>
+
+    <p class="auth-modal-title">Excluir sua conta?</p>
+
+    <p id="delete-account-error" class="auth-modal-error" hidden></p>
+
+    <div class="delete-account-text">
+      <p>Essa ação é permanente e não pode ser desfeita.</p>
+      <p>Sua conta e os dados associados ao app serão excluídos quando possível.</p>
+      <p>Se você tiver uma assinatura Premium ativa pela Google Play, a exclusão da conta <strong>NÃO</strong> cancela automaticamente a assinatura. Gerencie ou cancele sua assinatura pela Google Play.</p>
+    </div>
+
+    <label class="delete-account-confirm-label">
+      <input type="checkbox" id="delete-account-confirm-checkbox">
+      Confirmo que desejo excluir permanentemente minha conta.
+    </label>
+
+    <div class="delete-account-actions">
+      <button type="button" id="delete-account-cancel-btn" class="account-name-cancel-btn">Cancelar</button>
+      <button type="button" id="delete-account-confirm-btn" class="delete-account-confirm-btn" disabled>Excluir minha conta</button>
+    </div>
+  </div>
+
+  <div id="reauth-modal" class="word-popup auth-modal" role="dialog" aria-modal="true" aria-label="Confirme sua identidade" hidden>
+    <button type="button" id="reauth-modal-close" class="word-popup-close" aria-label="Fechar">×</button>
+
+    <p class="auth-modal-title">Confirme sua identidade</p>
+
+    <p id="reauth-modal-error" class="auth-modal-error" hidden></p>
+
+    <p id="reauth-modal-text" class="account-plan-placeholder"></p>
+
+    <label id="reauth-password-field" class="auth-modal-label" hidden>
+      Senha
+      <input type="password" id="reauth-password-input" class="auth-modal-input" autocomplete="current-password" placeholder="••••••••">
+    </label>
+
+    <button type="button" id="reauth-modal-submit" class="word-popup-save">Continuar</button>
   </div>
 
   <div id="lessons-overlay" class="lessons-overlay" hidden role="dialog" aria-modal="true" aria-label="Lição de hoje">
