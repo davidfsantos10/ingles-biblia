@@ -1,5 +1,18 @@
 apply plugin: 'com.android.application'
 
+// Assinatura de release: lê de android/keystore.properties, um arquivo LOCAL
+// (nunca versionado -- ver android/.gitignore) que cada máquina de build
+// precisa criar a partir de android/keystore.properties.example. Sem esse
+// arquivo (como neste repositório, ou em qualquer checkout novo),
+// assembleDebug/assembleRelease continuam funcionando normalmente -- só o
+// release sai sem assinatura, exatamente como antes desta mudança.
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+def hasReleaseSigning = keystorePropertiesFile.exists()
+if (hasReleaseSigning) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.davidfsantos.inglesbiblia"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +29,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    if (hasReleaseSigning) {
+        signingConfigs {
+            release {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
