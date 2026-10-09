@@ -283,7 +283,6 @@ const accountSignoutBtnEl = document.getElementById("account-signout-btn");
 const accountEmailSignupBtnEl = document.getElementById("account-email-signup-btn");
 const accountEmailLoginBtnEl = document.getElementById("account-email-login-btn");
 const accountGoogleBtnEl = document.getElementById("account-google-btn");
-const accountFacebookBtnEl = document.getElementById("account-facebook-btn");
 const accountDeleteBtnEl = document.getElementById("account-delete-btn");
 const deleteAccountModalEl = document.getElementById("delete-account-modal");
 const deleteAccountModalCloseEl = document.getElementById("delete-account-modal-close");
@@ -1895,13 +1894,12 @@ function mapAuthError(error) {
 
 // Método de login exibido no perfil -- só informativo (nunca mostramos
 // senha/token/credencial). O objeto User do plugin traz o provider real em
-// providerData[0].providerId ("google.com", "facebook.com", "password");
-// user.providerId no nível raiz é sempre a constante "firebase", não serve
-// pra isso. Também aceita o formato já achatado do cache local (ver
-// cacheAccountDisplay), que já guarda só o providerId resolvido.
+// providerData[0].providerId ("google.com", "password"); user.providerId no
+// nível raiz é sempre a constante "firebase", não serve pra isso. Também
+// aceita o formato já achatado do cache local (ver cacheAccountDisplay),
+// que já guarda só o providerId resolvido.
 const PROVIDER_LABELS = {
   "google.com": "Conectado com Google",
-  "facebook.com": "Conectado com Facebook",
   "password": "Conectado com e-mail e senha",
 };
 
@@ -2101,32 +2099,6 @@ async function handleGoogleSignIn() {
   }
 }
 
-// Login clássico do SDK do Facebook (LoginManager + CallbackManager) --
-// o plugin já pede só "email" + "public_profile" por padrão (ver
-// FacebookAuthProviderHandler.getPermissions()), sem escopos extras.
-// Desabilita o botão durante a chamada pra evitar duplo toque, já que
-// (ao contrário do Google) esse fluxo pode envolver troca pro app do
-// Facebook e volta, com uma latência maior e mais perceptível.
-async function handleFacebookSignIn() {
-  if (!isNativeAuthAvailable()) {
-    showToast("Login só funciona no app Android instalado, não no navegador.");
-    return;
-  }
-  if (accountFacebookBtnEl.disabled) return;
-  const FA = window.Capacitor.Plugins.FirebaseAuthentication;
-  accountFacebookBtnEl.disabled = true;
-  try {
-    await FA.signInWithFacebook();
-    showToast("Login feito com sucesso.");
-  } catch (err) {
-    if (isUserCancelledError(err)) return;
-    logAuthFailure("signInWithFacebook", err);
-    showToast(`Falha no login com Facebook: ${mapAuthError(err)}`);
-  } finally {
-    accountFacebookBtnEl.disabled = false;
-  }
-}
-
 async function handleSignOut() {
   if (!isNativeAuthAvailable()) return;
   try {
@@ -2182,8 +2154,8 @@ async function handleSaveName() {
 // permanentemente minha conta", que precisa estar marcado pro botão
 // habilitar -- evita exclusão com um toque acidental) -> deleteUser() ->
 // se o Firebase exigir login recente, popup de reautenticação (senha de
-// novo pra e-mail/senha, ou repetir o login social pra Google/Facebook) ->
-// deleteUser() de novo.
+// novo pra e-mail/senha, ou repetir o login com Google) -> deleteUser() de
+// novo.
 //
 // IMPORTANTE (achado auditando o código nativo da versão instalada do
 // plugin, @capacitor-firebase/authentication 8.5.2): no Android,
@@ -2221,10 +2193,9 @@ function openReauthModal() {
     reauthPasswordFieldEl.hidden = false;
     reauthModalSubmitEl.textContent = "Confirmar e excluir";
   } else {
-    const label = providerId === "facebook.com" ? "Facebook" : "Google";
-    reauthModalTextEl.textContent = `Por segurança, entre novamente com ${label} antes de excluir sua conta.`;
+    reauthModalTextEl.textContent = "Por segurança, entre novamente com Google antes de excluir sua conta.";
     reauthPasswordFieldEl.hidden = true;
-    reauthModalSubmitEl.textContent = `Continuar com ${label}`;
+    reauthModalSubmitEl.textContent = "Continuar com Google";
   }
   reauthModalEl.hidden = false;
   wordPopupBackdropEl.hidden = false;
@@ -2329,8 +2300,6 @@ async function handleReauthSubmit() {
         return;
       }
       await FA.signInWithEmailAndPassword({ email: currentAuthUser.email, password });
-    } else if (providerId === "facebook.com") {
-      await FA.signInWithFacebook();
     } else {
       await FA.signInWithGoogle({ useCredentialManager: true });
     }
@@ -5293,7 +5262,6 @@ initNotificationsUI();
 accountEmailSignupBtnEl.addEventListener("click", () => openAuthModal("signup"));
 accountEmailLoginBtnEl.addEventListener("click", () => openAuthModal("login"));
 accountGoogleBtnEl.addEventListener("click", handleGoogleSignIn);
-accountFacebookBtnEl.addEventListener("click", handleFacebookSignIn);
 accountSignoutBtnEl.addEventListener("click", handleSignOut);
 accountEditNameBtnEl.addEventListener("click", openNameEdit);
 accountNameCancelBtnEl.addEventListener("click", closeNameEdit);
