@@ -4161,7 +4161,7 @@ function saveVocabulary(list) {
 // preenchida depois por updateVocabularyTranslation).
 function recordWordClick(word, color, translation) {
   const list = loadVocabulary();
-  const existing = list.find((entry) => entry.word === word);
+  const existing = list.find((entry) => entry.word === word && (entry.type || "word") === "word");
 
   if (existing) {
     existing.timesClicked = (existing.timesClicked || 1) + 1;
@@ -4186,10 +4186,13 @@ function recordWordClick(word, color, translation) {
 }
 
 // Preenche a tradução assim que ela chega, sem mexer na contagem de cliques.
+// Filtra por type (igual updatePhraseTranslation/removeFromVocabulary) pra
+// não atualizar por engano uma expressão salva que coincida com o mesmo
+// texto de uma palavra solta (ver recordWordClick).
 function updateVocabularyTranslation(word, translation) {
   if (!translation) return;
   const list = loadVocabulary();
-  const entry = list.find((e) => e.word === word);
+  const entry = list.find((e) => e.word === word && (e.type || "word") === "word");
   if (!entry || entry.translation === translation) return;
 
   entry.translation = translation;
@@ -4197,7 +4200,7 @@ function updateVocabularyTranslation(word, translation) {
   if (!vocabularyViewEl.hidden) renderVocabularyList();
 
   if (flashcardsMode === "vocabulary") {
-    const deckEntry = flashcardsDeck.find((e) => e.word === word);
+    const deckEntry = flashcardsDeck.find((e) => e.word === word && (e.type || "word") === "word");
     if (deckEntry) deckEntry.translation = translation;
     if (!flashcardsViewEl.hidden && flashcardsDeck[flashcardsIndex] === deckEntry) {
       flashcardBackTextEl.textContent = translation;
