@@ -23,6 +23,8 @@ Este documento registra, para cada campo de tradução em `data/*.json`, de onde
 - **Observações:** vocabulário simplificado (~1000 palavras), confirmado por análise textual
 - **Data de obtenção original:** não registrada (importado antes deste documento existir)
 
+**Verificação externa (13/10/2026)**, antes da publicação na Google Play: pesquisa em `ebible.org` confirmou os três status acima — WEB em domínio público (dedicação explícita, uso comercial permitido), BBE em domínio público nos EUA (publicada sem aviso de copyright), e KJV em domínio público fora do Reino Unido, com Crown Copyright só dentro dele. Nenhuma das três impede a distribuição mundial do app pela Play Store; a única restrição prática conhecida (KJV dentro do Reino Unido) é a mesma situação de praticamente todo app bíblico do mercado, e não impede a leitura/estudo gratuito nem a monetização de recursos educacionais à parte do texto bíblico em si.
+
 ## `pt` — Bíblia Livre (BLIVRE)
 
 - **Nome:** Bíblia Livre (sigla **BLIVRE**)
@@ -38,7 +40,7 @@ Este documento registra, para cada campo de tradução em `data/*.json`, de onde
 
   > Todas as Escrituras em português citadas são da Bíblia Livre (BLIVRE), Copyright © Diego Santos, Mario Sérgio, e Marco Teles, http://sites.google.com/site/biblialivre/ - fevereiro de 2018. Licença Creative Commons Atribuição 3.0 Brasil (http://creativecommons.org/licenses/by/3.0/br/). Reprodução permitida desde que devidamente mencionados fonte e autores.
 
-  Observação: uma auditoria anterior encontrou, em um resultado de busca (não verificado diretamente por bloqueio de rede), uma menção a "CC BY 4.0" na página de distribuição do eBible.org (`porbr2018`). Essa divergência entre a licença declarada pela fonte primária (CC BY 3.0 BR, usada aqui) e a possível licença do eBible **não foi resolvida** — não foi possível acessar `ebible.org` para confirmar. O texto efetivamente importado neste projeto vem da tag oficial do GitHub, licenciada como CC BY 3.0 BR conforme acima.
+  **Atualização (13/10/2026) — divergência investigada e resolvida:** confirmado por pesquisa que `ebible.org/porbr2018/copyright.htm` (mesmos três titulares: Diego Santos, Mario Sérgio e Marco Teles) realmente declara **CC BY 4.0 Brasil** para a cópia distribuída por aquele site, diferente da CC BY 3.0 BR declarada no repositório GitHub (fonte usada aqui). São duas publicações oficiais da mesma tradução, sob rótulos de licença diferentes — não um erro. Isso **não é um bloqueio**: CC BY 3.0 e CC BY 4.0 têm o mesmo efeito prático relevante aqui (uso comercial permitido, modificação permitida, exigem só atribuição — nenhuma das duas é "compartilha-igual"/ShareAlike). Como o texto efetivamente importado neste projeto vem da tag `2018.2.0` do GitHub (ver hash SHA-256 acima), a licença que rege essa cópia específica é a CC BY 3.0 BR declarada nesse repositório, e é essa que o app cita na atribuição em tela. Observação à parte: existe um projeto homônimo mas **diferente**, "Bíblia Livre Para Todos" (`porblt`, tradução baseada na Free Bible Version em inglês, sob CC BY-SA 4.0/compartilha-igual) — não é a fonte usada aqui, não se aplica a este projeto.
 
 - **Data da migração:** 23/09/2026
 
