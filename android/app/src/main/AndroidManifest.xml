@@ -34,7 +34,7 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
 
-        <!-- AdMob (@capacitor-community/admob) -- App ID real em strings.xml (admob_app_id). -->
+        <!-- AdMob (@capacitor-community/admob): App ID real em strings.xml (admob_app_id). -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="@string/admob_app_id"/>
