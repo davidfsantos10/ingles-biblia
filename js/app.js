@@ -6016,3 +6016,46 @@ renderFavoritesBadge();
 renderNotesBadge();
 renderGrammar();
 setActiveView("home");
+
+// --- Anúncios (AdMob) ---
+//
+// Banner fixo na parte de baixo da tela, em todas as views (plano grátis
+// do app). Usa o Ad Unit ID de TESTE oficial do Google por enquanto -- ver
+// https://developers.google.com/admob/android/test-ads. Antes de publicar
+// a atualização com anúncios de verdade: troque ADMOB_BANNER_AD_UNIT_ID
+// pelo Ad Unit ID real da conta AdMob, mude ADMOB_BANNER_IS_TESTING pra
+// false, e troque admob_app_id em
+// android/app/src/main/res/values/strings.xml pelo App ID real.
+const ADMOB_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/9214589741";
+const ADMOB_BANNER_IS_TESTING = true;
+
+async function initAdsUI() {
+  const capacitor = window.Capacitor;
+  const isNative = !!(capacitor && capacitor.isNativePlatform && capacitor.isNativePlatform());
+  const AdMob = isNative && capacitor.Plugins && capacitor.Plugins.AdMob;
+  if (!AdMob) return; // navegador, ou plugin não instalado: sem anúncios
+
+  try {
+    await AdMob.initialize();
+    // O banner é uma view nativa sobreposta ao WebView, não um elemento do
+    // DOM -- sem isso, o conteúdo da última linha de cada tela ficaria
+    // escondido atrás dele. Reserva o espaço real via variável CSS,
+    // atualizada assim que o AdMob informa a altura carregada.
+    await AdMob.addListener("bannerAdSizeChanged", (info) => {
+      const heightPx = info && info.height ? `${info.height}px` : "0px";
+      document.documentElement.style.setProperty("--admob-banner-height", heightPx);
+    });
+    await AdMob.showBanner({
+      adId: ADMOB_BANNER_AD_UNIT_ID,
+      isTesting: ADMOB_BANNER_IS_TESTING,
+      adSize: "ADAPTIVE_BANNER",
+      position: "BOTTOM_CENTER",
+    });
+  } catch (err) {
+    // Sem anúncio nessa sessão (ex.: sem internet) -- não impede o uso do
+    // app, só não reserva espaço nenhum na tela.
+    console.warn("[ads] não foi possível carregar o banner do AdMob", err);
+  }
+}
+
+initAdsUI();

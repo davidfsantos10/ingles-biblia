@@ -14,6 +14,10 @@
   --color-word-green: #1e8f4e;
   --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-reading: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", serif;
+  /* Atualizada via JS (initAdsUI) com a altura real do banner nativo do
+     AdMob, pra reservar espaço na tela -- 0 enquanto nenhum anúncio
+     carregou (navegador, sem internet, etc.). */
+  --admob-banner-height: 0px;
 }
 
 /* Modo noturno: sobrescreve só as variáveis de cor acima -- como quase todo
@@ -121,6 +125,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  padding-bottom: var(--admob-banner-height);
 }
 
 /* Cabeçalho do Início (estilo do mockup do app) */
@@ -1691,7 +1696,7 @@ main {
 .home-fab-audio {
   position: fixed;
   right: 22px;
-  bottom: 22px;
+  bottom: calc(22px + var(--admob-banner-height));
   z-index: 30;
   width: 52px;
   height: 52px;
@@ -1717,7 +1722,7 @@ main {
 @media (max-width: 480px) {
   .home-fab-audio {
     right: 16px;
-    bottom: 16px;
+    bottom: calc(16px + var(--admob-banner-height));
   }
 }
 

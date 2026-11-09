@@ -9,6 +9,7 @@
     "android:open": "npm run cap:sync && npx cap open android"
   },
   "dependencies": {
+    "@capacitor-community/admob": "^8.3.0",
     "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor-firebase/authentication": "^8.5.2",
     "@capacitor/android": "^8.5.2",
