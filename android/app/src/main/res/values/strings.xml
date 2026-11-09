@@ -4,10 +4,6 @@
     <string name="title_activity_main">Inglês com a Bíblia</string>
     <string name="package_name">com.davidfsantos.inglesbiblia</string>
     <string name="custom_url_scheme">com.davidfsantos.inglesbiblia</string>
-    <!-- AdMob App ID de TESTE oficial do Google (sempre o mesmo em todo
-         projeto, não é segredo nem exclusivo deste app -- ver
-         https://developers.google.com/admob/android/test-ads). Troque pelo
-         App ID real da sua conta AdMob (formato ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY)
-         antes de publicar a atualização com anúncios. -->
-    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <!-- AdMob App ID real da conta AdMob do app. -->
+    <string name="admob_app_id">ca-app-pub-8274469364423308~5475723260</string>
 </resources>

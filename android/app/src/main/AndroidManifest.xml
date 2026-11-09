@@ -34,9 +34,7 @@
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
 
-        <!-- AdMob (@capacitor-community/admob) -- admob_app_id em strings.xml
-             está com o App ID de TESTE oficial do Google. Trocar pelo App ID
-             real da conta AdMob antes de publicar a atualização com anúncios. -->
+        <!-- AdMob (@capacitor-community/admob) -- App ID real em strings.xml (admob_app_id). -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="@string/admob_app_id"/>

@@ -6020,14 +6020,10 @@ setActiveView("home");
 // --- Anúncios (AdMob) ---
 //
 // Banner fixo na parte de baixo da tela, em todas as views (plano grátis
-// do app). Usa o Ad Unit ID de TESTE oficial do Google por enquanto -- ver
-// https://developers.google.com/admob/android/test-ads. Antes de publicar
-// a atualização com anúncios de verdade: troque ADMOB_BANNER_AD_UNIT_ID
-// pelo Ad Unit ID real da conta AdMob, mude ADMOB_BANNER_IS_TESTING pra
-// false, e troque admob_app_id em
-// android/app/src/main/res/values/strings.xml pelo App ID real.
-const ADMOB_BANNER_AD_UNIT_ID = "ca-app-pub-3940256099942544/9214589741";
-const ADMOB_BANNER_IS_TESTING = true;
+// do app). Ad Unit ID real da conta AdMob do app (ver também admob_app_id
+// em android/app/src/main/res/values/strings.xml).
+const ADMOB_BANNER_AD_UNIT_ID = "ca-app-pub-8274469364423308/8043990945";
+const ADMOB_BANNER_IS_TESTING = false;
 
 async function initAdsUI() {
   const capacitor = window.Capacitor;
