@@ -2468,6 +2468,15 @@ main {
   border-bottom-color: var(--color-accent);
 }
 
+/* Palavras que o exercício de "frase curta" (Lições) pede pra traduzir,
+   destacadas dentro do versículo inteiro -- ver appendTappableWords. */
+.word--lesson-blank {
+  font-weight: 800;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border-bottom: 2px solid var(--color-accent);
+}
+
 /* Palavras salvas no vocabulário: cor escolhida pelo usuário no popup, em negrito para se destacar. */
 
 .word--saved-blue {

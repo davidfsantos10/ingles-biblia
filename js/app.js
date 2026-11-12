@@ -546,8 +546,15 @@ function buildStackedVerseEl(verse, book, chapter, favorites, notes) {
 // espaços/pontuação entre elas como texto simples. Reaproveitado tanto pela
 // coluna de leitura quanto pelo enunciado dos exercícios de Lições, para que
 // tocar numa palavra abra a mesma tradução/pronúncia nos dois lugares.
-function appendTappableWords(container, text, lang) {
+//
+// `highlightIndices` é opcional: um Set com o índice (0, 1, 2…, na ordem em
+// que aparecem no texto) das ocorrências que devem ganhar a classe
+// ".word--lesson-blank" -- usado pelos exercícios de "traduza estas N
+// palavras" (Lições), que mostram o versículo inteiro mas destacam só as
+// palavras que o usuário precisa traduzir.
+function appendTappableWords(container, text, lang, highlightIndices) {
   let lastIndex = 0;
+  let occurrenceIndex = 0;
   WORD_PATTERN.lastIndex = 0;
   let match;
   while ((match = WORD_PATTERN.exec(text)) !== null) {
@@ -556,6 +563,7 @@ function appendTappableWords(container, text, lang) {
     }
     const span = document.createElement("span");
     span.className = "word";
+    if (highlightIndices && highlightIndices.has(occurrenceIndex)) span.classList.add("word--lesson-blank");
     span.textContent = match[0];
     span.dataset.word = match[0].toLowerCase();
     span.dataset.lang = lang;
@@ -563,6 +571,7 @@ function appendTappableWords(container, text, lang) {
     span.setAttribute("role", "button");
     container.appendChild(span);
     lastIndex = WORD_PATTERN.lastIndex;
+    occurrenceIndex += 1;
   }
   if (lastIndex < text.length) {
     container.appendChild(document.createTextNode(text.slice(lastIndex)));
@@ -3563,7 +3572,7 @@ let currentUnderstandContext = null;
 // trecho" sem nenhuma consulta nova.
 function getLessonSelectionContext(selectedText) {
   const exercise = currentLessonExercises[currentLessonIndex];
-  if (!exercise || exercise.type !== "sentence" || exercise.promptLang !== "en") return null;
+  if (!exercise || (exercise.type !== "sentence" && exercise.type !== "phrase") || exercise.promptLang !== "en") return null;
   if (!exercise.verse || !exercise.book) return null;
 
   return {
@@ -5413,98 +5422,144 @@ function isLessonAnswerCorrect(userAnswer, acceptedAnswers, isSentence) {
 
 // --- Montagem da lição do dia ---
 
-function buildLessonWordPool() {
-  const pool = [];
-  const seen = new Set();
+// Busca o versículo/livro de uma referência, descartando (retornando null)
+// quando a referência falhar ou não tiver tradução em português nesta
+// edição da Bíblia Livre -- sem inventar texto nem usar o aviso de
+// indisponibilidade como se fosse a resposta do exercício.
+async function pickVerseForLesson(ref) {
+  const data = await fetchChapterDataCached(ref.slug, ref.chapter);
+  if (!data) return null;
+  const verse = data.verses.find((v) => v.number === ref.number);
+  const book = BOOKS.find((b) => b.slug === ref.slug);
+  if (!verse || !book || !verse.pt) return null;
+  return { verse, book };
+}
 
-  for (const entry of loadVocabulary()) {
-    if (entry.translation && !seen.has(entry.word)) {
-      pool.push({ word: entry.word, translations: [entry.translation] });
-      seen.add(entry.word);
-    }
+// Escolhe o versículo e as `groupSize` palavras a destacar nele -- tudo
+// local (só lê os capítulos já embutidos no app), sem chamada de rede, por
+// isso pode tentar várias referências à vontade até achar uma que sirva.
+async function selectPhraseWords(groupSize, takeNextRef, rng) {
+  const MAX_VERSE_ATTEMPTS = 5;
+  for (let attempts = 0; attempts < MAX_VERSE_ATTEMPTS; attempts++) {
+    const ref = takeNextRef();
+    const picked = await pickVerseForLesson(ref);
+    if (!picked) continue;
+    const { verse, book } = picked;
+
+    const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
+    const promptLang = direction === "en-to-pt" ? "en" : "pt";
+    const promptText = promptLang === "en" ? getEnglishText(verse) : verse.pt;
+
+    // Tokeniza na mesma ordem em que as palavras tocáveis vão aparecer na
+    // tela (ver appendTappableWords), pra poder destacar ocorrências certas.
+    const tokens = [];
+    WORD_PATTERN.lastIndex = 0;
+    let match;
+    while ((match = WORD_PATTERN.exec(promptText)) !== null) tokens.push(match[0]);
+
+    // Só considera palavras com um tamanho mínimo -- evita sortear
+    // conectivos curtos (ex.: "a", "o", "is", "of"), pouco úteis pra
+    // praticar vocabulário.
+    const candidateIndices = tokens.map((_, i) => i).filter((i) => tokens[i].length >= 3);
+    if (candidateIndices.length < groupSize) continue;
+
+    const chosenIndices = seededShuffle(candidateIndices, rng)
+      .slice(0, groupSize)
+      .sort((a, b) => a - b);
+
+    return { ref, verse, book, direction, promptLang, promptText, tokens, chosenIndices, groupSize };
   }
+  return null;
+}
 
-  for (const [word, translations] of Object.entries(ARCHAIC_EN_PT_GLOSSARY)) {
-    if (!seen.has(word)) {
-      pool.push({ word, translations: translations.split(",").map((t) => t.trim()) });
-      seen.add(word);
-    }
-  }
+// A partir de uma seleção já pronta (ver selectPhraseWords), busca a
+// tradução de cada palavra destacada -- a única parte que depende de rede
+// (quando a palavra não está no glossário estático de arcaísmos da KJV).
+// Mesma função usada quando o usuário toca numa palavra durante a leitura
+// (com cache), nunca tradução inventada ou um recorte do versículo às
+// cegas. Pode ser chamada em paralelo pros vários exercícios de uma vez
+// (ver buildTodaysLessonExercises), já que não compartilha estado entre si.
+async function translatePhraseSelection(selection) {
+  const { ref, verse, book, direction, promptLang, promptText, tokens, chosenIndices, groupSize } = selection;
+  const fromLang = promptLang;
+  const toLang = promptLang === "en" ? "pt" : "en";
 
-  return pool;
+  const translations = await Promise.all(chosenIndices.map((i) => translateWord(tokens[i].toLowerCase(), fromLang, toLang)));
+
+  return {
+    type: "phrase",
+    mode: "type",
+    direction,
+    wordCount: groupSize,
+    prompt: promptText,
+    promptLang,
+    blankTokenIndices: new Set(chosenIndices),
+    acceptedAnswers: [translations.join(" ")],
+    reference: `${book.pt} ${ref.chapter}:${verse.number}`,
+    // Guardados para permitir tocar em palavras e selecionar trecho do
+    // enunciado (ver renderLessonExercise/getLessonSelectionContext).
+    verse,
+    book,
+    chapter: ref.chapter,
+    verseNumber: verse.number,
+  };
 }
 
 async function buildTodaysLessonExercises() {
   const rng = mulberry32(getLessonSeed());
+  const refQueue = seededShuffle(VERSE_OF_THE_DAY_REFS, rng);
+  let refCursor = 0;
+  function takeNextRef() {
+    const ref = refQueue[refCursor % refQueue.length];
+    refCursor += 1;
+    return ref;
+  }
 
   // --- O único exercício no modo difícil: traduzir o versículo inteiro,
-  // digitando do zero (sem banco de palavras pra ajudar). ---
+  // digitando do zero (sem nenhuma ajuda). ---
   let hardExercise = null;
-  const candidateRefs = seededShuffle(VERSE_OF_THE_DAY_REFS, rng).slice(0, LESSON_HARD_VERSE_CANDIDATES);
-  for (const ref of candidateRefs) {
-    try {
-      const response = await fetch(`data/${ref.slug}-${ref.chapter}.json`);
-      if (!response.ok) continue;
-      const data = await response.json();
-      const verse = data.verses.find((v) => v.number === ref.number);
-      const book = BOOKS.find((b) => b.slug === ref.slug);
-      // Sem tradução nesta edição da Bíblia Livre (verse.pt nulo): pula essa
-      // referência, sem inventar texto nem usar o aviso de indisponibilidade
-      // como se fosse a resposta do exercício.
-      if (!verse || !book || !verse.pt) continue;
+  for (let attempts = 0; attempts < LESSON_HARD_VERSE_CANDIDATES && !hardExercise; attempts++) {
+    const ref = takeNextRef();
+    const picked = await pickVerseForLesson(ref);
+    if (!picked) continue;
+    const { verse, book } = picked;
 
-      const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
-      const enText = getEnglishText(verse);
-      hardExercise = {
-        type: "sentence",
-        mode: "type",
-        direction,
-        prompt: direction === "en-to-pt" ? enText : verse.pt,
-        promptLang: direction === "en-to-pt" ? "en" : "pt",
-        acceptedAnswers: direction === "en-to-pt" ? [verse.pt] : [enText],
-        reference: `${book.pt} ${ref.chapter}:${ref.number}`,
-        // Guardados para permitir tocar em palavras e selecionar trecho do
-        // enunciado (ver renderLessonExercise/getSelectionContext) -- o
-        // mesmo versículo/livro já buscados acima, sem nova requisição.
-        verse,
-        book,
-        chapter: ref.chapter,
-        verseNumber: ref.number,
-      };
-      break;
-    } catch (err) {
-      // Essa referência falhou (ex.: sem conexão); tenta a próxima candidata.
-    }
+    const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
+    const enText = getEnglishText(verse);
+    hardExercise = {
+      type: "sentence",
+      mode: "type",
+      direction,
+      prompt: direction === "en-to-pt" ? enText : verse.pt,
+      promptLang: direction === "en-to-pt" ? "en" : "pt",
+      acceptedAnswers: direction === "en-to-pt" ? [verse.pt] : [enText],
+      reference: `${book.pt} ${ref.chapter}:${verse.number}`,
+      verse,
+      book,
+      chapter: ref.chapter,
+      verseNumber: verse.number,
+    };
   }
 
   const exercises = hardExercise ? [hardExercise] : [];
 
-  // --- Os outros 9: traduzir só 2, 3 ou 4 palavras de uma vez, bem mais
-  // fácil que a frase inteira. Usa palavras com tradução já confirmada --
-  // do vocabulário que o próprio usuário salvou lendo o app, ou do
-  // glossário de palavras arcaicas da KJV -- em vez de recortar um pedaço
-  // do versículo (inglês e português não têm a mesma ordem/divisão de
-  // palavras, então um recorte não teria uma tradução correta garantida). --
-  const totalPhraseWordsNeeded = LESSON_PHRASE_GROUP_SIZES.reduce((sum, n) => sum + n, 0);
-  const wordPool = seededShuffle(buildLessonWordPool(), rng).slice(0, totalPhraseWordsNeeded);
-
-  let poolIndex = 0;
+  // --- Os outros 9: mostra o versículo inteiro, mas só pede a tradução de
+  // 2, 3 ou 4 palavras destacadas nele (3 exercícios de cada tamanho). A
+  // escolha de versículo/palavras (rápida e local) continua sequencial, pra
+  // sempre dar o mesmo resultado pra todo mundo no mesmo dia -- mas as
+  // traduções (a parte lenta, que depende de rede) rodam todas em paralelo,
+  // em vez de uma atrás da outra, senão a lição demoraria bem mais pra
+  // montar com uma conexão ruim.
+  const selections = [];
   for (const groupSize of LESSON_PHRASE_GROUP_SIZES) {
-    const group = wordPool.slice(poolIndex, poolIndex + groupSize);
-    if (group.length < 2) break; // não sobraram palavras suficientes pra outro grupo
-    poolIndex += groupSize;
+    selections.push(await selectPhraseWords(groupSize, takeNextRef, rng));
+  }
 
-    const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
-    exercises.push({
-      type: "phrase",
-      mode: "type",
-      direction,
-      wordCount: group.length,
-      prompt: group.map((entry) => (direction === "en-to-pt" ? entry.word : entry.translations[0])).join(" "),
-      promptLang: direction === "en-to-pt" ? "en" : "pt",
-      acceptedAnswers: [group.map((entry) => (direction === "en-to-pt" ? entry.translations[0] : entry.word)).join(" ")],
-      reference: "",
-    });
+  const translatedResults = await Promise.allSettled(
+    selections.map((selection) => (selection ? translatePhraseSelection(selection) : Promise.reject(new Error("sem seleção válida"))))
+  );
+  for (const result of translatedResults) {
+    if (result.status === "fulfilled") exercises.push(result.value);
   }
 
   return seededShuffle(exercises, rng);
@@ -5639,14 +5694,17 @@ function renderLessonExercise() {
   lessonInstructionEl.textContent = isSentence
     ? `Traduza a frase inteira para o ${targetLang}:`
     : exercise.type === "phrase"
-      ? `Traduza estas ${exercise.wordCount} palavras para o ${targetLang}:`
+      ? `Traduza as ${exercise.wordCount} palavras destacadas para o ${targetLang}:`
       : `Traduza a palavra para o ${targetLang}:`;
   // Enunciado tocável: como na leitura, cada palavra vira um span que abre
   // a mesma tradução/pronúncia ao tocar (ver handleVersesClick reaproveitado
   // abaixo), e o texto continua selecionável para abrir "Entender trecho"
-  // nas frases em inglês (ver getSelectionContext).
+  // nas frases em inglês (ver getSelectionContext). Nos exercícios de
+  // "frase curta" (type "phrase"), o versículo aparece inteiro mas só as
+  // palavras sorteadas (blankTokenIndices) ganham destaque visual --
+  // ver CSS ".word--lesson-blank".
   lessonPromptEl.textContent = "";
-  appendTappableWords(lessonPromptEl, exercise.prompt, exercise.promptLang || "en");
+  appendTappableWords(lessonPromptEl, exercise.prompt, exercise.promptLang || "en", exercise.blankTokenIndices);
   lessonRefEl.textContent = exercise.reference;
   lessonSpeakBtnEl.hidden = exercise.direction !== "en-to-pt";
 
