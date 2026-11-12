@@ -5438,7 +5438,7 @@ async function pickVerseForLesson(ref) {
 // Escolhe o versículo e as `groupSize` palavras a destacar nele -- tudo
 // local (só lê os capítulos já embutidos no app), sem chamada de rede, por
 // isso pode tentar várias referências à vontade até achar uma que sirva.
-async function selectPhraseWords(groupSize, takeNextRef, rng) {
+async function selectPhraseWords(groupSize, direction, takeNextRef, rng) {
   const MAX_VERSE_ATTEMPTS = 5;
   for (let attempts = 0; attempts < MAX_VERSE_ATTEMPTS; attempts++) {
     const ref = takeNextRef();
@@ -5446,7 +5446,6 @@ async function selectPhraseWords(groupSize, takeNextRef, rng) {
     if (!picked) continue;
     const { verse, book } = picked;
 
-    const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
     const promptLang = direction === "en-to-pt" ? "en" : "pt";
     const promptText = promptLang === "en" ? getEnglishText(verse) : verse.pt;
 
@@ -5554,7 +5553,11 @@ async function buildTodaysLessonExercises() {
   }
 
   // --- O único exercício no modo difícil: traduzir o versículo inteiro,
-  // digitando do zero (sem nenhuma ajuda). ---
+  // digitando do zero (sem nenhuma ajuda). É também o único dos 10
+  // exercícios no sentido português -> inglês (todos os outros são
+  // inglês -> português) -- como só tem 1, dá pra garantir isso sem
+  // depender de validação de tradução (usa direto o texto já pronto do
+  // versículo nos dois idiomas, sempre confiável). ---
   let hardExercise = null;
   for (let attempts = 0; attempts < LESSON_HARD_VERSE_CANDIDATES && !hardExercise; attempts++) {
     const ref = takeNextRef();
@@ -5562,7 +5565,7 @@ async function buildTodaysLessonExercises() {
     if (!picked) continue;
     const { verse, book } = picked;
 
-    const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
+    const direction = "pt-to-en";
     const enText = getEnglishText(verse);
     hardExercise = {
       type: "sentence",
@@ -5590,7 +5593,7 @@ async function buildTodaysLessonExercises() {
   // montar com uma conexão ruim.
   const selections = [];
   for (const groupSize of LESSON_PHRASE_GROUP_SIZES) {
-    selections.push(await selectPhraseWords(groupSize, takeNextRef, rng));
+    selections.push(await selectPhraseWords(groupSize, "en-to-pt", takeNextRef, rng));
   }
 
   const translatedResults = await Promise.allSettled(
