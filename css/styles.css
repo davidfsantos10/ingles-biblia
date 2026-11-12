@@ -2018,7 +2018,10 @@ main {
 
 .lessons-actions {
   flex-shrink: 0;
-  padding: 0.9rem 1.25rem 1.25rem;
+  /* Mesmo motivo do .picker-overlay: .lessons-overlay é position:fixed,
+     então precisa reservar o espaço do banner do AdMob por conta própria,
+     senão o botão "Verificar"/"Continuar" fica escondido atrás dele. */
+  padding: 0.9rem 1.25rem calc(1.25rem + var(--admob-banner-height));
 }
 
 .lessons-actions[hidden] {
@@ -2067,6 +2070,12 @@ main {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  /* Elemento com position:fixed -- o padding-bottom do body (que reserva
+     espaço pro banner do AdMob) não se aplica aqui. Sem isso, a folha
+     (alinhada embaixo via align-items:flex-end) ficaria colada no fundo
+     real da tela, por baixo do banner nativo, escondendo sua última linha
+     de conteúdo (ex.: os últimos números do seletor de capítulo/versículo). */
+  padding-bottom: var(--admob-banner-height);
 }
 
 .picker-overlay[hidden] {
@@ -2826,7 +2835,7 @@ main {
 .toast {
   position: fixed;
   left: 50%;
-  bottom: 1.5rem;
+  bottom: calc(1.5rem + var(--admob-banner-height));
   transform: translateX(-50%);
   z-index: 200;
   max-width: min(90vw, 24rem);
