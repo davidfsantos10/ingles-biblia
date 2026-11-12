@@ -5460,31 +5460,69 @@ async function selectPhraseWords(groupSize, takeNextRef, rng) {
     // Só considera palavras com um tamanho mínimo -- evita sortear
     // conectivos curtos (ex.: "a", "o", "is", "of"), pouco úteis pra
     // praticar vocabulário.
-    const candidateIndices = tokens.map((_, i) => i).filter((i) => tokens[i].length >= 3);
+    const candidateIndices = seededShuffle(
+      tokens.map((_, i) => i).filter((i) => tokens[i].length >= 3),
+      rng
+    );
     if (candidateIndices.length < groupSize) continue;
 
-    const chosenIndices = seededShuffle(candidateIndices, rng)
-      .slice(0, groupSize)
-      .sort((a, b) => a - b);
-
-    return { ref, verse, book, direction, promptLang, promptText, tokens, chosenIndices, groupSize };
+    return { ref, verse, book, direction, promptLang, promptText, tokens, candidateIndices, groupSize };
   }
   return null;
 }
 
 // A partir de uma seleção já pronta (ver selectPhraseWords), busca a
-// tradução de cada palavra destacada -- a única parte que depende de rede
+// tradução de cada palavra candidata -- a única parte que depende de rede
 // (quando a palavra não está no glossário estático de arcaísmos da KJV).
 // Mesma função usada quando o usuário toca numa palavra durante a leitura
-// (com cache), nunca tradução inventada ou um recorte do versículo às
-// cegas. Pode ser chamada em paralelo pros vários exercícios de uma vez
-// (ver buildTodaysLessonExercises), já que não compartilha estado entre si.
+// (com cache), nunca tradução inventada.
+//
+// Uma palavra isolada, sem o resto da frase, às vezes volta com uma
+// tradução errada ou fora de contexto (ex.: "there" virar "lá" quando na
+// verdade é o "há" de "há uma estação..."). Pra evitar aceitar uma
+// resposta assim como "certa" na lição, só usa a palavra se a tradução
+// dela realmente aparecer na tradução OFICIAL do versículo (verse.pt/
+// verse.en, já revisada) -- senão descarta e tenta outra palavra do mesmo
+// versículo, em vez de confiar cegamente no tradutor isolado.
+//
+// Pode ser chamada em paralelo pros vários exercícios de uma vez (ver
+// buildTodaysLessonExercises), já que não compartilha estado entre si.
 async function translatePhraseSelection(selection) {
-  const { ref, verse, book, direction, promptLang, promptText, tokens, chosenIndices, groupSize } = selection;
+  const { ref, verse, book, direction, promptLang, promptText, tokens, candidateIndices, groupSize } = selection;
   const fromLang = promptLang;
   const toLang = promptLang === "en" ? "pt" : "en";
+  const otherText = toLang === "pt" ? verse.pt : getEnglishText(verse);
+  const otherWords = new Set(normalizeLessonText(otherText).split(" ").filter(Boolean));
 
-  const translations = await Promise.all(chosenIndices.map((i) => translateWord(tokens[i].toLowerCase(), fromLang, toLang)));
+  function translationMatchesVerse(translated) {
+    const words = normalizeLessonText(translated)
+      .split(" ")
+      .filter((w) => w.length >= 3);
+    return words.some((w) => otherWords.has(w));
+  }
+
+  const validated = []; // [{ index, translation }], na ordem em que foram aceitas
+  const MAX_CANDIDATES_TO_TRY = groupSize * 7; // limite pra não gastar tradução à toa num versículo ruim
+  let cursor = 0;
+
+  while (validated.length < groupSize && cursor < Math.min(candidateIndices.length, MAX_CANDIDATES_TO_TRY)) {
+    const batch = candidateIndices.slice(cursor, cursor + groupSize);
+    cursor += groupSize;
+
+    const results = await Promise.allSettled(batch.map((i) => translateWord(tokens[i].toLowerCase(), fromLang, toLang)));
+    results.forEach((result, j) => {
+      if (validated.length >= groupSize) return;
+      if (result.status !== "fulfilled") return;
+      if (!translationMatchesVerse(result.value)) return;
+      validated.push({ index: batch[j], translation: result.value });
+    });
+  }
+
+  if (validated.length < groupSize) return null; // não achou palavras suficientes com tradução confiável nesse versículo
+
+  validated.sort((a, b) => a.index - b.index);
+  const chosenIndices = validated.map((v) => v.index);
+  const translations = validated.map((v) => v.translation);
 
   return {
     type: "phrase",
@@ -5559,7 +5597,7 @@ async function buildTodaysLessonExercises() {
     selections.map((selection) => (selection ? translatePhraseSelection(selection) : Promise.reject(new Error("sem seleção válida"))))
   );
   for (const result of translatedResults) {
-    if (result.status === "fulfilled") exercises.push(result.value);
+    if (result.status === "fulfilled" && result.value) exercises.push(result.value);
   }
 
   return seededShuffle(exercises, rng);
