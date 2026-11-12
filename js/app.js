@@ -5304,9 +5304,12 @@ homeAvatarBtnEl.addEventListener("click", () => {
 // lição do dia é sorteada de forma determinística pelo dia do ano, então
 // todo mundo recebe a mesma lição num dia, e ela muda sozinha à meia-noite.
 
-const LESSON_SENTENCE_COUNT = 6;
-const LESSON_WORD_COUNT = 4;
-const LESSON_TAP_DISTRACTOR_COUNT = 3;
+// Só 1 exercício no modo difícil (traduzir o versículo inteiro, do zero);
+// os outros 9 pedem só um punhado de palavras de cada vez (2, 3 ou 4), bem
+// mais acessível pra quem está começando a aprender inglês.
+const LESSON_HARD_VERSE_CANDIDATES = 6; // tenta até essas referências até achar uma com tradução em pt
+const LESSON_PHRASE_GROUP_SIZES = [2, 2, 2, 3, 3, 3, 4, 4, 4];
+const LESSON_TOTAL_COUNT = 1 + LESSON_PHRASE_GROUP_SIZES.length;
 const LESSONS_PROGRESS_STORAGE_KEY = "ingles-biblia.lessons-progress";
 const LESSON_ARROW_ICON =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
@@ -5433,10 +5436,12 @@ function buildLessonWordPool() {
 
 async function buildTodaysLessonExercises() {
   const rng = mulberry32(getLessonSeed());
-  const sentenceExercises = [];
 
-  const sentenceRefs = seededShuffle(VERSE_OF_THE_DAY_REFS, rng).slice(0, LESSON_SENTENCE_COUNT);
-  for (const ref of sentenceRefs) {
+  // --- O único exercício no modo difícil: traduzir o versículo inteiro,
+  // digitando do zero (sem banco de palavras pra ajudar). ---
+  let hardExercise = null;
+  const candidateRefs = seededShuffle(VERSE_OF_THE_DAY_REFS, rng).slice(0, LESSON_HARD_VERSE_CANDIDATES);
+  for (const ref of candidateRefs) {
     try {
       const response = await fetch(`data/${ref.slug}-${ref.chapter}.json`);
       if (!response.ok) continue;
@@ -5449,17 +5454,14 @@ async function buildTodaysLessonExercises() {
       if (!verse || !book || !verse.pt) continue;
 
       const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
-      const mode = rng() < 0.5 ? "type" : "tap";
       const enText = getEnglishText(verse);
-      const answerText = direction === "en-to-pt" ? verse.pt : enText;
-      sentenceExercises.push({
+      hardExercise = {
         type: "sentence",
-        mode,
+        mode: "type",
         direction,
         prompt: direction === "en-to-pt" ? enText : verse.pt,
         promptLang: direction === "en-to-pt" ? "en" : "pt",
         acceptedAnswers: direction === "en-to-pt" ? [verse.pt] : [enText],
-        answerTokens: answerText.split(/\s+/).filter(Boolean),
         reference: `${book.pt} ${ref.chapter}:${ref.number}`,
         // Guardados para permitir tocar em palavras e selecionar trecho do
         // enunciado (ver renderLessonExercise/getSelectionContext) -- o
@@ -5468,48 +5470,39 @@ async function buildTodaysLessonExercises() {
         book,
         chapter: ref.chapter,
         verseNumber: ref.number,
-      });
+      };
+      break;
     } catch (err) {
-      // Essa referência falhou (ex.: sem conexão); segue com as demais.
+      // Essa referência falhou (ex.: sem conexão); tenta a próxima candidata.
     }
   }
 
-  // Monta o banco de palavras dos exercícios "toque" usando as próprias
-  // frases sorteadas hoje como fonte: cada exercício usa palavras de
-  // OUTRAS frases da lição como distratoras, sem depender de lista externa.
-  const allTokens = [];
-  const seenLower = new Set();
-  for (const ex of sentenceExercises) {
-    for (const token of ex.answerTokens) {
-      const key = token.toLowerCase();
-      if (!seenLower.has(key)) {
-        seenLower.add(key);
-        allTokens.push(token);
-      }
-    }
-  }
+  const exercises = hardExercise ? [hardExercise] : [];
 
-  for (const ex of sentenceExercises) {
-    if (ex.mode !== "tap") continue;
-    const ownLower = new Set(ex.answerTokens.map((t) => t.toLowerCase()));
-    const distractorPool = allTokens.filter((t) => !ownLower.has(t.toLowerCase()));
-    const distractors = seededShuffle(distractorPool, rng).slice(0, LESSON_TAP_DISTRACTOR_COUNT);
-    const bankTokens = seededShuffle([...ex.answerTokens, ...distractors], rng);
-    ex.bank = bankTokens.map((text, i) => ({ id: i, text }));
-  }
+  // --- Os outros 9: traduzir só 2, 3 ou 4 palavras de uma vez, bem mais
+  // fácil que a frase inteira. Usa palavras com tradução já confirmada --
+  // do vocabulário que o próprio usuário salvou lendo o app, ou do
+  // glossário de palavras arcaicas da KJV -- em vez de recortar um pedaço
+  // do versículo (inglês e português não têm a mesma ordem/divisão de
+  // palavras, então um recorte não teria uma tradução correta garantida). --
+  const totalPhraseWordsNeeded = LESSON_PHRASE_GROUP_SIZES.reduce((sum, n) => sum + n, 0);
+  const wordPool = seededShuffle(buildLessonWordPool(), rng).slice(0, totalPhraseWordsNeeded);
 
-  const exercises = sentenceExercises.slice();
+  let poolIndex = 0;
+  for (const groupSize of LESSON_PHRASE_GROUP_SIZES) {
+    const group = wordPool.slice(poolIndex, poolIndex + groupSize);
+    if (group.length < 2) break; // não sobraram palavras suficientes pra outro grupo
+    poolIndex += groupSize;
 
-  const wordPool = seededShuffle(buildLessonWordPool(), rng).slice(0, LESSON_WORD_COUNT);
-  for (const entry of wordPool) {
     const direction = rng() < 0.5 ? "en-to-pt" : "pt-to-en";
     exercises.push({
-      type: "word",
+      type: "phrase",
       mode: "type",
       direction,
-      prompt: direction === "en-to-pt" ? entry.word : entry.translations[0],
+      wordCount: group.length,
+      prompt: group.map((entry) => (direction === "en-to-pt" ? entry.word : entry.translations[0])).join(" "),
       promptLang: direction === "en-to-pt" ? "en" : "pt",
-      acceptedAnswers: direction === "en-to-pt" ? entry.translations : [entry.word],
+      acceptedAnswers: [group.map((entry) => (direction === "en-to-pt" ? entry.translations[0] : entry.word)).join(" ")],
       reference: "",
     });
   }
@@ -5539,7 +5532,7 @@ function saveLessonsProgress(progress) {
 
 function renderLessonsCard() {
   const progress = loadLessonsProgress();
-  const total = progress.total || LESSON_SENTENCE_COUNT + LESSON_WORD_COUNT;
+  const total = progress.total || LESSON_TOTAL_COUNT;
   const percent = total > 0 ? Math.round((progress.completed / total) * 100) : 0;
 
   const circumference = 144.5;
@@ -5644,8 +5637,10 @@ function renderLessonExercise() {
 
   lessonsProgressFillEl.style.width = `${Math.round((currentLessonIndex / currentLessonExercises.length) * 100)}%`;
   lessonInstructionEl.textContent = isSentence
-    ? `Traduza a frase para o ${targetLang}:`
-    : `Traduza a palavra para o ${targetLang}:`;
+    ? `Traduza a frase inteira para o ${targetLang}:`
+    : exercise.type === "phrase"
+      ? `Traduza estas ${exercise.wordCount} palavras para o ${targetLang}:`
+      : `Traduza a palavra para o ${targetLang}:`;
   // Enunciado tocável: como na leitura, cada palavra vira um span que abre
   // a mesma tradução/pronúncia ao tocar (ver handleVersesClick reaproveitado
   // abaixo), e o texto continua selecionável para abrir "Entender trecho"
@@ -5700,7 +5695,7 @@ function checkLessonAnswer() {
     return;
   }
 
-  const correct = isLessonAnswerCorrect(userAnswer, exercise.acceptedAnswers, exercise.type === "sentence");
+  const correct = isLessonAnswerCorrect(userAnswer, exercise.acceptedAnswers, exercise.type === "sentence" || exercise.type === "phrase");
 
   lessonAnswered = true;
   lessonInputEl.disabled = true;
